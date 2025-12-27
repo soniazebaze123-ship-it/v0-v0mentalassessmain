@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 20% 98%;
+
+    /* Updated to a softer, more colorful palette */
+    --secondary: 199 89% 48%; /* Light Blue */
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 168 76% 36%; /* Teal/Green */
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+
+    /* Added custom colors for better aesthetics */
+    --brand-blue: 217 91% 60%;
+    --brand-teal: 173 58% 39%;
+    --brand-orange: 24 95% 53%;
+    --brand-purple: 270 50% 40%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 20% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 210 20% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 85.1%; /* Increased from 65.1% to 85.1% for much better contrast */
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 62.8% 65.6%; /* Increased from 30.6% to 65.6% for better contrast */
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 217.2 32.6% 45.5%; /* Increased from 17.5% to 45.5% for better contrast */
+    --input: 217.2 32.6% 45.5%; /* Increased from 17.5% to 45.5% for better contrast */
+    --ring: 210 20% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Responsive touch targets */
+@media (max-width: 768px) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .touch-button {
+    padding: 12px 16px;
+    font-size: 16px;
+  }
+
+  .touch-input {
+    padding: 12px;
+    font-size: 16px;
+  }
+}
+
+/* High contrast mode improvements */
+@media (prefers-contrast: high) {
+  .dark {
+    --muted-foreground: 215 20.2% 90.1%;
+    --border: 217.2 32.6% 50.5%;
+    --input: 217.2 32.6% 50.5%;
+  }
+}
+
+/* Improved focus visibility */
+.focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Dark mode text improvements */
+.dark .text-gray-600 {
+  color: hsl(215 20.2% 75.1%);
+}
+
+.dark .text-gray-500 {
+  color: hsl(215 20.2% 70.1%);
+}
+
+.dark .text-gray-400 {
+  color: hsl(215 20.2% 65.1%);
+}
