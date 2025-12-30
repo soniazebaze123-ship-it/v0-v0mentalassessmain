@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { LanguageProvider } from "@/contexts/language-context"
 import { UserProvider, useUser } from "@/contexts/user-context"
 import { Registration } from "@/components/registration"
 import { Dashboard } from "@/components/dashboard"
@@ -27,7 +26,7 @@ import { MMSERepetition } from "@/components/assessments/mmse-repetition"
 import { WritingTask } from "@/components/assessments/writing-task"
 import { CopyingDesign } from "@/components/assessments/copying-design"
 
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/contexts/language-context"
 
 function AppContent() {
@@ -85,6 +84,8 @@ function AppContent() {
   const loadCompletedAssessments = async () => {
     if (!user) return
 
+    const supabase = createClient()
+
     try {
       const { data: assessments } = await supabase.from("assessments").select("*").eq("user_id", user.id)
 
@@ -100,7 +101,9 @@ function AppContent() {
         setCompletedAssessments(completed)
       }
     } catch (error) {
-      console.error("Error loading completed assessments:", error)
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error loading completed assessments:", error)
+      }
     }
   }
 
@@ -168,6 +171,8 @@ function AppContent() {
         {} as Record<string, number>,
       )
 
+      const supabase = createClient()
+
       try {
         await supabase.from("assessments").insert({
           user_id: user!.id, // Use user!.id as it should be present if logged in
@@ -185,7 +190,9 @@ function AppContent() {
           [assessmentType]: { totalScore, sectionScores },
         }))
       } catch (error) {
-        console.error("Error saving assessment:", error)
+        if (process.env.NODE_ENV === "development") {
+          console.error("Error saving assessment:", error)
+        }
       }
 
       setCurrentView("results")
@@ -304,10 +311,8 @@ function AppContent() {
 
 export default function Home() {
   return (
-    <LanguageProvider>
-      <UserProvider>
-        <AppContent />
-      </UserProvider>
-    </LanguageProvider>
+    <UserProvider>
+      <AppContent />
+    </UserProvider>
   )
 }

@@ -8,9 +8,9 @@ import { LanguageProvider } from "@/contexts/language-context"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "MentalAssess",
-  description: "Mental assessment application",
-    generator: 'v0.app'
+  title: "MentalAssess - Cognitive Assessment Platform",
+  description: "Professional cognitive assessment application with MoCA and MMSE tests",
+  generator: "v0.app",
 }
 
 export default function RootLayout({
@@ -19,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <LanguageProvider>{children}</LanguageProvider>

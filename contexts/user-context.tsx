@@ -2,13 +2,12 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
-import { v4 as uuidv4 } from "uuid" // Import uuid for generating IDs
+import { createClient } from "@/lib/supabase/client"
+import { v4 as uuidv4 } from "uuid"
 
 interface User {
-  id: string // This will be the UUID from public.users
+  id: string
   phone_number: string
-  // Add any other custom user profile fields here
 }
 
 interface AssessmentProgress {
@@ -22,7 +21,7 @@ interface UserContextType {
   loading: boolean
   login: (phoneNumber: string) => Promise<{ success: boolean; error?: string }>
   register: (phoneNumber: string) => Promise<{ success: boolean; error?: string }>
-  sendOtp: (phoneNumber: string) => Promise<{ success: boolean; error?: string }> // Dummy for UI flow
+  sendOtp: (phoneNumber: string) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   progress: Record<string, AssessmentProgress>
   saveProgress: (assessmentType: "MOCA" | "MMSE", step: number, scores: number[]) => Promise<void>
@@ -37,23 +36,23 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [progress, setProgress] = useState<Record<string, AssessmentProgress>>({})
 
   useEffect(() => {
-    // Dummy Auth: Load user from localStorage on initial load
     const storedUser = localStorage.getItem("mental_assess_dummy_user")
     if (storedUser) {
       const parsedUser = JSON.parse(storedUser)
       setUser(parsedUser)
-      loadUserProgress(parsedUser.id) // This is an async call
+      loadUserProgress(parsedUser.id)
     } else {
-      setLoading(false) // This path correctly sets loading to false
+      setLoading(false)
     }
   }, [])
 
   const loadUserProgress = async (userId: string) => {
+    const supabase = createClient()
+
     try {
       const { data, error } = await supabase.from("user_progress").select("*").eq("user_id", userId)
 
       if (error) {
-        console.error("Error loading user progress:", error)
         setProgress({})
       } else {
         const newProgress: Record<string, AssessmentProgress> = {}
@@ -67,32 +66,31 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setProgress(newProgress)
       }
     } catch (error) {
-      console.error("Caught error loading user progress:", error)
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error loading user progress:", error)
+      }
     } finally {
-      setLoading(false) // Ensure loading is set to false after attempt to load progress
+      setLoading(false)
     }
   }
 
-  // Dummy OTP send function - no actual OTP sent, just simulates success for UI flow
   const sendOtp = async (phoneNumber: string): Promise<{ success: boolean; error?: string }> => {
-    // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500))
-    console.log(`Dummy OTP simulation for ${phoneNumber} completed.`)
     return { success: true }
   }
 
   const login = async (phoneNumber: string): Promise<{ success: boolean; error?: string }> => {
     setLoading(true)
+    const supabase = createClient()
+
     try {
-      // Query for user by phone number
-      const { data, error } = await supabase.from("users").select("*").eq("phone_number", phoneNumber).limit(1) // Use limit(1) instead of single() to handle no rows gracefully
+      const { data, error } = await supabase.from("users").select("*").eq("phone_number", phoneNumber).limit(1)
 
       if (error) {
-        console.error("Database error during login:", error)
         return { success: false, error: "Database error during login." }
       }
 
-      const existingUser = data ? data[0] : null // Get the first user if data exists
+      const existingUser = data ? data[0] : null
 
       if (!existingUser) {
         return { success: false, error: "Invalid phone number. Please register or check your number." }
@@ -103,7 +101,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       await loadUserProgress(existingUser.id)
       return { success: true }
     } catch (error: any) {
-      console.error("Login error:", error.message)
       return { success: false, error: error.message }
     } finally {
       setLoading(false)
@@ -112,18 +109,17 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (phoneNumber: string): Promise<{ success: boolean; error?: string }> => {
     setLoading(true)
+    const supabase = createClient()
+
     try {
-      // Check if phone number already exists
       const { data: existingUser } = await supabase.from("users").select("id").eq("phone_number", phoneNumber).limit(1)
 
       if (existingUser && existingUser.length > 0) {
         return { success: false, error: "Phone number already registered." }
       }
 
-      // Generate a new UUID for the user
       const newUserId = uuidv4()
 
-      // Insert new user into public.users table
       const { data: newUser, error: insertError } = await supabase
         .from("users")
         .insert({ id: newUserId, phone_number: phoneNumber })
@@ -131,7 +127,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         .single()
 
       if (insertError || !newUser) {
-        console.error("Registration failed:", insertError?.message || "Failed to create user.")
         return { success: false, error: "Registration failed. Please try again." }
       }
 
@@ -140,7 +135,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       await loadUserProgress(newUser.id)
       return { success: true }
     } catch (error: any) {
-      console.error("Registration error:", error.message)
       return { success: false, error: error.message }
     } finally {
       setLoading(false)
@@ -153,8 +147,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setUser(null)
       setProgress({})
       localStorage.removeItem("mental_assess_dummy_user")
-    } catch (error) {
-      console.error("Error logging out:", error)
     } finally {
       setLoading(false)
     }
@@ -162,9 +154,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const saveProgress = async (assessmentType: "MOCA" | "MMSE", step: number, scores: number[]) => {
     if (!user?.id) {
-      console.error("Cannot save progress: No authenticated user ID.")
       return
     }
+
+    const supabase = createClient()
 
     const newProgressEntry = {
       user_id: user.id,
@@ -178,10 +171,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         .from("user_progress")
         .upsert(newProgressEntry, { onConflict: "user_id, assessment_type" })
 
-      if (error) {
-        console.error("Supabase error saving progress:", error)
-        throw error
-      }
+      if (error) throw error
 
       setProgress((prev) => ({
         ...prev,
@@ -192,15 +182,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         },
       }))
     } catch (error) {
-      console.error("Error saving progress:", error)
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error saving progress:", error)
+      }
     }
   }
 
   const clearProgress = async (assessmentType: "MOCA" | "MMSE") => {
     if (!user?.id) {
-      console.error("Cannot clear progress: No authenticated user ID.")
       return
     }
+
+    const supabase = createClient()
 
     try {
       const { error } = await supabase
@@ -209,10 +202,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         .eq("user_id", user.id)
         .eq("assessment_type", assessmentType)
 
-      if (error) {
-        console.error("Supabase error clearing progress:", error)
-        throw error
-      }
+      if (error) throw error
 
       setProgress((prev) => {
         const newProgress = { ...prev }
@@ -220,7 +210,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         return newProgress
       })
     } catch (error) {
-      console.error("Error clearing progress:", error)
+      if (process.env.NODE_ENV === "development") {
+        console.error("Error clearing progress:", error)
+      }
     }
   }
 
