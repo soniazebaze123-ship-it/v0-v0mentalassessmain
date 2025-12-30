@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { AssessmentTextarea } from "@/components/ui/assessment-textarea"
 import { supabase } from "@/lib/supabase"
-import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut } from "lucide-react"
+import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp } from "lucide-react"
 import Image from "next/image"
 import { useLanguage } from "@/contexts/language-context"
 
@@ -16,6 +16,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { AverageScoreChart } from "@/components/admin/average-score-chart"
 import { ScoreDistributionChart } from "@/components/admin/score-distribution-chart"
 import { ProgressTrendChart } from "@/components/admin/progress-trend-chart"
+import { PatientProgressTracker } from "@/components/admin/patient-progress-tracker"
 import { getScoreDistribution, getScoreTrends } from "@/lib/admin-data-utils"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 
@@ -67,6 +68,7 @@ export function AdminPanel() {
   const [labAnalysis, setLabAnalysis] = useState("")
   const [loading, setLoading] = useState(false)
   const [viewingFiles, setViewingFiles] = useState(false)
+  const [viewingProgressTracker, setViewingProgressTracker] = useState(false)
 
   // Add new state variables for chart filtering
   const [selectedTrendUser, setSelectedTrendUser] = useState<string | null>(null)
@@ -115,8 +117,18 @@ export function AdminPanel() {
         .select("*")
         .order("updated_at", { ascending: false })
 
+      const mappedAssessments = (assessmentsData || []).map((assessment) => ({
+        id: assessment.id,
+        user_id: assessment.user_id,
+        assessment_type: assessment.type as "MOCA" | "MMSE",
+        total_score: assessment.score,
+        section_scores: assessment.data?.sections || {},
+        completed_at: assessment.completed_at,
+        laboratory_analysis: assessment.data?.laboratory_analysis,
+      }))
+
       setUsers(usersData || [])
-      setAssessments(assessmentsData || [])
+      setAssessments(mappedAssessments)
       setUploadedFiles(filesData || [])
       setUserProgress(progressData || [])
     } catch (error) {
@@ -186,6 +198,10 @@ export function AdminPanel() {
 
   const getFileUrl = (filePath: string) => {
     return supabase.storage.from("user-files").getPublicUrl(filePath).data.publicUrl
+  }
+
+  if (viewingProgressTracker) {
+    return <PatientProgressTracker onBack={() => setViewingProgressTracker(false)} />
   }
 
   if (!isAuthenticated) {
@@ -283,6 +299,10 @@ export function AdminPanel() {
         <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
           <h1 className="text-3xl font-bold text-center sm:text-left">{t("admin.title")}</h1>
           <div className="flex flex-wrap justify-center sm:justify-end gap-2">
+            <Button onClick={() => setViewingProgressTracker(true)} variant="outline">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Patient Progress
+            </Button>
             <Button onClick={() => setViewingFiles(!viewingFiles)} variant="outline">
               <Eye className="w-4 h-4 mr-2" />
               {viewingFiles ? t("admin.view_assessments") : t("admin.view_files")}

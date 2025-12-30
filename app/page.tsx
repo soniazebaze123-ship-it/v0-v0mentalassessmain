@@ -6,6 +6,7 @@ import { Registration } from "@/components/registration"
 import { Dashboard } from "@/components/dashboard"
 import { ImageUpload } from "@/components/image-upload"
 import { ResultsDisplay } from "@/components/results-display"
+import { RiskProfileDisplay } from "@/components/risk-profile-display"
 import { Login } from "@/components/login"
 import { AdminPanel } from "@/components/admin-panel"
 
@@ -26,6 +27,11 @@ import { MMSERepetition } from "@/components/assessments/mmse-repetition"
 import { WritingTask } from "@/components/assessments/writing-task"
 import { CopyingDesign } from "@/components/assessments/copying-design"
 
+// Sensory Screening Components
+import { VisualScreening } from "@/components/assessments/visual-screening"
+import { AuditoryScreening } from "@/components/assessments/auditory-screening"
+import { OlfactoryScreening } from "@/components/assessments/olfactory-screening"
+
 import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/contexts/language-context"
 
@@ -33,7 +39,18 @@ function AppContent() {
   const { user, loading, progress, saveProgress, clearProgress } = useUser()
   const { t } = useLanguage()
   const [currentView, setCurrentView] = useState<
-    "login" | "register" | "dashboard" | "moca" | "mmse" | "upload" | "results" | "admin"
+    | "login"
+    | "register"
+    | "dashboard"
+    | "moca"
+    | "mmse"
+    | "upload"
+    | "results"
+    | "admin"
+    | "visual"
+    | "auditory"
+    | "olfactory"
+    | "risk_profile"
   >("login")
   const [currentStep, setCurrentStep] = useState(0)
   const [scores, setScores] = useState<number[]>([])
@@ -92,9 +109,9 @@ function AppContent() {
       if (assessments) {
         const completed: Record<string, any> = {}
         assessments.forEach((assessment) => {
-          completed[assessment.assessment_type] = {
-            totalScore: assessment.total_score,
-            sectionScores: assessment.section_scores,
+          completed[assessment.type] = {
+            totalScore: assessment.score,
+            sectionScores: assessment.data,
             completedAt: assessment.completed_at,
           }
         })
@@ -107,13 +124,17 @@ function AppContent() {
     }
   }
 
-  const handleStartAssessment = (type: "moca" | "mmse" | "upload") => {
+  const handleStartAssessment = (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory") => {
+    if (type === "visual" || type === "auditory" || type === "olfactory") {
+      setCurrentView(type)
+      return
+    }
+
     if (type === "upload") {
       setCurrentView("upload")
     } else {
       const assessmentKey = type.toUpperCase() as "MOCA" | "MMSE"
       if (completedAssessments[assessmentKey]) {
-        // Prevent starting if already completed
         alert(t("dashboard.results_final"))
         return
       }
@@ -122,14 +143,13 @@ function AppContent() {
       setAssessmentType(assessmentKey)
       setCurrentStep(0)
       setScores([])
-      saveProgress(assessmentKey, 0, []) // Save initial progress
+      saveProgress(assessmentKey, 0, [])
     }
   }
 
   const handleResumeAssessment = (type: "moca" | "mmse", step: number, savedScores: number[]) => {
     const assessmentKey = type.toUpperCase() as "MOCA" | "MMSE"
     if (completedAssessments[assessmentKey]) {
-      // Prevent resuming if already completed
       alert(t("dashboard.results_final"))
       return
     }
@@ -144,6 +164,10 @@ function AppContent() {
     setCurrentView("results")
   }
 
+  const handleViewRiskProfile = () => {
+    setCurrentView("risk_profile")
+  }
+
   const handleStepComplete = async (score: number) => {
     const newScores = [...scores, score]
     setScores(newScores)
@@ -151,11 +175,9 @@ function AppContent() {
     const steps = assessmentType === "MOCA" ? mocaSteps : mmseSteps
 
     if (currentStep < steps.length - 1) {
-      // Save progress
       await saveProgress(assessmentType, currentStep + 1, newScores)
       setCurrentStep(currentStep + 1)
     } else {
-      // Assessment complete
       const totalScore = newScores.reduce((sum, s) => sum + s, 0)
 
       const sectionNames =
@@ -175,16 +197,14 @@ function AppContent() {
 
       try {
         await supabase.from("assessments").insert({
-          user_id: user!.id, // Use user!.id as it should be present if logged in
-          assessment_type: assessmentType,
-          total_score: totalScore,
-          section_scores: sectionScores,
+          user_id: user!.id,
+          type: assessmentType,
+          score: totalScore,
+          data: sectionScores,
         })
 
-        // Clear progress after successful completion
         await clearProgress(assessmentType)
 
-        // Update completed assessments state
         setCompletedAssessments((prev) => ({
           ...prev,
           [assessmentType]: { totalScore, sectionScores },
@@ -200,7 +220,7 @@ function AppContent() {
   }
 
   const handleSkipTask = () => {
-    handleStepComplete(0) // Award 0 points for skipped tasks
+    handleStepComplete(0)
   }
 
   const handleUploadComplete = () => {
@@ -211,7 +231,7 @@ function AppContent() {
     setCurrentView("dashboard")
     setCurrentStep(0)
     setScores([])
-    loadCompletedAssessments() // Reload completed assessments to ensure dashboard is up-to-date
+    loadCompletedAssessments()
   }
 
   if (loading) {
@@ -234,6 +254,22 @@ function AppContent() {
 
   if (currentView === "upload") {
     return <ImageUpload onComplete={handleUploadComplete} />
+  }
+
+  if (currentView === "visual") {
+    return <VisualScreening onComplete={() => handleBackToDashboard()} />
+  }
+
+  if (currentView === "auditory") {
+    return <AuditoryScreening onComplete={() => handleBackToDashboard()} />
+  }
+
+  if (currentView === "olfactory") {
+    return <OlfactoryScreening onComplete={() => handleBackToDashboard()} />
+  }
+
+  if (currentView === "risk_profile") {
+    return <RiskProfileDisplay onBackToDashboard={handleBackToDashboard} />
   }
 
   if (currentView === "results") {
@@ -300,6 +336,7 @@ function AppContent() {
       onStartAssessment={handleStartAssessment}
       onResumeAssessment={handleResumeAssessment}
       onViewResults={handleViewResults}
+      onViewRiskProfile={handleViewRiskProfile}
     >
       <div className="space-y-8 w-full max-w-2xl">
         <LanguageAbstraction onComplete={(score) => console.log("Language Abstraction Score:", score)} />

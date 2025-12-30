@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { AssessmentInput } from "@/components/ui/assessment-input"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useUser } from "@/contexts/user-context"
 import { useLanguage } from "@/contexts/language-context"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
@@ -16,7 +17,10 @@ interface RegistrationProps {
 export function Registration({ onBackToLogin }: RegistrationProps) {
   const { t, language, setLanguage } = useLanguage()
   const { register, sendOtp } = useUser()
+  const [name, setName] = useState("")
   const [phoneNumber, setPhoneNumber] = useState("")
+  const [dateOfBirth, setDateOfBirth] = useState("")
+  const [gender, setGender] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -26,8 +30,7 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
     // Simulate OTP send (no actual OTP needed for this dummy auth)
     const otpResult = await sendOtp(phoneNumber)
     if (otpResult.success) {
-      // Directly attempt registration after "OTP sent" simulation
-      const registerResult = await register(phoneNumber)
+      const registerResult = await register(phoneNumber, name, dateOfBirth, gender)
       if (!registerResult.success) {
         setError(registerResult.error || t("register.error.invalid"))
       }
@@ -82,6 +85,18 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="name">{t("register.name")}</Label>
+            <AssessmentInput
+              id="name"
+              type="text"
+              placeholder={t("register.name.placeholder")}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="phone">{t("phone")}</Label>
             <AssessmentInput
               id="phone"
@@ -93,10 +108,37 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="dob">{t("register.date_of_birth")}</Label>
+            <AssessmentInput
+              id="dob"
+              type="date"
+              value={dateOfBirth}
+              onChange={(e) => setDateOfBirth(e.target.value)}
+              disabled={loading}
+              max={new Date().toISOString().split("T")[0]}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="gender">{t("register.gender")}</Label>
+            <Select value={gender} onValueChange={setGender} disabled={loading}>
+              <SelectTrigger id="gender">
+                <SelectValue placeholder={t("register.gender.placeholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">{t("register.gender.male")}</SelectItem>
+                <SelectItem value="female">{t("register.gender.female")}</SelectItem>
+                <SelectItem value="other">{t("register.gender.other")}</SelectItem>
+                <SelectItem value="prefer_not_to_say">{t("register.gender.prefer_not_to_say")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button
             onClick={handleSendOtpAndRegister}
             className="w-full touch-target"
-            disabled={loading || phoneNumber.length < 10}
+            disabled={loading || phoneNumber.length < 10 || name.trim().length < 2 || !dateOfBirth || !gender}
           >
             {loading ? t("common.loading") : t("common.next")}
           </Button>

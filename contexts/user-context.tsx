@@ -8,6 +8,10 @@ import { v4 as uuidv4 } from "uuid"
 interface User {
   id: string
   phone_number: string
+  email: string
+  name?: string
+  date_of_birth?: string
+  gender?: string
 }
 
 interface AssessmentProgress {
@@ -20,7 +24,12 @@ interface UserContextType {
   user: User | null
   loading: boolean
   login: (phoneNumber: string) => Promise<{ success: boolean; error?: string }>
-  register: (phoneNumber: string) => Promise<{ success: boolean; error?: string }>
+  register: (
+    phoneNumber: string,
+    name?: string,
+    dateOfBirth?: string,
+    gender?: string,
+  ) => Promise<{ success: boolean; error?: string }>
   sendOtp: (phoneNumber: string) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   progress: Record<string, AssessmentProgress>
@@ -107,34 +116,57 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const register = async (phoneNumber: string): Promise<{ success: boolean; error?: string }> => {
+  const register = async (
+    phoneNumber: string,
+    name?: string,
+    dateOfBirth?: string,
+    gender?: string,
+  ): Promise<{ success: boolean; error?: string }> => {
     setLoading(true)
     const supabase = createClient()
 
     try {
+      console.log("[v0] Starting registration for phone:", phoneNumber, "name:", name)
+
       const { data: existingUser } = await supabase.from("users").select("id").eq("phone_number", phoneNumber).limit(1)
 
       if (existingUser && existingUser.length > 0) {
+        console.log("[v0] Phone number already exists")
         return { success: false, error: "Phone number already registered." }
       }
 
       const newUserId = uuidv4()
+      const generatedEmail = `${phoneNumber.replace(/[^0-9]/g, "")}@mentalassess.app`
+
+      console.log("[v0] Creating new user with id:", newUserId, "name:", name, "dob:", dateOfBirth, "gender:", gender)
 
       const { data: newUser, error: insertError } = await supabase
         .from("users")
-        .insert({ id: newUserId, phone_number: phoneNumber })
+        .insert({
+          id: newUserId,
+          phone_number: phoneNumber,
+          email: generatedEmail,
+          name: name || null,
+          date_of_birth: dateOfBirth || null,
+          gender: gender || null,
+        })
         .select()
         .single()
 
+      console.log("[v0] Insert result:", { newUser, insertError })
+
       if (insertError || !newUser) {
-        return { success: false, error: "Registration failed. Please try again." }
+        console.log("[v0] Registration failed:", insertError)
+        return { success: false, error: insertError?.message || "Registration failed. Please try again." }
       }
 
+      console.log("[v0] Registration successful, setting user")
       setUser(newUser)
       localStorage.setItem("mental_assess_dummy_user", JSON.stringify(newUser))
       await loadUserProgress(newUser.id)
       return { success: true }
     } catch (error: any) {
+      console.log("[v0] Registration error:", error)
       return { success: false, error: error.message }
     } finally {
       setLoading(false)

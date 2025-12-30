@@ -14,6 +14,7 @@ export interface ScoreDistributionData {
 export interface TrendData {
   date: string
   score: number
+  type: string // Include type for potential multi-line chart
 }
 
 // Define score bands for MoCA and MMSE
@@ -30,6 +31,10 @@ const MMSE_SCORE_BANDS = [
 ]
 
 export function calculateAverageScores(assessments: Assessment[]): AverageScores {
+  if (!assessments || assessments.length === 0) {
+    return { moca: 0, mmse: 0 }
+  }
+
   const mocaScores = assessments.filter((a) => a.assessment_type === "MOCA").map((a) => a.total_score)
   const mmseScores = assessments.filter((a) => a.assessment_type === "MMSE").map((a) => a.total_score)
 
@@ -40,6 +45,15 @@ export function calculateAverageScores(assessments: Assessment[]): AverageScores
 }
 
 export function getScoreDistribution(assessments: Assessment[], type: "MOCA" | "MMSE"): ScoreDistributionData[] {
+  if (!assessments || assessments.length === 0) {
+    const bands = type === "MOCA" ? MOCA_SCORE_BANDS : MMSE_SCORE_BANDS
+    return bands.map((band) => ({
+      name: band.name,
+      value: 0,
+      color: band.color,
+    }))
+  }
+
   const filteredAssessments = assessments.filter((a) => a.assessment_type === type)
   const scoreCounts: Record<string, number> = {}
   const bands = type === "MOCA" ? MOCA_SCORE_BANDS : MMSE_SCORE_BANDS
@@ -70,6 +84,10 @@ export function getScoreTrends(
   userId: string | null,
   assessmentType: "MOCA" | "MMSE" | "ALL",
 ): TrendData[] {
+  if (!assessments || assessments.length === 0) {
+    return []
+  }
+
   let filteredAssessments = assessments
 
   if (userId) {
