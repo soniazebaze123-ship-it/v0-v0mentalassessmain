@@ -20,6 +20,21 @@ interface OlfactoryScreeningProps {
   onSkip?: () => void
 }
 
+const SMELL_ICONS: Record<string, string> = {
+  rose: "🌹",
+  lemon: "🍋",
+  coffee: "☕",
+  mint: "🌿",
+  cinnamon: "🥮",
+  chocolate: "🍫",
+  vanilla: "🍦",
+  orange: "🍊",
+  soap: "🧼",
+  garlic: "🧄",
+  peppermint: "🍬",
+  banana: "🍌",
+}
+
 export function OlfactoryScreening({ onComplete, onSkip }: OlfactoryScreeningProps) {
   const { t } = useLanguage()
   const { user } = useUser()
@@ -68,7 +83,8 @@ export function OlfactoryScreening({ onComplete, onSkip }: OlfactoryScreeningPro
 
     const { totalCorrect, percentCorrect, classification, normalizedScore } = calculateOlfactoryScore(finalResults)
 
-    // Save to database
+    console.log("[v0] Olfactory test complete:", { totalCorrect, percentCorrect, classification, normalizedScore })
+
     if (user) {
       try {
         await supabase.from("sensory_assessments").insert({
@@ -91,12 +107,13 @@ export function OlfactoryScreening({ onComplete, onSkip }: OlfactoryScreeningPro
             self_administered: true,
           },
         })
+        console.log("[v0] Olfactory screening saved successfully")
       } catch (error) {
         console.error("[v0] Error saving olfactory screening:", error)
       }
     }
 
-    onComplete(Math.round(100 - normalizedScore))
+    onComplete(Math.round(normalizedScore))
   }
 
   const handleSkip = () => {
@@ -193,12 +210,8 @@ export function OlfactoryScreening({ onComplete, onSkip }: OlfactoryScreeningPro
               disabled={showFeedback}
               className="flex flex-col items-center gap-4 p-6 rounded-lg border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <div className="relative w-32 h-32 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center">
-                <img
-                  src={`/.jpg?key=avkku&height=200&width=200&query=${encodeURIComponent(option.name)}`}
-                  alt={option.name}
-                  className="w-full h-full object-cover"
-                />
+              <div className="relative w-32 h-32 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-lg flex items-center justify-center">
+                <span className="text-7xl">{SMELL_ICONS[option.id] || "🌸"}</span>
               </div>
               <span className="font-medium text-lg">{t(`sensory.olfactory.smell.${option.id}`)}</span>
             </button>
