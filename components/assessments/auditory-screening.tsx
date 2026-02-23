@@ -133,26 +133,37 @@ export function AuditoryScreening({ onComplete, onSkip }: AuditoryScreeningProps
   }
 
   const handleSubmitResponse = () => {
+    const trial = trials[currentTrialIndex]
     const response = userResponse
       .split("")
       .map((d) => Number.parseInt(d))
       .filter((d) => !isNaN(d))
     const isCorrect =
       response.length === 3 &&
-      response[0] === currentTrial.digits[0] &&
-      response[1] === currentTrial.digits[1] &&
-      response[2] === currentTrial.digits[2]
+      response[0] === trial.digits[0] &&
+      response[1] === trial.digits[1] &&
+      response[2] === trial.digits[2]
 
-    const newResults = [...results, { correct: isCorrect, snr: currentTrial.noiseLevel }]
+    console.log("[v0] Trial", currentTrialIndex + 1, "- Expected:", trial.digits.join(""), "Got:", userResponse, "Correct:", isCorrect)
+
+    const newResults = [...results, { correct: isCorrect, snr: trial.noiseLevel }]
     setResults(newResults)
     setUserResponse("")
 
-    if (currentTrialIndex < trials.length - 1) {
-      setCurrentTrialIndex(currentTrialIndex + 1)
+    const nextIndex = currentTrialIndex + 1
+    if (nextIndex < trials.length) {
+      setCurrentTrialIndex(nextIndex)
       setTimeout(() => {
-        playCurrentTrial()
+        // Play the NEXT trial using the index directly
+        const nextTrial = trials[nextIndex]
+        if (audioContextRef.current && nextTrial) {
+          setIsPlaying(true)
+          playDigitTripletWithNoise(nextTrial.digits, nextTrial.noiseLevel, audioContextRef.current)
+            .then(() => setIsPlaying(false))
+        }
       }, 500)
     } else {
+      console.log("[v0] All trials complete. Correct:", newResults.filter(r => r.correct).length, "/", newResults.length)
       finishTest(newResults)
     }
   }
