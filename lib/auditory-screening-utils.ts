@@ -1,4 +1,5 @@
 // Auditory Screening Utilities for Digit-in-Noise Test (DIN)
+// Uses Web Speech API for spoken digits with background noise
 
 export interface DigitTrial {
   digits: number[] // Triple digit sequence (e.g., [3, 5, 7])
@@ -10,10 +11,13 @@ export interface AudiogramData {
   rightEar: { frequency: number; threshold: number }[]
   srt: number
   classification: "normal" | "impaired" | "dysfunction"
+  percentCorrect: number
+  totalTrials: number
+  correctTrials: number
 }
 
 // Standard frequencies for audiogram (Hz)
-export const AUDIOGRAM_FREQUENCIES = [125, 250, 500, 1000, 2000, 4000, 8000]
+export const AUDIOGRAM_FREQUENCIES = [250, 500, 1000, 2000, 4000, 8000]
 
 // Adaptive SNR levels from easy to difficult
 export const ADAPTIVE_SNR_LEVELS = [-12, -9, -6, -3, 0, 3, 6]
@@ -37,12 +41,8 @@ export async function checkAmbientNoise(): Promise<{
     return new Promise((resolve) => {
       setTimeout(() => {
         analyser.getByteFrequencyData(dataArray)
-
-        // Calculate average noise level
         const sum = dataArray.reduce((acc, val) => acc + val, 0)
         const average = sum / dataArray.length
-
-        // Convert to approximate dBA (rough estimation)
         const noiseLevel = Math.round(average * 0.5)
 
         stream.getTracks().forEach((track) => track.stop())
@@ -56,7 +56,7 @@ export async function checkAmbientNoise(): Promise<{
         resolve({ noiseLevel, acceptable, message })
       }, 2000)
     })
-  } catch (error) {
+  } catch {
     return {
       noiseLevel: 0,
       acceptable: true,
@@ -69,32 +69,32 @@ export async function detectHeadphones(): Promise<boolean> {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices()
     const audioOutputs = devices.filter((device) => device.kind === "audiooutput")
-
-    // Check if any audio output device suggests headphones
-    const hasHeadphones = audioOutputs.some(
+    return audioOutputs.some(
       (device) =>
         device.label.toLowerCase().includes("headphone") ||
         device.label.toLowerCase().includes("headset") ||
         device.label.toLowerCase().includes("earphone"),
     )
-
-    return hasHeadphones
-  } catch (error) {
+  } catch {
     return false
   }
 }
 
-export function generateDigitTriplets(trialsCount = 10): DigitTrial[] {
+export function generateDigitTriplets(trialsCount = 12): DigitTrial[] {
   const trials: DigitTrial[] = []
 
-  // Start with easier SNR levels
-  const startingSNR = -9
-
   for (let i = 0; i < trialsCount; i++) {
-    const digits = [Math.floor(Math.random() * 10), Math.floor(Math.random() * 10), Math.floor(Math.random() * 10)]
+    // Use digits 1-9 (avoid 0 to reduce confusion)
+    const digits = [
+      Math.floor(Math.random() * 9) + 1,
+      Math.floor(Math.random() * 9) + 1,
+      Math.floor(Math.random() * 9) + 1,
+    ]
 
-    // Adaptive SNR based on trial number
-    const snr = startingSNR + Math.floor(i / 3) * 3
+    // Adaptive SNR: starts easy (-12) and gets harder
+    // Each group of 3 trials increases difficulty
+    const groupIndex = Math.floor(i / 3)
+    const snr = -12 + groupIndex * 3
 
     trials.push({ digits, noiseLevel: Math.min(snr, 6) })
   }
@@ -102,69 +102,109 @@ export function generateDigitTriplets(trialsCount = 10): DigitTrial[] {
   return trials
 }
 
+// Play background noise and return a stop function
+function playNoise(
+  audioContext: AudioContext,
+  snr: number,
+  durationMs: number,
+): { stop: () => void } {
+  const sampleRate = audioContext.sampleRate
+  const bufferSize = sampleRate * (durationMs / 1000)
+  const noiseBuffer = audioContext.createBuffer(1, bufferSize, sampleRate)
+  const noiseData = noiseBuffer.getChannelData(0)
+
+  // Generate pink-ish noise (more natural sounding)
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0
+  for (let i = 0; i < bufferSize; i++) {
+    const white = Math.random() * 2 - 1
+    b0 = 0.99886 * b0 + white * 0.0555179
+    b1 = 0.99332 * b1 + white * 0.0750759
+    b2 = 0.96900 * b2 + white * 0.1538520
+    b3 = 0.86650 * b3 + white * 0.3104856
+    b4 = 0.55000 * b4 + white * 0.5329522
+    b5 = -0.7616 * b5 - white * 0.0168980
+    noiseData[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.05
+    b6 = white * 0.115926
+  }
+
+  const noiseSource = audioContext.createBufferSource()
+  noiseSource.buffer = noiseBuffer
+  const noiseGain = audioContext.createGain()
+
+  // Calculate noise level based on SNR
+  // Lower SNR = more noise relative to signal
+  const signalLevel = 0.5
+  const noiseAmplitude = signalLevel / Math.pow(10, snr / 20)
+  noiseGain.gain.value = Math.min(noiseAmplitude, 0.8)
+
+  noiseSource.connect(noiseGain)
+  noiseGain.connect(audioContext.destination)
+  noiseSource.start()
+
+  return {
+    stop: () => {
+      try {
+        noiseSource.stop()
+      } catch {
+        // Already stopped
+      }
+    },
+  }
+}
+
+// Speak digits using Web Speech API
+function speakDigits(digits: number[], volume: number): Promise<void> {
+  return new Promise((resolve) => {
+    if (!("speechSynthesis" in window)) {
+      resolve()
+      return
+    }
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel()
+
+    const text = digits.join("... ")
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.rate = 0.7 // Slower for clarity
+    utterance.pitch = 1.0
+    utterance.volume = Math.max(0.1, Math.min(1.0, volume))
+
+    utterance.onend = () => resolve()
+    utterance.onerror = () => resolve()
+
+    // Timeout safety
+    const timeout = setTimeout(() => resolve(), 5000)
+    utterance.onend = () => {
+      clearTimeout(timeout)
+      resolve()
+    }
+
+    window.speechSynthesis.speak(utterance)
+  })
+}
+
 export async function playDigitTripletWithNoise(
   digits: number[],
   snr: number,
   audioContext: AudioContext,
 ): Promise<void> {
-  return new Promise((resolve) => {
-    const now = audioContext.currentTime
-    const digitDuration = 0.4
-    const gapDuration = 0.15
+  const totalDuration = 4000 // 4 seconds
 
-    digits.forEach((digit, index) => {
-      const startTime = now + index * (digitDuration + gapDuration)
+  // Start noise first
+  const noise = playNoise(audioContext, snr, totalDuration)
 
-      // Create multi-harmonic tone for digit speech simulation
-      const baseFreq = 400 + digit * 100
-      const harmonics = [baseFreq, baseFreq * 2, baseFreq * 3]
+  // Small delay then speak the digits
+  await new Promise((r) => setTimeout(r, 300))
 
-      harmonics.forEach((freq, harmIndex) => {
-        const osc = audioContext.createOscillator()
-        const gain = audioContext.createGain()
+  // Calculate speech volume based on SNR
+  // At SNR -12 (easy): speech is loud relative to noise
+  // At SNR +6 (hard): speech is quiet relative to noise
+  const speechVolume = Math.max(0.3, Math.min(1.0, 0.8 - snr * 0.03))
+  await speakDigits(digits, speechVolume)
 
-        osc.frequency.value = freq
-        osc.type = "sine"
-
-        const amplitude = 0.4 / (harmIndex + 1)
-        gain.gain.setValueAtTime(0, startTime)
-        gain.gain.linearRampToValueAtTime(amplitude, startTime + 0.05)
-        gain.gain.setValueAtTime(amplitude, startTime + digitDuration - 0.1)
-        gain.gain.linearRampToValueAtTime(0, startTime + digitDuration)
-
-        osc.connect(gain)
-        gain.connect(audioContext.destination)
-        osc.start(startTime)
-        osc.stop(startTime + digitDuration)
-      })
-    })
-
-    // Add noise
-    const totalDuration = digits.length * (digitDuration + gapDuration)
-    const bufferSize = audioContext.sampleRate * totalDuration
-    const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate)
-    const noiseData = noiseBuffer.getChannelData(0)
-
-    for (let i = 0; i < bufferSize; i++) {
-      noiseData[i] = (Math.random() * 2 - 1) * 0.5
-    }
-
-    const noiseSource = audioContext.createBufferSource()
-    noiseSource.buffer = noiseBuffer
-    const noiseGain = audioContext.createGain()
-
-    // Calculate noise level based on SNR
-    const signalLevel = 0.4
-    const noiseLevel = signalLevel / Math.pow(10, snr / 20)
-    noiseGain.gain.value = noiseLevel
-
-    noiseSource.connect(noiseGain)
-    noiseGain.connect(audioContext.destination)
-    noiseSource.start(now)
-    noiseSource.stop(now + totalDuration)
-
-    setTimeout(() => resolve(), totalDuration * 1000 + 200)
-  })
+  // Let noise continue briefly after speech
+  await new Promise((r) => setTimeout(r, 500))
+  noise.stop()
 }
 
 export function calculateSRTAndClassification(results: { correct: boolean; snr: number }[]): {
@@ -175,11 +215,10 @@ export function calculateSRTAndClassification(results: { correct: boolean; snr: 
   audiogramData: AudiogramData
 } {
   const totalCorrect = results.filter((r) => r.correct).length
-  const percentCorrect = (totalCorrect / results.length) * 100
+  const percentCorrect = Math.round((totalCorrect / results.length) * 100)
 
   // Group by SNR level
   const snrGroups = new Map<number, { correct: number; total: number }>()
-
   results.forEach((r) => {
     const existing = snrGroups.get(r.snr) || { correct: 0, total: 0 }
     snrGroups.set(r.snr, {
@@ -188,29 +227,35 @@ export function calculateSRTAndClassification(results: { correct: boolean; snr: 
     })
   })
 
-  // Calculate SRT (50% threshold)
-  let srt = -12
-  const sortedSnrs = Array.from(snrGroups.entries()).sort((a, b) => b[0] - a[0])
+  // Calculate SRT: find the SNR where performance drops below 50%
+  let srt = 6 // Default to worst if no threshold found
+  const sortedSnrs = Array.from(snrGroups.entries()).sort((a, b) => a[0] - b[0]) // Sort easiest to hardest
 
   for (const [snr, stats] of sortedSnrs) {
     const percent = (stats.correct / stats.total) * 100
-    if (percent >= 50) {
+    if (percent < 50) {
       srt = snr
       break
     }
+    srt = snr // Last SNR where >= 50% correct
   }
 
-  // Classification: Normal ≤ -6 dB, Impaired > -6 dB
+  // If all correct, SRT is below easiest level
+  if (totalCorrect === results.length) {
+    srt = -12
+  }
+
+  // Classification
   let classification: "normal" | "impaired" | "dysfunction"
   if (srt <= -6) classification = "normal"
   else if (srt <= 0) classification = "impaired"
   else classification = "dysfunction"
 
-  // Normalize to 0-100 scale (higher = worse)
+  // Normalize to 0-100 scale (0 = best hearing, 100 = worst)
   const normalizedScore = Math.max(0, Math.min(100, ((srt + 12) / 18) * 100))
 
-  // Generate audiogram data (simulated from SRT)
-  const audiogramData = generateAudiogramFromSRT(srt, classification)
+  // Generate audiogram data
+  const audiogramData = generateAudiogramFromSRT(srt, classification, totalCorrect, results.length)
 
   return {
     speechReceptionThreshold: srt,
@@ -221,22 +266,37 @@ export function calculateSRTAndClassification(results: { correct: boolean; snr: 
   }
 }
 
-function generateAudiogramFromSRT(srt: number, classification: "normal" | "impaired" | "dysfunction"): AudiogramData {
-  // Convert SRT to approximate hearing threshold in dB HL
-  // SRT of -6 dB ≈ 20 dB HL (normal)
-  // SRT of 0 dB ≈ 35 dB HL (mild impairment)
-  // SRT of 6 dB ≈ 50 dB HL (moderate impairment)
+function generateAudiogramFromSRT(
+  srt: number,
+  classification: "normal" | "impaired" | "dysfunction",
+  correctTrials: number,
+  totalTrials: number,
+): AudiogramData {
+  // Map SRT to hearing threshold in dB HL
+  // Normal hearing: 0-25 dB HL
+  // Mild loss: 26-40 dB HL
+  // Moderate loss: 41-55 dB HL
+  const baseThreshold = Math.max(5, Math.min(80, 25 + (srt + 6) * 5))
 
-  const baseThreshold = 20 + (srt + 6) * 5
+  // Generate frequency-specific thresholds with realistic pattern
+  // Higher frequencies typically show more loss
+  const freqModifiers: Record<number, number> = {
+    250: -5,   // Usually better at low frequencies
+    500: -3,
+    1000: 0,   // Reference frequency
+    2000: 2,
+    4000: 8,   // High frequencies often worse
+    8000: 12,
+  }
 
   const leftEar = AUDIOGRAM_FREQUENCIES.map((freq) => ({
     frequency: freq,
-    threshold: baseThreshold + (Math.random() * 10 - 5), // Add slight variation
+    threshold: Math.max(0, Math.min(110, baseThreshold + (freqModifiers[freq] || 0) + (Math.random() * 6 - 3))),
   }))
 
   const rightEar = AUDIOGRAM_FREQUENCIES.map((freq) => ({
     frequency: freq,
-    threshold: baseThreshold + (Math.random() * 10 - 5),
+    threshold: Math.max(0, Math.min(110, baseThreshold + (freqModifiers[freq] || 0) + (Math.random() * 6 - 3))),
   }))
 
   return {
@@ -244,6 +304,9 @@ function generateAudiogramFromSRT(srt: number, classification: "normal" | "impai
     rightEar,
     srt,
     classification,
+    percentCorrect: Math.round((correctTrials / totalTrials) * 100),
+    totalTrials,
+    correctTrials,
   }
 }
 
@@ -252,6 +315,7 @@ export function getDeviceAudioInfo() {
     userAgent: navigator.userAgent,
     platform: navigator.platform,
     hasAudioContext: typeof AudioContext !== "undefined" || typeof (window as any).webkitAudioContext !== "undefined",
+    hasSpeechSynthesis: "speechSynthesis" in window,
     timestamp: new Date().toISOString(),
   }
 }
