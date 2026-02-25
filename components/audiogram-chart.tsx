@@ -2,78 +2,46 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { AudiogramData } from "@/lib/auditory-screening-utils"
-import {
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  ReferenceLine,
-  ReferenceArea,
-} from "recharts"
 
 interface AudiogramChartProps {
   data: AudiogramData
   showTitle?: boolean
 }
 
+const FREQ_LABELS = ["250", "500", "1k", "2k", "4k", "8k"]
+const FREQ_VALUES = [250, 500, 1000, 2000, 4000, 8000]
+const DB_TICKS = [-10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
+
+// Hearing loss zones
+const ZONES = [
+  { label: "Normal", y1: -10, y2: 25, color: "#ccfbf1" },
+  { label: "Mild", y1: 25, y2: 40, color: "#fef9c3" },
+  { label: "Moderate", y1: 40, y2: 55, color: "#ffedd5" },
+  { label: "Mod-Severe", y1: 55, y2: 70, color: "#fed7aa" },
+  { label: "Severe", y1: 70, y2: 90, color: "#fee2e2" },
+  { label: "Profound", y1: 90, y2: 120, color: "#fecaca" },
+]
+
 export function AudiogramChart({ data, showTitle = true }: AudiogramChartProps) {
-  // Transform data for Recharts scatter plot
-  const leftEarData = data.leftEar.map((point) => ({
-    frequency: point.frequency,
-    threshold: Math.round(point.threshold),
-    ear: "Left",
-  }))
+  // Chart dimensions
+  const W = 600
+  const H = 400
+  const PAD = { top: 30, right: 30, bottom: 50, left: 60 }
+  const plotW = W - PAD.left - PAD.right
+  const plotH = H - PAD.top - PAD.bottom
 
-  const rightEarData = data.rightEar.map((point) => ({
-    frequency: point.frequency,
-    threshold: Math.round(point.threshold),
-    ear: "Right",
-  }))
+  // Map frequency index (0-5) to X position
+  const xPos = (idx: number) => PAD.left + (idx / (FREQ_VALUES.length - 1)) * plotW
 
-  // Custom X-axis tick formatter for audiogram frequencies
-  const formatFrequency = (value: number) => {
-    if (value >= 1000) return `${value / 1000}k`
-    return String(value)
+  // Map dB HL to Y position (inverted: -10 at top, 120 at bottom)
+  const yPos = (db: number) => {
+    const ratio = (db - (-10)) / (120 - (-10))
+    return PAD.top + ratio * plotH
   }
 
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const d = payload[0].payload
-      return (
-        <div className="bg-background border rounded-lg px-3 py-2 shadow-md text-sm">
-          <p className="font-semibold">{d.ear} Ear</p>
-          <p>Frequency: {d.frequency} Hz</p>
-          <p>Threshold: {d.threshold} dB HL</p>
-        </div>
-      )
-    }
-    return null
-  }
-
-  // Custom shape for left ear (X marker)
-  const LeftEarMarker = (props: any) => {
-    const { cx, cy } = props
-    if (!cx || !cy) return null
-    const s = 7
-    return (
-      <g>
-        <line x1={cx - s} y1={cy - s} x2={cx + s} y2={cy + s} stroke="#2563eb" strokeWidth="2.5" />
-        <line x1={cx + s} y1={cy - s} x2={cx - s} y2={cy + s} stroke="#2563eb" strokeWidth="2.5" />
-      </g>
-    )
-  }
-
-  // Custom shape for right ear (O marker)
-  const RightEarMarker = (props: any) => {
-    const { cx, cy } = props
-    if (!cx || !cy) return null
-    return <circle cx={cx} cy={cy} r={7} fill="none" stroke="#dc2626" strokeWidth="2.5" />
-  }
+  // Build polyline strings
+  const leftPoints = data.leftEar.map((p, i) => `${xPos(i)},${yPos(p.threshold)}`).join(" ")
+  const rightPoints = data.rightEar.map((p, i) => `${xPos(i)},${yPos(p.threshold)}`).join(" ")
 
   return (
     <Card className="w-full">
@@ -91,13 +59,15 @@ export function AudiogramChart({ data, showTitle = true }: AudiogramChartProps) 
             </div>
             <div className="ml-auto text-xs">
               <span className="font-semibold">SRT: {data.srt} dB SNR</span>
-              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${
-                data.classification === "normal"
-                  ? "bg-green-100 text-green-800"
-                  : data.classification === "impaired"
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "bg-red-100 text-red-800"
-              }`}>
+              <span
+                className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${
+                  data.classification === "normal"
+                    ? "bg-green-100 text-green-800"
+                    : data.classification === "impaired"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
+                }`}
+              >
                 {data.classification}
               </span>
             </div>
@@ -105,91 +75,156 @@ export function AudiogramChart({ data, showTitle = true }: AudiogramChartProps) 
         </CardHeader>
       )}
       <CardContent>
-        <div className="w-full" style={{ height: 380 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart margin={{ top: 10, right: 20, bottom: 30, left: 20 }}>
-              {/* Hearing loss zone backgrounds */}
-              <ReferenceArea y1={0} y2={25} fill="#ccfbf1" fillOpacity={0.5} />
-              <ReferenceArea y1={25} y2={40} fill="#fef9c3" fillOpacity={0.5} />
-              <ReferenceArea y1={40} y2={55} fill="#ffedd5" fillOpacity={0.5} />
-              <ReferenceArea y1={55} y2={70} fill="#fed7aa" fillOpacity={0.5} />
-              <ReferenceArea y1={70} y2={90} fill="#fee2e2" fillOpacity={0.5} />
-              <ReferenceArea y1={90} y2={120} fill="#fecaca" fillOpacity={0.5} />
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="w-full"
+          style={{ maxHeight: 420 }}
+          role="img"
+          aria-label="Audiogram showing hearing thresholds for left and right ears"
+        >
+          {/* Hearing loss zone backgrounds */}
+          {ZONES.map((z) => (
+            <rect
+              key={z.label}
+              x={PAD.left}
+              y={yPos(z.y1)}
+              width={plotW}
+              height={yPos(z.y2) - yPos(z.y1)}
+              fill={z.color}
+              opacity="0.5"
+            />
+          ))}
 
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-
-              <XAxis
-                dataKey="frequency"
-                type="number"
-                scale="log"
-                domain={[200, 10000]}
-                ticks={[250, 500, 1000, 2000, 4000, 8000]}
-                tickFormatter={formatFrequency}
-                label={{ value: "Frequency (Hz)", position: "bottom", offset: 10, fontSize: 13 }}
-                stroke="#6b7280"
-                fontSize={11}
+          {/* Grid lines - horizontal */}
+          {DB_TICKS.map((db) => (
+            <g key={`h-${db}`}>
+              <line
+                x1={PAD.left}
+                y1={yPos(db)}
+                x2={PAD.left + plotW}
+                y2={yPos(db)}
+                stroke="#d1d5db"
+                strokeWidth="0.5"
+                strokeDasharray={db % 20 === 0 ? "0" : "4 4"}
               />
+              <text x={PAD.left - 8} y={yPos(db) + 4} textAnchor="end" fontSize="10" fill="#6b7280">
+                {db}
+              </text>
+            </g>
+          ))}
 
-              <YAxis
-                dataKey="threshold"
-                type="number"
-                domain={[-10, 120]}
-                reversed={true}
-                ticks={[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]}
-                label={{ value: "Hearing Level (dB HL)", angle: -90, position: "insideLeft", offset: -5, fontSize: 13 }}
-                stroke="#6b7280"
-                fontSize={11}
+          {/* Grid lines - vertical */}
+          {FREQ_VALUES.map((_, i) => (
+            <g key={`v-${i}`}>
+              <line
+                x1={xPos(i)}
+                y1={PAD.top}
+                x2={xPos(i)}
+                y2={PAD.top + plotH}
+                stroke="#d1d5db"
+                strokeWidth="0.5"
+                strokeDasharray="4 4"
               />
+              <text
+                x={xPos(i)}
+                y={PAD.top + plotH + 18}
+                textAnchor="middle"
+                fontSize="11"
+                fill="#6b7280"
+              >
+                {FREQ_LABELS[i]}
+              </text>
+            </g>
+          ))}
 
-              {/* Reference lines for classification boundaries */}
-              <ReferenceLine y={25} stroke="#15803d" strokeDasharray="5 5" strokeWidth={1.5} />
-              <ReferenceLine y={40} stroke="#a16207" strokeDasharray="5 5" strokeWidth={1.5} />
-              <ReferenceLine y={70} stroke="#dc2626" strokeDasharray="5 5" strokeWidth={1.5} />
+          {/* Axis labels */}
+          <text x={W / 2} y={H - 5} textAnchor="middle" fontSize="12" fill="#374151" fontWeight="500">
+            Frequency (Hz)
+          </text>
+          <text
+            x={15}
+            y={H / 2}
+            textAnchor="middle"
+            fontSize="12"
+            fill="#374151"
+            fontWeight="500"
+            transform={`rotate(-90, 15, ${H / 2})`}
+          >
+            Hearing Level (dB HL)
+          </text>
 
-              <Tooltip content={<CustomTooltip />} />
+          {/* Classification boundary labels */}
+          <text x={PAD.left + plotW + 2} y={yPos(25) + 4} fontSize="8" fill="#15803d" fontWeight="500">
+            25
+          </text>
+          <text x={PAD.left + plotW + 2} y={yPos(40) + 4} fontSize="8" fill="#a16207" fontWeight="500">
+            40
+          </text>
+          <text x={PAD.left + plotW + 2} y={yPos(70) + 4} fontSize="8" fill="#dc2626" fontWeight="500">
+            70
+          </text>
 
-              <Scatter
-                name="Left Ear"
-                data={leftEarData}
-                shape={<LeftEarMarker />}
-                line={{ stroke: "#2563eb", strokeWidth: 2 }}
-              />
-              <Scatter
-                name="Right Ear"
-                data={rightEarData}
-                shape={<RightEarMarker />}
-                line={{ stroke: "#dc2626", strokeWidth: 2 }}
-              />
-            </ScatterChart>
-          </ResponsiveContainer>
-        </div>
+          {/* Left ear line (blue) */}
+          <polyline points={leftPoints} fill="none" stroke="#2563eb" strokeWidth="2" />
+
+          {/* Left ear X markers */}
+          {data.leftEar.map((p, i) => {
+            const cx = xPos(i)
+            const cy = yPos(p.threshold)
+            const s = 6
+            return (
+              <g key={`l-${i}`}>
+                <line x1={cx - s} y1={cy - s} x2={cx + s} y2={cy + s} stroke="#2563eb" strokeWidth="2.5" />
+                <line x1={cx + s} y1={cy - s} x2={cx - s} y2={cy + s} stroke="#2563eb" strokeWidth="2.5" />
+                <text x={cx} y={cy - 10} fontSize="9" textAnchor="middle" fill="#2563eb" fontWeight="600">
+                  {Math.round(p.threshold)}
+                </text>
+              </g>
+            )
+          })}
+
+          {/* Right ear line (red) */}
+          <polyline points={rightPoints} fill="none" stroke="#dc2626" strokeWidth="2" />
+
+          {/* Right ear O markers */}
+          {data.rightEar.map((p, i) => {
+            const cx = xPos(i)
+            const cy = yPos(p.threshold)
+            return (
+              <g key={`r-${i}`}>
+                <circle cx={cx} cy={cy} r="6" fill="none" stroke="#dc2626" strokeWidth="2.5" />
+                <text x={cx} y={cy + 18} fontSize="9" textAnchor="middle" fill="#dc2626" fontWeight="600">
+                  {Math.round(p.threshold)}
+                </text>
+              </g>
+            )
+          })}
+
+          {/* Plot border */}
+          <rect
+            x={PAD.left}
+            y={PAD.top}
+            width={plotW}
+            height={plotH}
+            fill="none"
+            stroke="#9ca3af"
+            strokeWidth="1"
+          />
+        </svg>
 
         {/* Hearing loss zone legend */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5 mt-3 text-xs">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm border border-gray-300" style={{ backgroundColor: "#ccfbf1" }}></div>
-            <span>Normal (0-25 dB)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm border border-gray-300" style={{ backgroundColor: "#fef9c3" }}></div>
-            <span>Mild (26-40 dB)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm border border-gray-300" style={{ backgroundColor: "#ffedd5" }}></div>
-            <span>Moderate (41-55 dB)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm border border-gray-300" style={{ backgroundColor: "#fed7aa" }}></div>
-            <span>Mod-Severe (56-70 dB)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm border border-gray-300" style={{ backgroundColor: "#fee2e2" }}></div>
-            <span>Severe (71-90 dB)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm border border-gray-300" style={{ backgroundColor: "#fecaca" }}></div>
-            <span>Profound (90+ dB)</span>
-          </div>
+          {ZONES.map((z) => (
+            <div key={z.label} className="flex items-center gap-1.5">
+              <div
+                className="w-3 h-3 rounded-sm border border-gray-300"
+                style={{ backgroundColor: z.color }}
+              ></div>
+              <span>
+                {z.label} ({z.y1 < 0 ? `${z.y1}` : z.y1}-{z.y2} dB)
+              </span>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
