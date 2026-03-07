@@ -326,21 +326,10 @@ function generateAudiogramFromSRT(
 }
 
 export function getDeviceAudioInfo() {
-  // Check if we're in browser
-  if (typeof window === "undefined" || typeof navigator === "undefined") {
-    return {
-      userAgent: "unknown",
-      platform: "unknown",
-      hasAudioContext: false,
-      hasSpeechSynthesis: false,
-      timestamp: new Date().toISOString(),
-    }
-  }
-
   return {
     userAgent: navigator.userAgent,
     platform: navigator.platform,
-    hasAudioContext: typeof AudioContext !== "undefined" || typeof (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext !== "undefined",
+    hasAudioContext: typeof AudioContext !== "undefined" || typeof (window as any).webkitAudioContext !== "undefined",
     hasSpeechSynthesis: "speechSynthesis" in window,
     timestamp: new Date().toISOString(),
   }
