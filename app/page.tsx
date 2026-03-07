@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { UserProvider, useUser } from "@/contexts/user-context"
+import { useUser } from "@/contexts/user-context"
 import { Registration } from "@/components/registration"
 import { Dashboard } from "@/components/dashboard"
 import { ImageUpload } from "@/components/image-upload"
@@ -369,9 +369,5 @@ function AppContent() {
 }
 
 export default function Home() {
-  return (
-    <UserProvider>
-      <AppContent />
-    </UserProvider>
-  )
+  return <AppContent />
 }
