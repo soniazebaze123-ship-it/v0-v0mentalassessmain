@@ -27,9 +27,19 @@ export async function checkAmbientNoise(): Promise<{
   acceptable: boolean
   message: string
 }> {
+  // Check if we're in browser
+  if (typeof window === "undefined") {
+    return {
+      noiseLevel: 0,
+      acceptable: true,
+      message: "Unable to measure ambient noise. Proceeding with test.",
+    }
+  }
+
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    const audioContext = new AudioContext()
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    const audioContext = new AudioContextClass()
     const source = audioContext.createMediaStreamSource(stream)
     const analyser = audioContext.createAnalyser()
 
@@ -66,6 +76,11 @@ export async function checkAmbientNoise(): Promise<{
 }
 
 export async function detectHeadphones(): Promise<boolean> {
+  // Check if we're in browser
+  if (typeof window === "undefined" || typeof navigator === "undefined") {
+    return false
+  }
+
   try {
     const devices = await navigator.mediaDevices.enumerateDevices()
     const audioOutputs = devices.filter((device) => device.kind === "audiooutput")
@@ -311,10 +326,21 @@ function generateAudiogramFromSRT(
 }
 
 export function getDeviceAudioInfo() {
+  // Check if we're in browser
+  if (typeof window === "undefined" || typeof navigator === "undefined") {
+    return {
+      userAgent: "unknown",
+      platform: "unknown",
+      hasAudioContext: false,
+      hasSpeechSynthesis: false,
+      timestamp: new Date().toISOString(),
+    }
+  }
+
   return {
     userAgent: navigator.userAgent,
     platform: navigator.platform,
-    hasAudioContext: typeof AudioContext !== "undefined" || typeof (window as any).webkitAudioContext !== "undefined",
+    hasAudioContext: typeof AudioContext !== "undefined" || typeof (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext !== "undefined",
     hasSpeechSynthesis: "speechSynthesis" in window,
     timestamp: new Date().toISOString(),
   }
