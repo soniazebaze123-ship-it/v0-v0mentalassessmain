@@ -1,14 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { UserProvider, useUser } from "@/contexts/user-context"
+import { useUser } from "@/contexts/user-context"
 import { Registration } from "@/components/registration"
 import { Dashboard } from "@/components/dashboard"
 import { ImageUpload } from "@/components/image-upload"
 import { ResultsDisplay } from "@/components/results-display"
 import { RiskProfileDisplay } from "@/components/risk-profile-display"
 import { Login } from "@/components/login"
-import { AdminPanel } from "@/components/admin-panel"
+import dynamic from "next/dynamic"
+const AdminPanel = dynamic(() => import("@/components/admin-panel").then(mod => mod.AdminPanel), { ssr: false })
 
 // MoCA Components
 import { InteractiveClock } from "@/components/assessments/interactive-clock"
