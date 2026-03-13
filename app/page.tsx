@@ -370,9 +370,5 @@ function AppContent() {
 }
 
 export default function Home() {
-  return (
-    <UserProvider>
-      <AppContent />
-    </UserProvider>
-  )
+  return <AppContent />
 }
