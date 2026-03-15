@@ -1,19 +1,31 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect, useCallback } from "react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Slider } from "@/components/ui/slider"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import { useUser } from "@/contexts/user-context"
 import { supabase } from "@/lib/supabase"
 import { useLanguage } from "@/contexts/language-context"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
 import {
   LOG_MAR_LEVELS,
-  generateRandomOrientations,
+  generateRandomDirection,
   calculateLogMARScore,
   getDeviceInfo,
+  calculatePPIFromCreditCard,
+  estimateScreenPPI,
+  calculateOptotypeSize,
+  logMARToSnellen,
+  getVisualRiskLevel,
+  CREDIT_CARD_WIDTH_MM,
+  DEFAULT_VIEWING_DISTANCE_CM,
+  type TumblingEDirection,
+  type VisualCalibration,
 } from "@/lib/visual-acuity-utils"
-import { Eye, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react"
+import { Eye, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, CreditCard, Ruler, CheckCircle2, AlertCircle } from "lucide-react"
 import { TestProgress } from "@/components/ui/test-progress"
 import { ScoreGauge, getScoreRiskLevel } from "@/components/ui/score-gauge"
 import { RiskBadge } from "@/components/ui/risk-badge"
@@ -23,45 +35,78 @@ interface VisualScreeningProps {
   onSkip?: () => void
 }
 
+type Phase = "intro" | "calibration" | "distance" | "testing" | "results"
+
 export function VisualScreening({ onComplete, onSkip }: VisualScreeningProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const { user } = useUser()
 
-  const [currentLevel, setCurrentLevel] = useState(0)
+  // Phase management
+  const [phase, setPhase] = useState<Phase>("intro")
+  
+  // Calibration state
+  const [calibration, setCalibration] = useState<VisualCalibration>({
+    ppi: estimateScreenPPI(),
+    viewingDistanceCm: DEFAULT_VIEWING_DISTANCE_CM,
+    confirmed: false,
+  })
+  const [cardWidthPixels, setCardWidthPixels] = useState(300)
+  
+  // Test state
+  const [currentLevel, setCurrentLevel] = useState(5) // Start at logMAR 0.5 (20/63)
   const [currentTrial, setCurrentTrial] = useState(0)
+  const [totalTrials, setTotalTrials] = useState(0)
+  const [correctCount, setCorrectCount] = useState(0)
   const [results, setResults] = useState<{ level: number; correct: number; total: number }[]>([])
   const [levelResponses, setLevelResponses] = useState<boolean[]>([])
-  const [testStarted, setTestStarted] = useState(false)
-  const [testComplete, setTestComplete] = useState(false)
-  const [viewingDistance, setViewingDistance] = useState<"near" | "far">("far")
+  const [currentDirection, setCurrentDirection] = useState<TumblingEDirection>(generateRandomDirection())
+  const [trialStartTime, setTrialStartTime] = useState<number>(Date.now())
+  
+  // Results state
   const [finalScore, setFinalScore] = useState(0)
+  const [finalLogMAR, setFinalLogMAR] = useState(0)
+  const [classification, setClassification] = useState<"normal" | "impaired" | "dysfunction">("normal")
 
-  // Generate orientations for current level
-  const [orientations] = useState(() => {
-    const levels = LOG_MAR_LEVELS.map((level) => ({
-      ...level,
-      orientations: generateRandomOrientations(5),
-    }))
-    return levels
-  })
+  // Update PPI when card width changes
+  useEffect(() => {
+    const newPPI = calculatePPIFromCreditCard(cardWidthPixels)
+    setCalibration(prev => ({ ...prev, ppi: newPPI }))
+  }, [cardWidthPixels])
 
-  const currentLevelData = orientations[currentLevel]
-  const currentOrientation = currentLevelData.orientations[currentTrial]
+  // Calculate E size based on current level and calibration
+  const currentLevelData = LOG_MAR_LEVELS[currentLevel] || LOG_MAR_LEVELS[5]
+  const eSize = calculateOptotypeSize(
+    currentLevelData.logMAR,
+    calibration.ppi,
+    calibration.viewingDistanceCm
+  )
 
-  const handleStart = () => {
-    setTestStarted(true)
+  const handleConfirmCalibration = () => {
+    setCalibration(prev => ({ ...prev, confirmed: true }))
+    setPhase("distance")
   }
 
-  const handleResponse = (response: "up" | "down" | "left" | "right") => {
-    const isCorrect = response === currentOrientation
+  const handleStartTest = () => {
+    setPhase("testing")
+    setCurrentDirection(generateRandomDirection())
+    setTrialStartTime(Date.now())
+  }
+
+  const handleResponse = (response: TumblingEDirection) => {
+    const reactionTime = Date.now() - trialStartTime
+    const isCorrect = response === currentDirection
     const newResponses = [...levelResponses, isCorrect]
     setLevelResponses(newResponses)
+    setTotalTrials(prev => prev + 1)
+    if (isCorrect) setCorrectCount(prev => prev + 1)
 
     // Move to next trial or level
     if (currentTrial < 4) {
       setCurrentTrial(currentTrial + 1)
+      setCurrentDirection(generateRandomDirection())
+      setTrialStartTime(Date.now())
     } else {
-      // Level complete
+      // Level complete - evaluate
       const correct = newResponses.filter((r) => r).length
       const newResults = [
         ...results,
@@ -75,50 +120,64 @@ export function VisualScreening({ onComplete, onSkip }: VisualScreeningProps) {
       setLevelResponses([])
       setCurrentTrial(0)
 
-      // Check if we should continue or stop
-      if (correct < 3 || currentLevel === LOG_MAR_LEVELS.length - 1) {
-        // Test complete
-        finishTest(newResults)
-      } else {
-        // Continue to next level
+      // Adaptive staircase logic
+      const passed = correct >= 3
+      
+      if (passed && currentLevel < LOG_MAR_LEVELS.length - 1) {
+        // Move to harder level (smaller letters)
         setCurrentLevel(currentLevel + 1)
+        setCurrentDirection(generateRandomDirection())
+        setTrialStartTime(Date.now())
+      } else if (!passed && currentLevel > 0) {
+        // Failed - might need to go back or finish
+        // If this is second failure at a level or we've done enough trials, finish
+        if (newResults.length >= 3 || totalTrials >= 20) {
+          finishTest(newResults)
+        } else {
+          setCurrentLevel(currentLevel - 1)
+          setCurrentDirection(generateRandomDirection())
+          setTrialStartTime(Date.now())
+        }
+      } else {
+        // Reached end of levels or max trials
+        finishTest(newResults)
       }
     }
   }
 
   const finishTest = async (finalResults: { level: number; correct: number; total: number }[]) => {
-    setTestComplete(true)
+    const { finalLogMAR: logMAR, classification: cls, normalizedScore } = calculateLogMARScore(finalResults)
 
-    const { finalLogMAR, classification, normalizedScore } = calculateLogMARScore(finalResults)
-
-    const displayScore = Math.round(normalizedScore)
-    setFinalScore(displayScore)
+    setFinalLogMAR(logMAR)
+    setClassification(cls)
+    setFinalScore(Math.round(normalizedScore))
+    setPhase("results")
 
     // Save to database
     if (user) {
       try {
-        console.log("[v0] Saving visual screening - normalized_score:", normalizedScore, "display score:", displayScore)
         await supabase.from("sensory_assessments").insert({
           user_id: user.id,
           test_type: "visual",
-          raw_score: finalLogMAR,
+          raw_score: logMAR,
           normalized_score: normalizedScore,
-          classification: classification,
+          classification: cls,
           test_data: {
             levels_completed: finalResults,
-            viewing_distance: viewingDistance,
-            total_trials: finalResults.reduce((sum, r) => sum + r.total, 0),
-            total_correct: finalResults.reduce((sum, r) => sum + r.correct, 0),
+            calibration: calibration,
+            total_trials: totalTrials,
+            total_correct: correctCount,
+            snellen_equivalent: logMARToSnellen(logMAR),
           },
           device_info: getDeviceInfo(),
           environment_data: {
-            test_type: "tumbling_e",
+            test_type: "tumbling_e_adaptive",
             self_administered: true,
+            calibrated: calibration.confirmed,
           },
         })
-        console.log("[v0] Visual screening saved successfully")
       } catch (error) {
-        console.error("[v0] Error saving visual screening:", error)
+        console.error("Error saving visual screening:", error)
       }
     }
   }
@@ -131,54 +190,61 @@ export function VisualScreening({ onComplete, onSkip }: VisualScreeningProps) {
     }
   }
 
-  if (!testStarted) {
+  // Render rotation transform for E
+  const getRotation = (direction: TumblingEDirection): string => {
+    switch (direction) {
+      case "right": return "rotate(0deg)"
+      case "down": return "rotate(90deg)"
+      case "left": return "rotate(180deg)"
+      case "up": return "rotate(270deg)"
+      default: return "rotate(0deg)"
+    }
+  }
+
+  // ========== INTRO PHASE ==========
+  if (phase === "intro") {
     return (
-      <Card className="w-full max-w-4xl mx-auto">
+      <Card className="w-full max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Eye className="h-6 w-6" />
-            {t("sensory.visual.title")}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">{t("sensory.visual.description")}</p>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+              <Eye className="h-8 w-8" />
+            </div>
+            <div>
+              <CardTitle>{language === "zh" ? "视力检查" : "Visual Acuity Test"}</CardTitle>
+              <CardDescription>
+                {language === "zh" ? "3-5分钟 · Tumbling-E自适应阶梯测试" : "3-5 min · Tumbling-E adaptive staircase test"}
+              </CardDescription>
+            </div>
+          </div>
           <InstructionAudio instructionKey="sensory.visual.instruction" className="mt-2" />
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="bg-blue-50 dark:bg-blue-950 p-6 rounded-lg space-y-4">
-            <h3 className="font-semibold">{t("sensory.visual.setup_title")}</h3>
-            <ul className="space-y-2 text-sm">
-              <li>• {t("sensory.visual.setup_1")}</li>
-              <li>• {t("sensory.visual.setup_2")}</li>
-              <li>• {t("sensory.visual.setup_3")}</li>
-              <li>• {t("sensory.visual.setup_4")}</li>
-            </ul>
+          <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg space-y-3">
+            <h4 className="font-medium">{language === "zh" ? "测试说明" : "About this test"}:</h4>
+            <p className="text-sm text-muted-foreground">
+              {language === "zh" 
+                ? "此测试通过显示不同大小的字母\"E\"来测量您的近视力敏锐度。结果以logMAR（最小分辨角对数）表示。"
+                : "This test measures your near-vision sharpness by displaying letter \"E\" in different sizes. Results are expressed in logMAR (logarithm of the Minimum Angle of Resolution)."}
+            </p>
           </div>
 
-          <div className="space-y-4">
-            <label className="text-sm font-medium">{t("sensory.visual.viewing_distance")}</label>
-            <div className="flex gap-4">
-              <Button
-                variant={viewingDistance === "far" ? "default" : "outline"}
-                onClick={() => setViewingDistance("far")}
-                className="flex-1"
-              >
-                {t("sensory.visual.distance_far")}
-              </Button>
-              <Button
-                variant={viewingDistance === "near" ? "default" : "outline"}
-                onClick={() => setViewingDistance("near")}
-                className="flex-1"
-              >
-                {t("sensory.visual.distance_near")}
-              </Button>
-            </div>
+          <div className="space-y-3">
+            <h4 className="font-medium">{language === "zh" ? "测试步骤" : "Test steps"}:</h4>
+            <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-2">
+              <li>{language === "zh" ? "校准屏幕：使用信用卡调整显示尺寸" : "Screen calibration: Adjust display size using a credit card"}</li>
+              <li>{language === "zh" ? "设置距离：将设备保持在40厘米处" : "Set distance: Hold device at 40cm (arm's length)"}</li>
+              <li>{language === "zh" ? "开始测试：选择字母\"E\"指向的方向" : "Start test: Select the direction the letter \"E\" is pointing"}</li>
+            </ol>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-4">
-            <Button variant="outline" onClick={handleSkip} className="w-full sm:w-auto bg-transparent">
-              {t("common.skip_task")}
+          <div className="flex gap-3 pt-4">
+            <Button variant="outline" onClick={handleSkip} className="flex-1">
+              {language === "zh" ? "跳过" : "Skip"}
             </Button>
-            <Button onClick={handleStart} className="w-full sm:w-auto">
-              {t("sensory.visual.start_test")}
+            <Button onClick={() => setPhase("calibration")} className="flex-1">
+              {language === "zh" ? "开始校准" : "Start Calibration"}
+              <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
         </CardContent>
@@ -186,73 +252,277 @@ export function VisualScreening({ onComplete, onSkip }: VisualScreeningProps) {
     )
   }
 
-  if (testComplete) {
+  // ========== CALIBRATION PHASE ==========
+  if (phase === "calibration") {
+    const cardWidthMM = (cardWidthPixels / calibration.ppi) * 25.4
+    const cardHeightPixels = cardWidthPixels * (53.98 / 85.6)
+
     return (
-      <Card className="w-full max-w-4xl mx-auto">
+      <Card className="w-full max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle>{t("sensory.visual.complete_title")}</CardTitle>
+          <Badge variant="outline" className="w-fit mb-2">
+            {language === "zh" ? "第1步：屏幕校准" : "Step 1: Screen Calibration"}
+          </Badge>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            {language === "zh" ? "屏幕校准" : "Screen Calibration"}
+          </CardTitle>
+          <CardDescription>
+            {language === "zh" 
+              ? "将标准信用卡放在屏幕上，调整滑块使矩形与卡片完全匹配。"
+              : "Place a standard credit card against the screen. Adjust the slider until the rectangle matches your card exactly."}
+          </CardDescription>
         </CardHeader>
-        <CardContent className="text-center space-y-4">
-          <div className="text-6xl">✓</div>
-          <p className="text-lg">{t("sensory.visual.complete_message")}</p>
-          <Button onClick={() => onComplete(finalScore)} className="mt-4">
-            {t("common.continue")}
+        <CardContent className="space-y-6">
+          {/* Credit Card Outline */}
+          <div className="flex justify-center py-4">
+            <div 
+              className="border-2 border-dashed border-blue-500 rounded-lg bg-blue-50/50 flex items-center justify-center"
+              style={{ 
+                width: `${cardWidthPixels}px`, 
+                height: `${cardHeightPixels}px`,
+              }}
+            >
+              <span className="text-blue-500 text-sm font-medium">
+                {language === "zh" ? "信用卡轮廓" : "Credit Card Outline"}
+              </span>
+            </div>
+          </div>
+
+          {/* Slider */}
+          <div className="space-y-4">
+            <label className="text-sm font-medium">
+              {language === "zh" ? "调整尺寸" : "Adjust Size"}
+            </label>
+            <Slider
+              value={[cardWidthPixels]}
+              onValueChange={(value) => setCardWidthPixels(value[0])}
+              min={200}
+              max={500}
+              step={1}
+              className="w-full"
+            />
+          </div>
+
+          {/* PPI Display */}
+          <div className="bg-muted p-4 rounded-lg text-center">
+            <p className="text-sm text-muted-foreground">
+              {language === "zh" ? "估算屏幕PPI" : "Estimated screen PPI"}: 
+              <span className="font-bold text-foreground ml-2">{calibration.ppi}</span>
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setPhase("intro")} className="flex-1">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              {language === "zh" ? "返回" : "Back"}
+            </Button>
+            <Button onClick={handleConfirmCalibration} className="flex-1">
+              {language === "zh" ? "确认校准" : "Confirm Calibration"}
+              <CheckCircle2 className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // ========== DISTANCE PHASE ==========
+  if (phase === "distance") {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <Badge variant="outline" className="w-fit mb-2">
+            {language === "zh" ? "第2步：设置距离" : "Step 2: Viewing Distance"}
+          </Badge>
+          <CardTitle className="flex items-center gap-2">
+            <Ruler className="h-5 w-5" />
+            {language === "zh" ? "设置观看距离" : "Viewing Distance"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-6 rounded-lg text-center space-y-4">
+            <div className="text-5xl font-bold text-amber-600">40 cm</div>
+            <p className="text-lg">
+              {language === "zh" ? "约16英寸 / 一臂长度" : "~16 inches / arm's length"}
+            </p>
+          </div>
+
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 mt-0.5 text-amber-500 flex-shrink-0" />
+              {language === "zh" 
+                ? "在整个测试过程中保持设备在此距离稳定不动。"
+                : "Hold your device steady at this distance throughout the test."}
+            </p>
+            <p className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 mt-0.5 text-amber-500 flex-shrink-0" />
+              {language === "zh" 
+                ? "您将看到指向不同方向的字母\"E\"。点击与方向匹配的箭头。"
+                : "You will see a letter \"E\" pointing in different directions. Tap the arrow matching the direction."}
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setPhase("calibration")} className="flex-1">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              {language === "zh" ? "返回" : "Back"}
+            </Button>
+            <Button onClick={handleStartTest} className="flex-1">
+              {language === "zh" ? "我准备好了" : "I'm Ready"}
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // ========== TESTING PHASE ==========
+  if (phase === "testing") {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">
+                {language === "zh" ? "视力测试" : "Visual Acuity Test"}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {language === "zh" ? "等级" : "Level"} {currentLevelData.level} · 
+                {language === "zh" ? "试验" : "Trial"} {currentTrial + 1}/5
+              </p>
+            </div>
+            <Badge variant="secondary">
+              {logMARToSnellen(currentLevelData.logMAR)}
+            </Badge>
+          </div>
+          <Progress value={(totalTrials / 25) * 100} className="mt-2" />
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Display the "E" */}
+          <div className="flex items-center justify-center min-h-[300px] bg-white dark:bg-gray-900 rounded-lg border">
+            <div
+              style={{
+                fontSize: `${eSize}px`,
+                fontFamily: "Arial, sans-serif",
+                fontWeight: "bold",
+                transform: getRotation(currentDirection),
+                lineHeight: 1,
+              }}
+            >
+              E
+            </div>
+          </div>
+
+          {/* Response buttons */}
+          <div className="space-y-3">
+            <p className="text-center text-sm font-medium">
+              {language === "zh" ? "E指向哪个方向？" : "Which direction is the E pointing?"}
+            </p>
+            <div className="flex flex-col items-center gap-2">
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => handleResponse("up")}
+                className="w-20 h-16"
+              >
+                <ArrowUp className="h-8 w-8" />
+              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => handleResponse("left")}
+                  className="w-20 h-16"
+                >
+                  <ArrowLeft className="h-8 w-8" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => handleResponse("right")}
+                  className="w-20 h-16"
+                >
+                  <ArrowRight className="h-8 w-8" />
+                </Button>
+              </div>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => handleResponse("down")}
+                className="w-20 h-16"
+              >
+                <ArrowDown className="h-8 w-8" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // ========== RESULTS PHASE ==========
+  if (phase === "results") {
+    const riskLevel = getVisualRiskLevel(finalLogMAR)
+    const snellen = logMARToSnellen(finalLogMAR)
+
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckCircle2 className="h-6 w-6 text-green-500" />
+            {language === "zh" ? "测试完成" : "Test Complete"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-muted p-4 rounded-lg text-center">
+              <p className="text-sm text-muted-foreground mb-1">
+                {language === "zh" ? "视力" : "Visual Acuity"}
+              </p>
+              <p className="text-3xl font-bold">{snellen}</p>
+            </div>
+            <div className="bg-muted p-4 rounded-lg text-center">
+              <p className="text-sm text-muted-foreground mb-1">LogMAR</p>
+              <p className="text-3xl font-bold">{finalLogMAR.toFixed(2)}</p>
+            </div>
+          </div>
+
+          <div className="bg-muted p-4 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-muted-foreground">
+                {language === "zh" ? "分类" : "Classification"}
+              </span>
+              <RiskBadge level={riskLevel} />
+            </div>
+            <p className="font-medium">
+              {classification === "normal" 
+                ? (language === "zh" ? "正常视力" : "Normal Vision")
+                : classification === "impaired"
+                  ? (language === "zh" ? "轻度受损" : "Mildly Impaired")
+                  : (language === "zh" ? "需要进一步检查" : "Further Evaluation Needed")}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="bg-muted/50 p-3 rounded">
+              <p className="text-muted-foreground">{language === "zh" ? "总试验" : "Total Trials"}</p>
+              <p className="font-medium">{totalTrials}</p>
+            </div>
+            <div className="bg-muted/50 p-3 rounded">
+              <p className="text-muted-foreground">{language === "zh" ? "正确率" : "Accuracy"}</p>
+              <p className="font-medium">{totalTrials > 0 ? Math.round((correctCount / totalTrials) * 100) : 0}%</p>
+            </div>
+          </div>
+
+          <Button onClick={() => onComplete(finalScore)} className="w-full">
+            {language === "zh" ? "继续" : "Continue"}
           </Button>
         </CardContent>
       </Card>
     )
   }
 
-  return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>
-          {t("sensory.visual.level")} {currentLevelData.level} / {LOG_MAR_LEVELS.length}
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          {t("sensory.visual.trial")} {currentTrial + 1} / 5
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-8">
-        {/* Display the "E" in the correct orientation */}
-        <div className="flex items-center justify-center min-h-[400px] bg-gray-50 dark:bg-gray-900 rounded-lg">
-          <div
-            className="text-black dark:text-white font-bold flex items-center justify-center"
-            style={{
-              fontSize: `${currentLevelData.size}px`,
-              transform:
-                currentOrientation === "down"
-                  ? "rotate(180deg)"
-                  : currentOrientation === "left"
-                    ? "rotate(90deg)"
-                    : currentOrientation === "right"
-                      ? "rotate(-90deg)"
-                      : "none",
-            }}
-          >
-            E
-          </div>
-        </div>
-
-        {/* Response buttons */}
-        <div className="space-y-4">
-          <p className="text-center text-sm font-medium">{t("sensory.visual.which_direction")}</p>
-          <div className="grid grid-cols-2 gap-4">
-            <Button size="lg" onClick={() => handleResponse("up")} className="h-20">
-              <ArrowUp className="h-8 w-8" />
-            </Button>
-            <Button size="lg" onClick={() => handleResponse("down")} className="h-20">
-              <ArrowDown className="h-8 w-8" />
-            </Button>
-            <Button size="lg" onClick={() => handleResponse("left")} className="h-20">
-              <ArrowLeft className="h-8 w-8" />
-            </Button>
-            <Button size="lg" onClick={() => handleResponse("right")} className="h-20">
-              <ArrowRight className="h-8 w-8" />
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
+  return null
 }
