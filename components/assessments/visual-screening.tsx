@@ -14,6 +14,9 @@ import {
   getDeviceInfo,
 } from "@/lib/visual-acuity-utils"
 import { Eye, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react"
+import { TestProgress } from "@/components/ui/test-progress"
+import { ScoreGauge, getScoreRiskLevel } from "@/components/ui/score-gauge"
+import { RiskBadge } from "@/components/ui/risk-badge"
 
 interface VisualScreeningProps {
   onComplete: (score: number) => void

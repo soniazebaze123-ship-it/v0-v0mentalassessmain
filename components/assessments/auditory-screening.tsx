@@ -20,6 +20,9 @@ import {
 } from "@/lib/auditory-screening-utils"
 import { Headphones, Volume2, VolumeX, AlertCircle, CheckCircle2, Mic } from "lucide-react"
 import { AudiogramChart } from "@/components/audiogram-chart"
+import { TestProgress } from "@/components/ui/test-progress"
+import { ScoreGauge, getScoreRiskLevel } from "@/components/ui/score-gauge"
+import { RiskBadge } from "@/components/ui/risk-badge"
 
 interface AuditoryScreeningProps {
   onComplete: (score: number) => void

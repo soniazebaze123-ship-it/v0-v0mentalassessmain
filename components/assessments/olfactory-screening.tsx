@@ -14,6 +14,9 @@ import {
   type SmellItem,
 } from "@/lib/olfactory-screening-utils"
 import { Flower2, Check, X } from "lucide-react"
+import { TestProgress } from "@/components/ui/test-progress"
+import { ScoreGauge, getScoreRiskLevel } from "@/components/ui/score-gauge"
+import { RiskBadge } from "@/components/ui/risk-badge"
 
 interface OlfactoryScreeningProps {
   onComplete: (score: number) => void
