@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { useLanguage } from "@/contexts/language-context"
 import { useUser } from "@/contexts/user-context"
 import { supabase } from "@/lib/supabase"
-import { Brain, Upload, CheckCircle, Clock, LogOut, Eye, Ear, Flower2, TrendingUp } from "lucide-react"
+import { Brain, Upload, CheckCircle, Clock, LogOut, Eye, Ear, Flower2, TrendingUp, Leaf } from "lucide-react"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 
@@ -18,10 +18,11 @@ interface AssessmentStatus {
   visual: { completed: boolean; score?: number }
   auditory: { completed: boolean; score?: number }
   olfactory: { completed: boolean; score?: number }
+  tcm: { completed: boolean; score?: number }
 }
 
 interface DashboardProps {
-  onStartAssessment: (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory") => void
+  onStartAssessment: (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm") => void
   onResumeAssessment?: (type: "moca" | "mmse", step: number, scores: number[]) => void
   onViewResults?: (type: "moca" | "mmse") => void
   onViewRiskProfile?: () => void
@@ -35,6 +36,7 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
     visual: { completed: false },
     auditory: { completed: false },
     olfactory: { completed: false },
+    tcm: { completed: false },
   })
   const [loading, setLoading] = useState(true)
   const [hasAnyAssessments, setHasAnyAssessments] = useState(false)
@@ -70,6 +72,7 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
         visual: { completed: false },
         auditory: { completed: false },
         olfactory: { completed: false },
+        tcm: { completed: false },
       }
 
       let hasCompleted = false
@@ -150,7 +153,7 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
     logout()
   }
 
-  const handleRetake = async (type: "moca" | "mmse" | "visual" | "auditory" | "olfactory") => {
+  const handleRetake = async (type: "moca" | "mmse" | "visual" | "auditory" | "olfactory" | "tcm") => {
     const canTake = await canTakeTestToday(type)
 
     if (!canTake) {
@@ -563,6 +566,58 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                   <Button
                     className="w-full bg-amber-600 hover:bg-amber-700 text-white shadow-md"
                     onClick={() => onStartAssessment("olfactory")}
+                  >
+                    {t("common.start")}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* TCM Constitution Assessment */}
+          <Card
+            className={`transition-all duration-200 border-2 ${status.tcm.completed ? "border-green-500 bg-green-50" : "border-emerald-200 bg-white hover:border-emerald-400"}`}
+          >
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div
+                  className={`p-3 rounded-full ${status.tcm.completed ? "bg-green-100 text-green-600" : "bg-emerald-100 text-emerald-600"}`}
+                >
+                  <Leaf className="w-8 h-8" />
+                </div>
+                {status.tcm.completed && <CheckCircle className="w-6 h-6 text-green-600" />}
+              </div>
+              <CardTitle className="text-lg mt-4">{language === "zh" ? "中医体质辨识" : "TCM Constitution"}</CardTitle>
+              <CardDescription>
+                {language === "zh" 
+                  ? "根据中医理论评估您的体质类型" 
+                  : "Assess your body constitution based on TCM principles"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {status.tcm.completed ? (
+                <div className="space-y-3">
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 w-full justify-center py-1">
+                    {t("dashboard.completed")}
+                  </Badge>
+                  <p className="text-center font-bold text-2xl text-green-700">{status.tcm.score}%</p>
+                  <Button
+                    variant="outline"
+                    className="w-full bg-white hover:bg-gray-50 text-sm border-dashed"
+                    onClick={() => handleRetake("tcm")}
+                  >
+                    {t("common.retake")}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <Badge variant="outline" className="border-gray-400 text-gray-600">
+                    <Clock className="w-3 h-3 mr-1" />
+                    {t("dashboard.pending")}
+                  </Badge>
+                  <Button
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
+                    onClick={() => onStartAssessment("tcm")}
                   >
                     {t("common.start")}
                   </Button>

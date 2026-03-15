@@ -32,6 +32,7 @@ import { CopyingDesign } from "@/components/assessments/copying-design"
 import { VisualScreening } from "@/components/assessments/visual-screening"
 import { AuditoryScreening } from "@/components/assessments/auditory-screening"
 import { OlfactoryScreening } from "@/components/assessments/olfactory-screening"
+import { TCMConstitution } from "@/components/assessments/tcm-constitution"
 
 import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/contexts/language-context"
@@ -51,6 +52,7 @@ function AppContent() {
     | "visual"
     | "auditory"
     | "olfactory"
+    | "tcm"
     | "risk_profile"
   >("login")
   const [currentStep, setCurrentStep] = useState(0)
@@ -125,8 +127,8 @@ function AppContent() {
     }
   }
 
-  const handleStartAssessment = (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory") => {
-    if (type === "visual" || type === "auditory" || type === "olfactory") {
+  const handleStartAssessment = (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm") => {
+    if (type === "visual" || type === "auditory" || type === "olfactory" || type === "tcm") {
       setCurrentView(type)
       return
     }
@@ -289,6 +291,18 @@ function AppContent() {
 
   if (currentView === "olfactory") {
     return <OlfactoryScreening onComplete={() => handleBackToDashboard()} />
+  }
+
+  if (currentView === "tcm") {
+    return (
+      <TCMConstitution
+        onComplete={(score, data) => {
+          console.log("[v0] TCM Constitution completed:", { score, data })
+          handleBackToDashboard()
+        }}
+        onBack={handleBackToDashboard}
+      />
+    )
   }
 
   if (currentView === "risk_profile") {
