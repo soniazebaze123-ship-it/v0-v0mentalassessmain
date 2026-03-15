@@ -1,14 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, ArrowRight, CheckCircle2, Leaf, Heart, Droplets, Wind, Flame, Moon, Sun, Sparkles } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle2, Leaf, Heart, Droplets, Wind, Flame, Moon, Sun, Sparkles, Upload, Camera, X, ImageIcon } from "lucide-react"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
+import { useUser } from "@/contexts/user-context"
+import { supabase } from "@/lib/supabase"
+import Image from "next/image"
 
 // TCM Constitution Types
 type TCMConstitution =
@@ -37,6 +40,13 @@ interface ConstitutionInfo {
   icon: React.ReactNode
   color: string
   recommendations: string[]
+}
+
+interface UploadedImage {
+  id: string
+  type: "tongue" | "face"
+  url: string
+  preview: string
 }
 
 // Constitution data
@@ -229,7 +239,8 @@ interface TCMConstitutionProps {
 }
 
 export function TCMConstitution({ onComplete, onBack, language = "en" }: TCMConstitutionProps) {
-  const [phase, setPhase] = useState<"intro" | "questions" | "results">("intro")
+  const { user } = useUser()
+  const [phase, setPhase] = useState<"intro" | "image_upload" | "questions" | "results">("intro")
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [responses, setResponses] = useState<Record<string, number>>({})
   const [results, setResults] = useState<{
@@ -238,8 +249,103 @@ export function TCMConstitution({ onComplete, onBack, language = "en" }: TCMCons
     constitutionScores: Record<TCMConstitution, number>
     recommendations: string[]
   } | null>(null)
+  
+  // Image upload state
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [dragActive, setDragActive] = useState(false)
+  const [uploadError, setUploadError] = useState("")
+  const [currentUploadType, setCurrentUploadType] = useState<"tongue" | "face">("tongue")
 
   const progress = (currentQuestion / TCM_QUESTIONS.length) * 100
+
+  // Image upload handlers
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true)
+    } else if (e.type === "dragleave") {
+      setDragActive(false)
+    }
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent, type: "tongue" | "face") => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleImageUpload(e.dataTransfer.files[0], type)
+    }
+  }, [])
+
+  const handleImageUpload = async (file: File, type: "tongue" | "face") => {
+    if (!file.type.startsWith("image/")) {
+      setUploadError(language === "zh" ? "请上传图片文件" : "Please upload an image file")
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError(language === "zh" ? "图片大小不能超过10MB" : "Image size must be less than 10MB")
+      return
+    }
+
+    setUploading(true)
+    setUploadProgress(0)
+    setUploadError("")
+
+    try {
+      const fileExt = file.name.split(".").pop()
+      const fileName = `tcm/${user?.id}/${type}-${Date.now()}.${fileExt}`
+      
+      const { error: uploadError } = await supabase.storage
+        .from("user-files")
+        .upload(fileName, file, { cacheControl: "3600", upsert: false })
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage.from("user-files").getPublicUrl(fileName)
+      
+      // Save to database
+      const { data: fileRecord, error: dbError } = await supabase
+        .from("uploaded_files")
+        .insert({
+          user_id: user?.id,
+          filename: `${type}_image.${fileExt}`,
+          file_path: fileName,
+          file_type: file.type,
+          file_size: file.size,
+        })
+        .select()
+        .single()
+
+      if (dbError) throw dbError
+
+      const preview = URL.createObjectURL(file)
+      
+      // Remove existing image of same type
+      setUploadedImages(prev => {
+        const filtered = prev.filter(img => img.type !== type)
+        return [...filtered, { id: fileRecord.id, type, url: publicUrl, preview }]
+      })
+      
+      setUploadProgress(100)
+    } catch (error) {
+      console.error("Upload error:", error)
+      setUploadError(language === "zh" ? "上传失败，请重试" : "Upload failed, please try again")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeImage = async (imageId: string) => {
+    try {
+      await supabase.from("uploaded_files").delete().eq("id", imageId)
+      setUploadedImages(prev => prev.filter(img => img.id !== imageId))
+    } catch (error) {
+      console.error("Error removing image:", error)
+    }
+  }
 
   const handleResponse = (value: number) => {
     const question = TCM_QUESTIONS[currentQuestion]
@@ -394,9 +500,9 @@ export function TCMConstitution({ onComplete, onBack, language = "en" }: TCMCons
           <div className="bg-muted p-4 rounded-lg space-y-2">
             <h4 className="font-medium">{language === "zh" ? "测试说明" : "Instructions"}:</h4>
             <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-              <li>{language === "zh" ? "共27个问题，约5-10分钟完成" : "27 questions, takes about 5-10 minutes"}</li>
+              <li>{language === "zh" ? "第一步：上传舌象和面部照片（可选）" : "Step 1: Upload tongue and face images (optional)"}</li>
+              <li>{language === "zh" ? "第二步：回答27个体质问卷问题" : "Step 2: Answer 27 constitution questionnaire questions"}</li>
               <li>{language === "zh" ? "根据您过去一年的状况作答" : "Answer based on your condition in the past year"}</li>
-              <li>{language === "zh" ? "每个问题选择1-5分" : "Rate each question from 1 (Never) to 5 (Always)"}</li>
               <li>{language === "zh" ? "完成后将显示您的体质类型和建议" : "Results will show your constitution type and recommendations"}</li>
             </ul>
           </div>
@@ -406,8 +512,164 @@ export function TCMConstitution({ onComplete, onBack, language = "en" }: TCMCons
               <ArrowLeft className="h-4 w-4 mr-2" />
               {language === "zh" ? "返回" : "Back"}
             </Button>
-            <Button onClick={() => setPhase("questions")} className="flex-1">
+            <Button onClick={() => setPhase("image_upload")} className="flex-1">
               {language === "zh" ? "开始测试" : "Start Assessment"}
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Image Upload phase
+  if (phase === "image_upload") {
+    const tongueImage = uploadedImages.find(img => img.type === "tongue")
+    const faceImage = uploadedImages.find(img => img.type === "face")
+
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <div className="flex items-center justify-between mb-2">
+            <Badge variant="outline">
+              {language === "zh" ? "第1步：图像采集" : "Step 1: Image Collection"}
+            </Badge>
+            <Button variant="ghost" size="sm" onClick={onBack}>
+              {language === "zh" ? "退出" : "Exit"}
+            </Button>
+          </div>
+          <CardTitle className="text-xl">
+            {language === "zh" ? "上传舌象和面部照片" : "Upload Tongue and Face Images"}
+          </CardTitle>
+          <CardDescription>
+            {language === "zh" 
+              ? "中医诊断通过观察舌象和面色来辅助判断体质。此步骤为可选，您可以跳过直接进入问卷。" 
+              : "TCM diagnosis uses tongue and facial observation to help determine constitution. This step is optional."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {uploadError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-red-600 text-sm">{uploadError}</p>
+            </div>
+          )}
+
+          {/* Tongue Image Upload */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Camera className="h-5 w-5 text-red-500" />
+              <h4 className="font-medium">{language === "zh" ? "舌象照片" : "Tongue Image"}</h4>
+            </div>
+            {tongueImage ? (
+              <div className="relative border rounded-lg p-2">
+                <div className="relative w-full h-40 bg-gray-100 rounded overflow-hidden">
+                  <Image src={tongueImage.preview} alt="Tongue" fill className="object-cover" />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeImage(tongueImage.id)}
+                  className="absolute top-2 right-2 bg-white/80 hover:bg-white text-red-500"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div
+                className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
+                  dragActive ? "border-red-500 bg-red-50" : "border-gray-300 hover:border-red-400"
+                }`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={(e) => handleDrop(e, "tongue")}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], "tongue")}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  disabled={uploading}
+                />
+                <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">
+                  {language === "zh" ? "拖放或点击上传舌象照片" : "Drag & drop or click to upload tongue image"}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {language === "zh" ? "请在自然光下拍摄，舌头自然伸出" : "Take photo in natural light with tongue extended naturally"}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Face Image Upload */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Camera className="h-5 w-5 text-blue-500" />
+              <h4 className="font-medium">{language === "zh" ? "面部照片" : "Face Image"}</h4>
+            </div>
+            {faceImage ? (
+              <div className="relative border rounded-lg p-2">
+                <div className="relative w-full h-40 bg-gray-100 rounded overflow-hidden">
+                  <Image src={faceImage.preview} alt="Face" fill className="object-cover" />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeImage(faceImage.id)}
+                  className="absolute top-2 right-2 bg-white/80 hover:bg-white text-red-500"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div
+                className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
+                  dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-400"
+                }`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={(e) => handleDrop(e, "face")}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], "face")}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  disabled={uploading}
+                />
+                <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">
+                  {language === "zh" ? "拖放或点击上传面部照片" : "Drag & drop or click to upload face image"}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {language === "zh" ? "请在自然光下拍摄正面照片，无化妆为佳" : "Take frontal photo in natural light, preferably without makeup"}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Upload Progress */}
+          {uploading && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>{language === "zh" ? "上传中..." : "Uploading..."}</span>
+                <span>{Math.round(uploadProgress)}%</span>
+              </div>
+              <Progress value={uploadProgress} className="w-full" />
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <Button variant="outline" onClick={() => setPhase("intro")} className="flex-1">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              {language === "zh" ? "返回" : "Back"}
+            </Button>
+            <Button onClick={() => setPhase("questions")} className="flex-1" disabled={uploading}>
+              {uploadedImages.length > 0 
+                ? (language === "zh" ? "继续问卷" : "Continue to Questionnaire")
+                : (language === "zh" ? "跳过，直接问卷" : "Skip, Go to Questionnaire")}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
