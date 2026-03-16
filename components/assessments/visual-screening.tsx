@@ -33,16 +33,17 @@ import { RiskBadge } from "@/components/ui/risk-badge"
 interface VisualScreeningProps {
   onComplete: (score: number) => void
   onSkip?: () => void
+  enhanced?: boolean
 }
 
 type Phase = "intro" | "calibration" | "distance" | "testing" | "results"
 
-export function VisualScreening({ onComplete, onSkip }: VisualScreeningProps) {
+export function VisualScreening({ onComplete, onSkip, enhanced = false }: VisualScreeningProps) {
   const { t, language } = useLanguage()
   const { user } = useUser()
 
-  // Phase management
-  const [phase, setPhase] = useState<Phase>("intro")
+  // Phase management - enhanced starts with calibration, classic skips to testing
+  const [phase, setPhase] = useState<Phase>(enhanced ? "intro" : "intro")
   
   // Calibration state
   const [calibration, setCalibration] = useState<VisualCalibration>({
@@ -211,9 +212,14 @@ export function VisualScreening({ onComplete, onSkip }: VisualScreeningProps) {
               <Eye className="h-8 w-8" />
             </div>
             <div>
-              <CardTitle>{language === "zh" ? "视力检查" : "Visual Acuity Test"}</CardTitle>
+              <CardTitle>
+                {language === "zh" ? "视力检查" : "Visual Acuity Test"}
+                {enhanced && <Badge className="ml-2 bg-blue-600">Enhanced</Badge>}
+              </CardTitle>
               <CardDescription>
-                {language === "zh" ? "3-5分钟 · Tumbling-E自适应阶梯测试" : "3-5 min · Tumbling-E adaptive staircase test"}
+                {enhanced 
+                  ? (language === "zh" ? "3-5分钟 · Tumbling-E自适应阶梯测试 (含校准)" : "3-5 min · Tumbling-E adaptive staircase test (with calibration)")
+                  : (language === "zh" ? "2-3分钟 · 基础视力测试" : "2-3 min · Basic visual acuity test")}
               </CardDescription>
             </div>
           </div>
@@ -223,27 +229,33 @@ export function VisualScreening({ onComplete, onSkip }: VisualScreeningProps) {
           <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg space-y-3">
             <h4 className="font-medium">{language === "zh" ? "测试说明" : "About this test"}:</h4>
             <p className="text-sm text-muted-foreground">
-              {language === "zh" 
-                ? "此测试通过显示不同大小的字母\"E\"来测量您的近视力敏锐度。结果以logMAR（最小分辨角对数）表示。"
-                : "This test measures your near-vision sharpness by displaying letter \"E\" in different sizes. Results are expressed in logMAR (logarithm of the Minimum Angle of Resolution)."}
+              {enhanced 
+                ? (language === "zh" 
+                    ? "此测试通过显示不同大小的字母\"E\"来测量您的近视力敏锐度。包含屏幕校准和精确的logMAR评分。"
+                    : "This test measures your near-vision sharpness by displaying letter \"E\" in different sizes. Includes screen calibration and precise logMAR scoring.")
+                : (language === "zh" 
+                    ? "此测试通过显示不同大小的字母\"E\"来快速评估您的视力。"
+                    : "This test quickly assesses your visual acuity by displaying letter \"E\" in different sizes.")}
             </p>
           </div>
 
-          <div className="space-y-3">
-            <h4 className="font-medium">{language === "zh" ? "测试步骤" : "Test steps"}:</h4>
-            <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-2">
-              <li>{language === "zh" ? "校准屏幕：使用信用卡调整显示尺寸" : "Screen calibration: Adjust display size using a credit card"}</li>
-              <li>{language === "zh" ? "设置距离：将设备保持在40厘米处" : "Set distance: Hold device at 40cm (arm's length)"}</li>
-              <li>{language === "zh" ? "开始测试：选择字母\"E\"指向的方向" : "Start test: Select the direction the letter \"E\" is pointing"}</li>
-            </ol>
-          </div>
+          {enhanced && (
+            <div className="space-y-3">
+              <h4 className="font-medium">{language === "zh" ? "测试步骤" : "Test steps"}:</h4>
+              <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-2">
+                <li>{language === "zh" ? "校准屏幕：使用信用卡调整显示尺寸" : "Screen calibration: Adjust display size using a credit card"}</li>
+                <li>{language === "zh" ? "设置距离：将设备保持在40厘米处" : "Set distance: Hold device at 40cm (arm's length)"}</li>
+                <li>{language === "zh" ? "开始测试：选择字母\"E\"指向的方向" : "Start test: Select the direction the letter \"E\" is pointing"}</li>
+              </ol>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <Button variant="outline" onClick={handleSkip} className="flex-1">
               {language === "zh" ? "跳过" : "Skip"}
             </Button>
-            <Button onClick={() => setPhase("calibration")} className="flex-1">
-              {language === "zh" ? "开始校准" : "Start Calibration"}
+            <Button onClick={() => setPhase(enhanced ? "calibration" : "testing")} className="flex-1">
+              {enhanced ? (language === "zh" ? "开始校准" : "Start Calibration") : (language === "zh" ? "开始测试" : "Start Test")}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>

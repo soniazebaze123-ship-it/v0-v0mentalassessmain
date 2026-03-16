@@ -21,6 +21,7 @@ import { RiskBadge } from "@/components/ui/risk-badge"
 interface OlfactoryScreeningProps {
   onComplete: (score: number) => void
   onSkip?: () => void
+  enhanced?: boolean
 }
 
 const SMELL_ICONS: Record<string, string> = {
@@ -38,7 +39,7 @@ const SMELL_ICONS: Record<string, string> = {
   banana: "🍌",
 }
 
-export function OlfactoryScreening({ onComplete, onSkip }: OlfactoryScreeningProps) {
+export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: OlfactoryScreeningProps) {
   const { t } = useLanguage()
   const { user } = useUser()
 

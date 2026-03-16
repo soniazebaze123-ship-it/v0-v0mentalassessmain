@@ -27,11 +27,12 @@ import { RiskBadge } from "@/components/ui/risk-badge"
 interface AuditoryScreeningProps {
   onComplete: (score: number) => void
   onSkip?: () => void
+  enhanced?: boolean
 }
 
 type TestPhase = "setup" | "noise-check" | "calibration" | "testing" | "complete"
 
-export function AuditoryScreening({ onComplete, onSkip }: AuditoryScreeningProps) {
+export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: AuditoryScreeningProps) {
   const { t } = useLanguage()
   const { user } = useUser()
 
