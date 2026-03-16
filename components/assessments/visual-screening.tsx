@@ -18,6 +18,7 @@ import {
   calculatePPIFromCreditCard,
   estimateScreenPPI,
   calculateOptotypeSize,
+  getClassicOptotypeSize,
   logMARToSnellen,
   getVisualRiskLevel,
   CREDIT_CARD_WIDTH_MM,
@@ -76,11 +77,13 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
 
   // Calculate E size based on current level and calibration
   const currentLevelData = LOG_MAR_LEVELS[currentLevel] || LOG_MAR_LEVELS[5]
-  const eSize = calculateOptotypeSize(
-    currentLevelData.logMAR,
-    calibration.ppi,
-    calibration.viewingDistanceCm
-  )
+  const eSize = enhanced 
+    ? calculateOptotypeSize(
+        currentLevelData.logMAR,
+        calibration.ppi,
+        calibration.viewingDistanceCm
+      )
+    : getClassicOptotypeSize(currentLevelData.level)
 
   const handleConfirmCalibration = () => {
     setCalibration(prev => ({ ...prev, confirmed: true }))

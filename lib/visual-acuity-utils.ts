@@ -68,7 +68,14 @@ export function calculateOptotypeSize(
   const radians = (arcMinutes / 60) * (Math.PI / 180)
   const sizeMm = 2 * viewingDistanceCm * 10 * Math.tan(radians / 2)
   const sizePixels = (sizeMm / 25.4) * ppi
-  return Math.max(10, Math.round(sizePixels))
+  // Minimum 40px to ensure visibility, scale up for better UX
+  return Math.max(40, Math.round(sizePixels * 1.5))
+}
+
+// Get simple E size for classic (non-calibrated) mode - uses predefined sizes
+export function getClassicOptotypeSize(level: number): number {
+  const sizes = [180, 150, 120, 100, 85, 70, 60, 50, 45, 40, 36, 32, 28, 24]
+  return sizes[level - 1] || 100
 }
 
 // Calculate PPI from credit card calibration
