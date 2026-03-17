@@ -270,39 +270,39 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {/* MoCA Assessment */}
           <Card
-            className={`transition-all duration-200 border-2 ${status.moca.completed ? "border-green-500 bg-green-50" : "border-blue-200 bg-white hover:border-blue-400"}`}
+            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.moca.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-blue-50 via-white to-sky-50 hover:from-blue-100 hover:to-sky-100"}`}
           >
-            <CardHeader>
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div
-                  className={`p-3 rounded-full ${status.moca.completed ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600"}`}
+                  className={`p-3 rounded-2xl shadow-sm ${status.moca.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-blue-500 to-sky-500 text-white"}`}
                 >
-                  <Brain className="w-8 h-8" />
+                  <Brain className="w-7 h-7" />
                 </div>
-                {status.moca.completed && <CheckCircle className="w-6 h-6 text-green-600" />}
+                {status.moca.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
               </div>
-              <CardTitle className="text-lg mt-4">{t("dashboard.moca")}</CardTitle>
-              <CardDescription>{t("dashboard.moca.description")}</CardDescription>
+              <CardTitle className="text-lg mt-4 font-semibold">{t("dashboard.moca")}</CardTitle>
+              <CardDescription className="text-sm">{t("dashboard.moca.description")}</CardDescription>
               <InstructionAudio instructionKey="moca.title" className="mt-2" />
             </CardHeader>
             <CardContent>
               {status.moca.completed ? (
                 <div className="space-y-3">
-                  <Badge variant="secondary" className="bg-green-100 text-green-800 w-full justify-center py-1">
-                    {t("dashboard.completed")}
-                  </Badge>
-                  <p className="text-center font-bold text-2xl text-green-700">{status.moca.score}/30</p>
+                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <p className="text-3xl font-bold text-emerald-600">{status.moca.score}/30</p>
+                    <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="outline"
-                      className="w-full bg-white hover:bg-gray-50 text-sm"
+                      className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-emerald-200"
                       onClick={() => handleAssessmentAction("moca")}
                     >
                       {t("common.view_results")}
                     </Button>
                     <Button
                       variant="outline"
-                      className="w-full bg-white hover:bg-gray-50 text-sm border-dashed"
+                      className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300"
                       onClick={() => handleRetake("moca")}
                     >
                       {t("common.retake")}
@@ -311,11 +311,12 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between text-sm text-gray-500">
+                  <div className="flex items-center text-sm text-blue-600">
+                    <Clock className="w-4 h-4 mr-1.5" />
                     <span>{progress.MOCA ? t("dashboard.resume") : t("dashboard.pending")}</span>
                   </div>
                   <Button
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+                    className="w-full bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-md rounded-xl font-medium"
                     onClick={() => handleAssessmentAction("moca")}
                   >
                     {progress.MOCA ? t("common.resume") : t("common.start")}
@@ -327,39 +328,39 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
 
           {/* MMSE Assessment */}
           <Card
-            className={`transition-all duration-200 border-2 ${status.mmse.completed ? "border-green-500 bg-green-50" : "border-teal-200 bg-white hover:border-teal-400"}`}
+            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.mmse.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-teal-50 via-white to-cyan-50 hover:from-teal-100 hover:to-cyan-100"}`}
           >
-            <CardHeader>
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div
-                  className={`p-3 rounded-full ${status.mmse.completed ? "bg-green-100 text-green-600" : "bg-teal-100 text-teal-600"}`}
+                  className={`p-3 rounded-2xl shadow-sm ${status.mmse.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-teal-500 to-cyan-500 text-white"}`}
                 >
-                  <Brain className="w-8 h-8" />
+                  <Brain className="w-7 h-7" />
                 </div>
-                {status.mmse.completed && <CheckCircle className="w-6 h-6 text-green-600" />}
+                {status.mmse.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
               </div>
-              <CardTitle className="text-lg mt-4">{t("dashboard.mmse")}</CardTitle>
-              <CardDescription>{t("dashboard.mmse.description")}</CardDescription>
+              <CardTitle className="text-lg mt-4 font-semibold">{t("dashboard.mmse")}</CardTitle>
+              <CardDescription className="text-sm">{t("dashboard.mmse.description")}</CardDescription>
               <InstructionAudio instructionKey="mmse.title" className="mt-2" />
             </CardHeader>
             <CardContent>
               {status.mmse.completed ? (
                 <div className="space-y-3">
-                  <Badge variant="secondary" className="bg-green-100 text-green-800 w-full justify-center py-1">
-                    {t("dashboard.completed")}
-                  </Badge>
-                  <p className="text-center font-bold text-2xl text-green-700">{status.mmse.score}/30</p>
+                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <p className="text-3xl font-bold text-emerald-600">{status.mmse.score}/30</p>
+                    <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="outline"
-                      className="w-full bg-white hover:bg-gray-50 text-sm"
+                      className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-emerald-200"
                       onClick={() => handleAssessmentAction("mmse")}
                     >
                       {t("common.view_results")}
                     </Button>
                     <Button
                       variant="outline"
-                      className="w-full bg-white hover:bg-gray-50 text-sm border-dashed"
+                      className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300"
                       onClick={() => handleRetake("mmse")}
                     >
                       {t("common.retake")}
@@ -368,11 +369,12 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between text-sm text-gray-500">
+                  <div className="flex items-center text-sm text-teal-600">
+                    <Clock className="w-4 h-4 mr-1.5" />
                     <span>{progress.MMSE ? t("dashboard.resume") : t("dashboard.pending")}</span>
                   </div>
                   <Button
-                    className="w-full bg-teal-600 hover:bg-teal-700 text-white shadow-md"
+                    className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-md rounded-xl font-medium"
                     onClick={() => handleAssessmentAction("mmse")}
                   >
                     {progress.MMSE ? t("common.resume") : t("common.start")}
@@ -384,19 +386,19 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
 
           {/* TCM Constitution Assessment */}
           <Card
-            className={`transition-all duration-200 border-2 ${status.tcm.completed ? "border-green-500 bg-green-50" : "border-emerald-200 bg-white hover:border-emerald-400"}`}
+            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.tcm.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-green-50 via-white to-emerald-50 hover:from-green-100 hover:to-emerald-100"}`}
           >
-            <CardHeader>
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div
-                  className={`p-3 rounded-full ${status.tcm.completed ? "bg-green-100 text-green-600" : "bg-emerald-100 text-emerald-600"}`}
+                  className={`p-3 rounded-2xl shadow-sm ${status.tcm.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-green-500 to-emerald-500 text-white"}`}
                 >
-                  <Leaf className="w-8 h-8" />
+                  <Leaf className="w-7 h-7" />
                 </div>
-                {status.tcm.completed && <CheckCircle className="w-6 h-6 text-green-600" />}
+                {status.tcm.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
               </div>
-              <CardTitle className="text-lg mt-4">{language === "zh" ? "中医体质辨识" : "TCM Constitution"}</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg mt-4 font-semibold">{language === "zh" ? "中医体质辨识" : "TCM Constitution"}</CardTitle>
+              <CardDescription className="text-sm">
                 {language === "zh" 
                   ? "根据中医理论评估您的体质类型" 
                   : "Assess your body constitution based on TCM principles"}
@@ -405,13 +407,13 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
             <CardContent>
               {status.tcm.completed ? (
                 <div className="space-y-3">
-                  <Badge variant="secondary" className="bg-green-100 text-green-800 w-full justify-center py-1">
-                    {t("dashboard.completed")}
-                  </Badge>
-                  <p className="text-center font-bold text-2xl text-green-700">{status.tcm.score}%</p>
+                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <p className="text-3xl font-bold text-emerald-600">{status.tcm.score}%</p>
+                    <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
+                  </div>
                   <Button
                     variant="outline"
-                    className="w-full bg-white hover:bg-gray-50 text-sm border-dashed"
+                    className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300"
                     onClick={() => handleRetake("tcm")}
                   >
                     {t("common.retake")}
@@ -419,12 +421,12 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <Badge variant="outline" className="border-gray-400 text-gray-600">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {t("dashboard.pending")}
-                  </Badge>
+                  <div className="flex items-center text-sm text-green-600">
+                    <Clock className="w-4 h-4 mr-1.5" />
+                    <span>{t("dashboard.pending")}</span>
+                  </div>
                   <Button
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-md rounded-xl font-medium"
                     onClick={() => onStartAssessment("tcm")}
                   >
                     {t("common.start")}
@@ -436,45 +438,48 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
 
           {/* TCM Image Upload */}
           <Card
-            className={`transition-all duration-200 border-2 ${status.upload.completed ? "border-green-500 bg-green-50" : "border-purple-200 bg-white hover:border-purple-400"}`}
+            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.upload.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-violet-50 via-white to-purple-50 hover:from-violet-100 hover:to-purple-100"}`}
           >
-            <CardHeader>
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div
-                  className={`p-3 rounded-full ${status.upload.completed ? "bg-green-100 text-green-600" : "bg-purple-100 text-purple-600"}`}
+                  className={`p-3 rounded-2xl shadow-sm ${status.upload.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-violet-500 to-purple-500 text-white"}`}
                 >
-                  <Upload className="w-8 h-8" />
+                  <Upload className="w-7 h-7" />
                 </div>
-                {status.upload.completed && <CheckCircle className="w-6 h-6 text-green-600" />}
+                {status.upload.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
               </div>
-              <CardTitle className="text-lg mt-4">{language === "zh" ? "中医图像上传" : "TCM Image Upload"}</CardTitle>
-              <CardDescription>{language === "zh" ? "上传舌象、面部等中医诊断图像" : "Upload tongue, face images for TCM diagnosis"}</CardDescription>
+              <CardTitle className="text-lg mt-4 font-semibold">{language === "zh" ? "中医图像上传" : "TCM Image Upload"}</CardTitle>
+              <CardDescription className="text-sm">{language === "zh" ? "上传舌象、面部等中医诊断图像" : "Upload tongue, face images for TCM diagnosis"}</CardDescription>
               <InstructionAudio instructionKey="upload.instruction" className="mt-2" />
             </CardHeader>
             <CardContent>
               {status.upload.completed ? (
-                <div className="space-y-2">
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    {t("dashboard.completed")}
-                  </Badge>
-                  <p className="text-sm font-medium">
-                    {t("dashboard.files_uploaded", { count: status.upload.fileCount })}
-                  </p>
+                <div className="space-y-3">
+                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <p className="text-lg font-semibold text-emerald-600">
+                      {t("dashboard.files_uploaded", { count: status.upload.fileCount })}
+                    </p>
+                    <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
+                  </div>
                   <Button
                     variant="outline"
-                    className="w-full bg-transparent"
+                    className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-emerald-200"
                     onClick={() => onStartAssessment("upload")}
                   >
                     {t("dashboard.manage_files")}
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <Badge variant="outline" className="border-gray-400 text-gray-600">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {t("dashboard.pending")}
-                  </Badge>
-                  <Button className="w-full" onClick={() => onStartAssessment("upload")}>
+                <div className="space-y-4">
+                  <div className="flex items-center text-sm text-violet-600">
+                    <Clock className="w-4 h-4 mr-1.5" />
+                    <span>{t("dashboard.pending")}</span>
+                  </div>
+                  <Button 
+                    className="w-full bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white shadow-md rounded-xl font-medium"
+                    onClick={() => onStartAssessment("upload")}
+                  >
                     {t("dashboard.upload_files")}
                   </Button>
                 </div>
@@ -484,30 +489,30 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
 
           {/* Visual Screening */}
           <Card
-            className={`transition-all duration-200 border-2 ${status.visual.completed ? "border-green-500 bg-green-50" : "border-indigo-200 bg-white hover:border-indigo-400"}`}
+            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.visual.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-indigo-50 via-white to-blue-50 hover:from-indigo-100 hover:to-blue-100"}`}
           >
-            <CardHeader>
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div
-                  className={`p-3 rounded-full ${status.visual.completed ? "bg-green-100 text-green-600" : "bg-indigo-100 text-indigo-600"}`}
+                  className={`p-3 rounded-2xl shadow-sm ${status.visual.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-indigo-500 to-blue-500 text-white"}`}
                 >
-                  <Eye className="w-8 h-8" />
+                  <Eye className="w-7 h-7" />
                 </div>
-                {status.visual.completed && <CheckCircle className="w-6 h-6 text-green-600" />}
+                {status.visual.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
               </div>
-              <CardTitle className="text-lg mt-4">{t("sensory.visual.title")}</CardTitle>
-              <CardDescription>{t("sensory.visual.description")}</CardDescription>
+              <CardTitle className="text-lg mt-4 font-semibold">{t("sensory.visual.title")}</CardTitle>
+              <CardDescription className="text-sm">{t("sensory.visual.description")}</CardDescription>
             </CardHeader>
             <CardContent>
               {status.visual.completed ? (
                 <div className="space-y-3">
-                  <Badge variant="secondary" className="bg-green-100 text-green-800 w-full justify-center py-1">
-                    {t("dashboard.completed")}
-                  </Badge>
-                  <p className="text-center font-bold text-2xl text-green-700">{status.visual.score}%</p>
+                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <p className="text-3xl font-bold text-emerald-600">{status.visual.score}%</p>
+                    <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
+                  </div>
                   <Button
                     variant="outline"
-                    className="w-full bg-white hover:bg-gray-50 text-sm border-dashed"
+                    className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300"
                     onClick={() => handleRetake("visual")}
                   >
                     {t("common.retake")}
@@ -515,12 +520,12 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <Badge variant="outline" className="border-gray-400 text-gray-600">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {t("dashboard.pending")}
-                  </Badge>
+                  <div className="flex items-center text-sm text-indigo-600">
+                    <Clock className="w-4 h-4 mr-1.5" />
+                    <span>{t("dashboard.pending")}</span>
+                  </div>
                   <Button
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md"
+                    className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white shadow-md rounded-xl font-medium"
                     onClick={() => onStartAssessment("visual")}
                   >
                     {t("common.start")}
@@ -532,30 +537,30 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
 
           {/* Auditory Screening */}
           <Card
-            className={`transition-all duration-200 border-2 ${status.auditory.completed ? "border-green-500 bg-green-50" : "border-pink-200 bg-white hover:border-pink-400"}`}
+            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.auditory.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-rose-50 via-white to-pink-50 hover:from-rose-100 hover:to-pink-100"}`}
           >
-            <CardHeader>
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div
-                  className={`p-3 rounded-full ${status.auditory.completed ? "bg-green-100 text-green-600" : "bg-pink-100 text-pink-600"}`}
+                  className={`p-3 rounded-2xl shadow-sm ${status.auditory.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-rose-500 to-pink-500 text-white"}`}
                 >
-                  <Ear className="w-8 h-8" />
+                  <Ear className="w-7 h-7" />
                 </div>
-                {status.auditory.completed && <CheckCircle className="w-6 h-6 text-green-600" />}
+                {status.auditory.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
               </div>
-              <CardTitle className="text-lg mt-4">{t("sensory.auditory.title")}</CardTitle>
-              <CardDescription>{t("sensory.auditory.description")}</CardDescription>
+              <CardTitle className="text-lg mt-4 font-semibold">{t("sensory.auditory.title")}</CardTitle>
+              <CardDescription className="text-sm">{t("sensory.auditory.description")}</CardDescription>
             </CardHeader>
             <CardContent>
               {status.auditory.completed ? (
                 <div className="space-y-3">
-                  <Badge variant="secondary" className="bg-green-100 text-green-800 w-full justify-center py-1">
-                    {t("dashboard.completed")}
-                  </Badge>
-                  <p className="text-center font-bold text-2xl text-green-700">{status.auditory.score}%</p>
+                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <p className="text-3xl font-bold text-emerald-600">{status.auditory.score}%</p>
+                    <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
+                  </div>
                   <Button
                     variant="outline"
-                    className="w-full bg-white hover:bg-gray-50 text-sm border-dashed"
+                    className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300"
                     onClick={() => handleRetake("auditory")}
                   >
                     {t("common.retake")}
@@ -563,12 +568,12 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <Badge variant="outline" className="border-gray-400 text-gray-600">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {t("dashboard.pending")}
-                  </Badge>
+                  <div className="flex items-center text-sm text-rose-600">
+                    <Clock className="w-4 h-4 mr-1.5" />
+                    <span>{t("dashboard.pending")}</span>
+                  </div>
                   <Button
-                    className="w-full bg-pink-600 hover:bg-pink-700 text-white shadow-md"
+                    className="w-full bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white shadow-md rounded-xl font-medium"
                     onClick={() => onStartAssessment("auditory")}
                   >
                     {t("common.start")}
@@ -580,30 +585,30 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
 
           {/* Olfactory Screening */}
           <Card
-            className={`transition-all duration-200 border-2 ${status.olfactory.completed ? "border-green-500 bg-green-50" : "border-amber-200 bg-white hover:border-amber-400"}`}
+            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.olfactory.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-amber-50 via-white to-orange-50 hover:from-amber-100 hover:to-orange-100"}`}
           >
-            <CardHeader>
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div
-                  className={`p-3 rounded-full ${status.olfactory.completed ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"}`}
+                  className={`p-3 rounded-2xl shadow-sm ${status.olfactory.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-amber-500 to-orange-500 text-white"}`}
                 >
-                  <Flower2 className="w-8 h-8" />
+                  <Flower2 className="w-7 h-7" />
                 </div>
-                {status.olfactory.completed && <CheckCircle className="w-6 h-6 text-green-600" />}
+                {status.olfactory.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
               </div>
-              <CardTitle className="text-lg mt-4">{t("sensory.olfactory.title")}</CardTitle>
-              <CardDescription>{t("sensory.olfactory.description")}</CardDescription>
+              <CardTitle className="text-lg mt-4 font-semibold">{t("sensory.olfactory.title")}</CardTitle>
+              <CardDescription className="text-sm">{t("sensory.olfactory.description")}</CardDescription>
             </CardHeader>
             <CardContent>
               {status.olfactory.completed ? (
                 <div className="space-y-3">
-                  <Badge variant="secondary" className="bg-green-100 text-green-800 w-full justify-center py-1">
-                    {t("dashboard.completed")}
-                  </Badge>
-                  <p className="text-center font-bold text-2xl text-green-700">{status.olfactory.score}%</p>
+                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 text-center">
+                    <p className="text-3xl font-bold text-emerald-600">{status.olfactory.score}%</p>
+                    <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
+                  </div>
                   <Button
                     variant="outline"
-                    className="w-full bg-white hover:bg-gray-50 text-sm border-dashed"
+                    className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300"
                     onClick={() => handleRetake("olfactory")}
                   >
                     {t("common.retake")}
@@ -611,12 +616,12 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <Badge variant="outline" className="border-gray-400 text-gray-600">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {t("dashboard.pending")}
-                  </Badge>
+                  <div className="flex items-center text-sm text-amber-600">
+                    <Clock className="w-4 h-4 mr-1.5" />
+                    <span>{t("dashboard.pending")}</span>
+                  </div>
                   <Button
-                    className="w-full bg-amber-600 hover:bg-amber-700 text-white shadow-md"
+                    className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md rounded-xl font-medium"
                     onClick={() => onStartAssessment("olfactory")}
                   >
                     {t("common.start")}
