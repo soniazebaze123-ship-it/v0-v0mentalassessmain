@@ -1,14 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { UserProvider, useUser } from "@/contexts/user-context"
+import { useUser } from "@/contexts/user-context"
 import { Registration } from "@/components/registration"
 import { Dashboard } from "@/components/dashboard"
 import { ImageUpload } from "@/components/image-upload"
 import { ResultsDisplay } from "@/components/results-display"
 import { RiskProfileDisplay } from "@/components/risk-profile-display"
 import { Login } from "@/components/login"
-import { AdminPanel } from "@/components/admin-panel"
+import dynamic from "next/dynamic"
+const AdminPanel = dynamic(() => import("@/components/admin-panel").then(mod => mod.AdminPanel), { ssr: false })
 
 // MoCA Components
 import { InteractiveClock } from "@/components/assessments/interactive-clock"
@@ -31,6 +32,7 @@ import { CopyingDesign } from "@/components/assessments/copying-design"
 import { VisualScreening } from "@/components/assessments/visual-screening"
 import { AuditoryScreening } from "@/components/assessments/auditory-screening"
 import { OlfactoryScreening } from "@/components/assessments/olfactory-screening"
+import { TCMConstitution } from "@/components/assessments/tcm-constitution"
 
 import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/contexts/language-context"
@@ -50,6 +52,7 @@ function AppContent() {
     | "visual"
     | "auditory"
     | "olfactory"
+    | "tcm"
     | "risk_profile"
   >("login")
   const [currentStep, setCurrentStep] = useState(0)
@@ -124,8 +127,8 @@ function AppContent() {
     }
   }
 
-  const handleStartAssessment = (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory") => {
-    if (type === "visual" || type === "auditory" || type === "olfactory") {
+  const handleStartAssessment = (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm") => {
+    if (type === "visual" || type === "auditory" || type === "olfactory" || type === "tcm") {
       setCurrentView(type)
       return
     }
@@ -169,6 +172,7 @@ function AppContent() {
   }
 
   const handleStepComplete = async (score: number) => {
+    console.log("[v0] Step complete - Score:", score, "Assessment:", assessmentType, "Step:", currentStep)
     const newScores = [...scores, score]
     setScores(newScores)
 
@@ -179,6 +183,7 @@ function AppContent() {
       setCurrentStep(currentStep + 1)
     } else {
       const totalScore = newScores.reduce((sum, s) => sum + s, 0)
+      console.log("[v0] Assessment complete - Scores array:", newScores, "Total:", totalScore)
 
       const sectionNames =
         assessmentType === "MOCA"
@@ -196,23 +201,43 @@ function AppContent() {
       const supabase = createClient()
 
       try {
-        await supabase.from("assessments").insert({
+        console.log("[v0] Saving assessment to DB:", {
           user_id: user!.id,
           type: assessmentType,
           score: totalScore,
           data: sectionScores,
         })
 
+        const { data, error } = await supabase
+          .from("assessments")
+          .insert({
+            user_id: user!.id,
+            type: assessmentType,
+            score: totalScore,
+            data: sectionScores,
+          })
+          .select()
+
+        console.log("[v0] Assessment save result:", { data, error })
+
+        if (error) {
+          console.error("[v0] Error saving assessment:", error)
+          alert(`Error saving assessment: ${error.message}`)
+          return
+        }
+
         await clearProgress(assessmentType)
+
+        await loadCompletedAssessments()
 
         setCompletedAssessments((prev) => ({
           ...prev,
           [assessmentType]: { totalScore, sectionScores },
         }))
       } catch (error) {
-        if (process.env.NODE_ENV === "development") {
-          console.error("Error saving assessment:", error)
-        }
+        console.error("[v0] Error saving assessment:", error)
+        alert(`Error saving assessment: ${error instanceof Error ? error.message : "Unknown error"}`)
+        return
       }
 
       setCurrentView("results")
@@ -266,6 +291,18 @@ function AppContent() {
 
   if (currentView === "olfactory") {
     return <OlfactoryScreening onComplete={() => handleBackToDashboard()} />
+  }
+
+  if (currentView === "tcm") {
+    return (
+      <TCMConstitution
+        onComplete={(score, data) => {
+          console.log("[v0] TCM Constitution completed:", { score, data })
+          handleBackToDashboard()
+        }}
+        onBack={handleBackToDashboard}
+      />
+    )
   }
 
   if (currentView === "risk_profile") {
@@ -347,9 +384,5 @@ function AppContent() {
 }
 
 export default function Home() {
-  return (
-    <UserProvider>
-      <AppContent />
-    </UserProvider>
-  )
+  return <AppContent />
 }
