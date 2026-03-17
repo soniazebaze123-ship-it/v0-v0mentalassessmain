@@ -231,16 +231,45 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
           <InstructionAudio instructionKey="sensory.auditory.instruction" className="mt-2" />
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="bg-blue-50 dark:bg-blue-950 p-6 rounded-lg space-y-4">
-            <h3 className="font-semibold">Test Requirements</h3>
+          {/* Headphone Recommendation */}
+          <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Headphones className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-amber-800 dark:text-amber-200">Headphones Strongly Recommended</p>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                  For accurate hearing assessment results, please use headphones or earbuds. 
+                  This eliminates background interference and ensures precise measurement.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Quiet Environment Reminder */}
+          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+            <div className="flex items-start gap-3">
+              <VolumeX className="h-6 w-6 text-blue-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-blue-800 dark:text-blue-200">Find a Quiet Environment</p>
+                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                  Move to a quiet room away from traffic, conversations, or appliances. 
+                  Background noise can significantly affect your test results.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Test Requirements */}
+          <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-lg space-y-4">
+            <h3 className="font-semibold">Test Checklist</h3>
             <ul className="space-y-3 text-sm">
               <li className="flex items-center gap-2">
                 {hasHeadphones ? (
                   <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
                 ) : (
-                  <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0" />
+                  <AlertCircle className="h-5 w-5 text-amber-500 shrink-0" />
                 )}
-                <span>Headphones: {hasHeadphones ? "Detected" : "Not detected (recommended)"}</span>
+                <span>Headphones: {hasHeadphones ? "Detected - Ready!" : "Not detected (strongly recommended)"}</span>
               </li>
               <li className="flex items-center gap-2">
                 {speechSupported ? (
@@ -258,7 +287,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
                     <li>You will hear 3 spoken digits with background noise</li>
                     <li>Type the 3 digits you heard in order</li>
                     <li>The noise level increases each round</li>
-                    <li>12 trials total</li>
+                    <li>12 trials total (~3 minutes)</li>
                   </ol>
                 </div>
               </li>
@@ -270,7 +299,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
               Skip Test
             </Button>
             <Button onClick={() => { setPhase("noise-check"); handleNoiseCheck() }} className="w-full sm:w-auto">
-              Start Ambient Noise Check
+              Continue to Noise Check
             </Button>
           </div>
         </CardContent>

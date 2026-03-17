@@ -37,7 +37,7 @@ interface VisualScreeningProps {
   enhanced?: boolean
 }
 
-type Phase = "intro" | "calibration" | "distance" | "testing" | "results"
+type Phase = "intro" | "calibration" | "distance" | "practice" | "testing" | "results"
 
 export function VisualScreening({ onComplete, onSkip, enhanced = false }: VisualScreeningProps) {
   const { t, language } = useLanguage()
@@ -68,6 +68,11 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
   const [finalScore, setFinalScore] = useState(0)
   const [finalLogMAR, setFinalLogMAR] = useState(0)
   const [classification, setClassification] = useState<"normal" | "impaired" | "dysfunction">("normal")
+  
+  // Practice state
+  const [practiceDirection, setPracticeDirection] = useState<TumblingEDirection>(generateRandomDirection())
+  const [practiceAttempts, setPracticeAttempts] = useState(0)
+  const [practiceCorrect, setPracticeCorrect] = useState(false)
 
   // Update PPI when card width changes
   useEffect(() => {
@@ -257,8 +262,8 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
             <Button variant="outline" onClick={handleSkip} className="flex-1">
               {language === "zh" ? "跳过" : "Skip"}
             </Button>
-            <Button onClick={() => setPhase(enhanced ? "calibration" : "testing")} className="flex-1">
-              {enhanced ? (language === "zh" ? "开始校准" : "Start Calibration") : (language === "zh" ? "开始测试" : "Start Test")}
+            <Button onClick={() => setPhase(enhanced ? "calibration" : "practice")} className="flex-1">
+              {enhanced ? (language === "zh" ? "开始校准" : "Start Calibration") : (language === "zh" ? "开始练习" : "Start Practice")}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -383,11 +388,144 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
               <ArrowLeft className="h-4 w-4 mr-2" />
               {language === "zh" ? "返回" : "Back"}
             </Button>
-            <Button onClick={handleStartTest} className="flex-1">
-              {language === "zh" ? "我准备好了" : "I'm Ready"}
+            <Button onClick={() => setPhase("practice")} className="flex-1">
+              {language === "zh" ? "开始练习" : "Start Practice"}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // ========== PRACTICE PHASE ==========
+  if (phase === "practice") {
+    const handlePracticeResponse = (response: TumblingEDirection) => {
+      if (response === practiceDirection) {
+        setPracticeCorrect(true)
+        setTimeout(() => {
+          setPhase("testing")
+          handleStartTest()
+        }, 1500)
+      } else {
+        setPracticeAttempts(prev => prev + 1)
+        setPracticeDirection(generateRandomDirection())
+      }
+    }
+
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">
+                {language === "zh" ? "练习回合" : "Practice Round"}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {language === "zh" ? "先熟悉一下操作" : "Get familiar with the controls"}
+              </p>
+            </div>
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              {language === "zh" ? "练习" : "Practice"}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6 bg-slate-50 dark:bg-slate-900 -mx-6 -mb-6 px-6 pb-6 pt-4">
+          {practiceCorrect ? (
+            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+              <div className="p-4 rounded-full bg-green-100 text-green-600">
+                <CheckCircle2 className="h-12 w-12" />
+              </div>
+              <p className="text-lg font-medium text-green-700">
+                {language === "zh" ? "太棒了！开始正式测试..." : "Great! Starting the test..."}
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Practice E display */}
+              <div className="flex items-center justify-center">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 min-w-[200px] min-h-[200px] flex items-center justify-center">
+                  <span
+                    style={{
+                      fontSize: "120px",
+                      fontFamily: "'Arial Black', 'Helvetica Neue', Arial, sans-serif",
+                      fontWeight: 900,
+                      transform: getRotation(practiceDirection),
+                      display: "inline-block",
+                      lineHeight: 1,
+                      color: "#1a1a2e",
+                    }}
+                  >
+                    E
+                  </span>
+                </div>
+              </div>
+
+              {/* Instruction text */}
+              <p className="text-center text-base font-medium text-muted-foreground">
+                {language === "zh" ? "E指向哪个方向？" : "Which direction is the E pointing?"}
+              </p>
+
+              {practiceAttempts > 0 && (
+                <p className="text-center text-sm text-amber-600">
+                  {language === "zh" ? "再试一次！点击E指向的方向。" : "Try again! Tap the direction the E is pointing."}
+                </p>
+              )}
+
+              {/* Response buttons */}
+              <div className="flex flex-col items-center gap-3">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => handlePracticeResponse("up")}
+                  className="w-20 h-14 rounded-xl bg-white hover:bg-gray-50 border-gray-200 shadow-sm"
+                >
+                  <ChevronUp className="h-6 w-6" />
+                </Button>
+                <div className="flex gap-3">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => handlePracticeResponse("left")}
+                    className="w-20 h-14 rounded-xl bg-white hover:bg-gray-50 border-gray-200 shadow-sm"
+                  >
+                    <ChevronLeft className="h-6 w-6" />
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => handlePracticeResponse("right")}
+                    className="w-20 h-14 rounded-xl bg-white hover:bg-gray-50 border-gray-200 shadow-sm"
+                  >
+                    <ChevronRight className="h-6 w-6" />
+                  </Button>
+                </div>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => handlePracticeResponse("down")}
+                  className="w-20 h-14 rounded-xl bg-white hover:bg-gray-50 border-gray-200 shadow-sm"
+                >
+                  <ChevronDown className="h-6 w-6" />
+                </Button>
+              </div>
+
+              {/* Skip practice button */}
+              <div className="text-center pt-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setPhase("testing")
+                    handleStartTest()
+                  }}
+                  className="text-muted-foreground"
+                >
+                  {language === "zh" ? "跳过练习" : "Skip practice"}
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     )

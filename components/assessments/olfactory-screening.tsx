@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useUser } from "@/contexts/user-context"
@@ -13,7 +13,9 @@ import {
   calculateOlfactoryScore,
   type SmellItem,
 } from "@/lib/olfactory-screening-utils"
-import { Flower2, Check, X } from "lucide-react"
+import { Flower2, Check, X, Timer, AlertCircle } from "lucide-react"
+import { Progress } from "@/components/ui/progress"
+import { Badge } from "@/components/ui/badge"
 import { TestProgress } from "@/components/ui/test-progress"
 import { ScoreGauge, getScoreRiskLevel } from "@/components/ui/score-gauge"
 import { RiskBadge } from "@/components/ui/risk-badge"
@@ -59,12 +61,58 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
   })
 
   const currentTrial = trials[currentTrialIndex]
+  
+  // Timer state (30 seconds per question)
+  const [timeRemaining, setTimeRemaining] = useState(30)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Start timer when test starts or question changes
+  useEffect(() => {
+    if (testStarted && !testComplete && !showFeedback) {
+      setTimeRemaining(30)
+      timerRef.current = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            // Time's up - auto-submit as incorrect
+            if (timerRef.current) clearInterval(timerRef.current)
+            handleTimeUp()
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+    
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [testStarted, currentTrialIndex, showFeedback])
+  
+  const handleTimeUp = () => {
+    setLastAnswerCorrect(false)
+    setShowFeedback(true)
+    
+    const newResults = [...results, { correct: false }]
+    setResults(newResults)
+    
+    setTimeout(() => {
+      setShowFeedback(false)
+      if (currentTrialIndex < trials.length - 1) {
+        setCurrentTrialIndex(currentTrialIndex + 1)
+      } else {
+        finishTest(newResults)
+      }
+    }, 1500)
+  }
 
   const handleStart = () => {
     setTestStarted(true)
   }
 
   const handleSelectOption = (selected: SmellItem) => {
+    // Clear timer when user answers
+    if (timerRef.current) clearInterval(timerRef.current)
+    
     const isCorrect = selected.id === currentTrial.correct.id
     setLastAnswerCorrect(isCorrect)
     setShowFeedback(true)
@@ -168,15 +216,82 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
   }
 
   if (testComplete) {
+    const correctCount = results.filter(r => r.correct).length
+    const percentCorrect = Math.round((correctCount / results.length) * 100)
+    const riskLevel = percentCorrect >= 83 ? "low" : percentCorrect >= 67 ? "moderate" : "high"
+    
+    // Age-based norms (based on UPSIT research)
+    const ageNorms = [
+      { range: "20-39", normal: "5-6/6", threshold: 83 },
+      { range: "40-59", normal: "4-6/6", threshold: 67 },
+      { range: "60-79", normal: "3-6/6", threshold: 50 },
+      { range: "80+", normal: "3-5/6", threshold: 50 },
+    ]
+    
     return (
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader>
-          <CardTitle>{t("sensory.olfactory.complete_title")}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Flower2 className="h-6 w-6" />
+            {t("sensory.olfactory.complete_title")}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="text-center space-y-4">
-          <div className="text-6xl">✓</div>
-          <p className="text-lg">{t("sensory.olfactory.complete_message")}</p>
-          <Button onClick={() => onComplete(0)} className="mt-4">
+        <CardContent className="space-y-6">
+          {/* Score Display */}
+          <div className="flex flex-col items-center py-6">
+            <ScoreGauge score={percentCorrect} maxScore={100} size="lg" />
+            <RiskBadge risk={getScoreRiskLevel(percentCorrect)} className="mt-4" />
+          </div>
+          
+          {/* Results Summary */}
+          <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-green-600">{correctCount}/{results.length}</p>
+                <p className="text-sm text-muted-foreground">Correct Answers</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{percentCorrect}%</p>
+                <p className="text-sm text-muted-foreground">Accuracy</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Age-Based Norms */}
+          <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
+            <h4 className="font-semibold flex items-center gap-2 mb-3">
+              <AlertCircle className="h-4 w-4 text-blue-600" />
+              Age-Based Reference Ranges
+            </h4>
+            <p className="text-sm text-muted-foreground mb-3">
+              Smell sensitivity naturally decreases with age. Compare your results:
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {ageNorms.map(norm => (
+                <div key={norm.range} className="bg-white dark:bg-gray-800 p-2 rounded text-center text-sm">
+                  <p className="font-medium">{norm.range} yrs</p>
+                  <p className="text-muted-foreground">{norm.normal}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Interpretation */}
+          <div className={`p-4 rounded-lg ${
+            riskLevel === "low" ? "bg-green-50 dark:bg-green-950 border border-green-200" :
+            riskLevel === "moderate" ? "bg-yellow-50 dark:bg-yellow-950 border border-yellow-200" :
+            "bg-red-50 dark:bg-red-950 border border-red-200"
+          }`}>
+            <p className="text-sm">
+              {riskLevel === "low" 
+                ? "Your smell identification ability appears to be within the normal range for most age groups."
+                : riskLevel === "moderate"
+                ? "Your results suggest some difficulty with smell identification. This may be normal for older adults, but consider discussing with your doctor."
+                : "Your results indicate significant difficulty with smell identification. We recommend consulting a healthcare professional for further evaluation."}
+            </p>
+          </div>
+          
+          <Button onClick={() => onComplete(percentCorrect)} className="w-full mt-4">
             {t("common.continue")}
           </Button>
         </CardContent>
@@ -186,13 +301,33 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>
-          {t("sensory.olfactory.trial")} {currentTrialIndex + 1} / {trials.length}
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">{t("sensory.olfactory.select_smell")}</p>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>
+              {t("sensory.olfactory.trial")} {currentTrialIndex + 1} / {trials.length}
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">{t("sensory.olfactory.select_smell")}</p>
+          </div>
+          {/* Timer display */}
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
+            timeRemaining <= 10 ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"
+          }`}>
+            <Timer className={`h-4 w-4 ${timeRemaining <= 10 ? "animate-pulse" : ""}`} />
+            <span className="font-mono font-semibold">{timeRemaining}s</span>
+          </div>
+        </div>
+        {/* Progress bar */}
+        <Progress value={((currentTrialIndex) / trials.length) * 100} className="mt-3" />
+        {/* Timer progress */}
+        <div className="mt-2">
+          <Progress 
+            value={(timeRemaining / 30) * 100} 
+            className={`h-1 ${timeRemaining <= 10 ? "[&>div]:bg-red-500" : "[&>div]:bg-blue-500"}`}
+          />
+        </div>
       </CardHeader>
-      <CardContent className="space-y-8">
+      <CardContent className="space-y-6">
         {showFeedback && (
           <div
             className={`p-4 rounded-lg flex items-center justify-center gap-2 ${
@@ -202,6 +337,16 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
             {lastAnswerCorrect ? <Check className="h-6 w-6 text-green-600" /> : <X className="h-6 w-6 text-red-600" />}
             <span className="font-medium">
               {lastAnswerCorrect ? t("sensory.olfactory.correct") : t("sensory.olfactory.incorrect")}
+            </span>
+          </div>
+        )}
+
+        {/* Time warning */}
+        {timeRemaining <= 10 && !showFeedback && (
+          <div className="flex items-center justify-center gap-2 text-red-600 animate-pulse">
+            <AlertCircle className="h-4 w-4" />
+            <span className="text-sm font-medium">
+              {timeRemaining <= 5 ? "Hurry! Time almost up!" : "Running low on time!"}
             </span>
           </div>
         )}
