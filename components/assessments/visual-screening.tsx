@@ -26,7 +26,7 @@ import {
   type TumblingEDirection,
   type VisualCalibration,
 } from "@/lib/visual-acuity-utils"
-import { Eye, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, CreditCard, Ruler, CheckCircle2, AlertCircle } from "lucide-react"
+import { Eye, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, CreditCard, Ruler, CheckCircle2, AlertCircle } from "lucide-react"
 import { TestProgress } from "@/components/ui/test-progress"
 import { ScoreGauge, getScoreRiskLevel } from "@/components/ui/score-gauge"
 import { RiskBadge } from "@/components/ui/risk-badge"
@@ -414,62 +414,67 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
           </div>
           <Progress value={(totalTrials / 25) * 100} className="mt-2" />
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Display the "E" */}
-          <div className="flex items-center justify-center min-h-[300px] bg-white dark:bg-gray-900 rounded-lg border">
-            <div
-              style={{
-                fontSize: `${eSize}px`,
-                fontFamily: "Arial, sans-serif",
-                fontWeight: "bold",
-                transform: getRotation(currentDirection),
-                lineHeight: 1,
-              }}
-            >
-              E
+        <CardContent className="space-y-6 bg-slate-50 dark:bg-slate-900 -mx-6 -mb-6 px-6 pb-6 pt-4">
+          {/* Display the "E" in a white card */}
+          <div className="flex items-center justify-center">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 min-w-[200px] min-h-[200px] flex items-center justify-center">
+              <span
+                style={{
+                  fontSize: `${Math.max(eSize, 80)}px`,
+                  fontFamily: "'Arial Black', 'Helvetica Neue', Arial, sans-serif",
+                  fontWeight: 900,
+                  transform: getRotation(currentDirection),
+                  display: "inline-block",
+                  lineHeight: 1,
+                  color: "#1a1a2e",
+                }}
+              >
+                E
+              </span>
             </div>
           </div>
 
-          {/* Response buttons */}
-          <div className="space-y-3">
-            <p className="text-center text-sm font-medium">
-              {language === "zh" ? "E指向哪个方向？" : "Which direction is the E pointing?"}
-            </p>
-            <div className="flex flex-col items-center gap-2">
+          {/* Question text */}
+          <p className="text-center text-base font-medium text-muted-foreground">
+            {language === "zh" ? "E指向哪个方向？" : "Which direction is the E pointing?"}
+          </p>
+
+          {/* Response buttons - cross pattern */}
+          <div className="flex flex-col items-center gap-3">
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => handleResponse("up")}
+              className="w-20 h-14 rounded-xl bg-white hover:bg-gray-50 border-gray-200 shadow-sm"
+            >
+              <ChevronUp className="h-6 w-6" />
+            </Button>
+            <div className="flex gap-3">
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => handleResponse("up")}
-                className="w-20 h-16"
+                onClick={() => handleResponse("left")}
+                className="w-20 h-14 rounded-xl bg-white hover:bg-gray-50 border-gray-200 shadow-sm"
               >
-                <ArrowUp className="h-8 w-8" />
+                <ChevronLeft className="h-6 w-6" />
               </Button>
-              <div className="flex gap-2">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() => handleResponse("left")}
-                  className="w-20 h-16"
-                >
-                  <ArrowLeft className="h-8 w-8" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={() => handleResponse("right")}
-                  className="w-20 h-16"
-                >
-                  <ArrowRight className="h-8 w-8" />
-                </Button>
-              </div>
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => handleResponse("down")}
-                className="w-20 h-16"
+                onClick={() => handleResponse("right")}
+                className="w-20 h-14 rounded-xl bg-white hover:bg-gray-50 border-gray-200 shadow-sm"
               >
-                <ArrowDown className="h-8 w-8" />
+                <ChevronRight className="h-6 w-6" />
               </Button>
+            </div>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => handleResponse("down")}
+              className="w-20 h-14 rounded-xl bg-white hover:bg-gray-50 border-gray-200 shadow-sm"
+            >
+              <ChevronDown className="h-6 w-6" />
+            </Button>
             </div>
           </div>
         </CardContent>
