@@ -50,11 +50,8 @@ function AppContent() {
     | "results"
     | "admin"
     | "visual"
-    | "visual_enhanced"
     | "auditory"
-    | "auditory_enhanced"
     | "olfactory"
-    | "olfactory_enhanced"
     | "tcm"
     | "risk_profile"
   >("login")
@@ -130,8 +127,8 @@ function AppContent() {
     }
   }
 
-  const handleStartAssessment = (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm" | "visual_enhanced" | "auditory_enhanced" | "olfactory_enhanced") => {
-    if (type === "visual" || type === "visual_enhanced" || type === "auditory" || type === "auditory_enhanced" || type === "olfactory" || type === "olfactory_enhanced" || type === "tcm") {
+  const handleStartAssessment = (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm") => {
+    if (type === "visual" || type === "auditory" || type === "olfactory" || type === "tcm") {
       setCurrentView(type)
       return
     }
@@ -288,24 +285,12 @@ function AppContent() {
     return <VisualScreening onComplete={() => handleBackToDashboard()} />
   }
 
-  if (currentView === "visual_enhanced") {
-    return <VisualScreening onComplete={() => handleBackToDashboard()} enhanced={true} />
-  }
-
   if (currentView === "auditory") {
     return <AuditoryScreening onComplete={() => handleBackToDashboard()} />
   }
 
-  if (currentView === "auditory_enhanced") {
-    return <AuditoryScreening onComplete={() => handleBackToDashboard()} enhanced={true} />
-  }
-
   if (currentView === "olfactory") {
     return <OlfactoryScreening onComplete={() => handleBackToDashboard()} />
-  }
-
-  if (currentView === "olfactory_enhanced") {
-    return <OlfactoryScreening onComplete={() => handleBackToDashboard()} enhanced={true} />
   }
 
   if (currentView === "tcm") {

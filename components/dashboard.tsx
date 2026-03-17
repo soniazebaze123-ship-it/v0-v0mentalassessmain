@@ -22,7 +22,7 @@ interface AssessmentStatus {
 }
 
 interface DashboardProps {
-  onStartAssessment: (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm" | "visual_enhanced" | "auditory_enhanced" | "olfactory_enhanced") => void
+  onStartAssessment: (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm") => void
   onResumeAssessment?: (type: "moca" | "mmse", step: number, scores: number[]) => void
   onViewResults?: (type: "moca" | "mmse") => void
   onViewRiskProfile?: () => void
@@ -430,7 +430,7 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
             </CardContent>
           </Card>
 
-          {/* Visual Screening - Classic */}
+          {/* Visual Screening */}
           <Card
             className={`transition-all duration-200 border-2 ${status.visual.completed ? "border-green-500 bg-green-50" : "border-indigo-200 bg-white hover:border-indigo-400"}`}
           >
@@ -441,10 +441,10 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                 >
                   <Eye className="w-8 h-8" />
                 </div>
-                <Badge variant="outline" className="text-xs">Classic</Badge>
+                {status.visual.completed && <CheckCircle className="w-6 h-6 text-green-600" />}
               </div>
               <CardTitle className="text-lg mt-4">{t("sensory.visual.title")}</CardTitle>
-              <CardDescription>{language === "zh" ? "基础视力检测" : "Basic visual acuity test"}</CardDescription>
+              <CardDescription>{t("sensory.visual.description")}</CardDescription>
             </CardHeader>
             <CardContent>
               {status.visual.completed ? (
@@ -478,40 +478,7 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
             </CardContent>
           </Card>
 
-          {/* Visual Screening - Enhanced */}
-          <Card className="transition-all duration-200 border-2 border-indigo-300 bg-gradient-to-br from-indigo-50 to-white hover:border-indigo-500 hover:shadow-lg">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="p-3 rounded-full bg-indigo-100 text-indigo-600">
-                  <Eye className="w-8 h-8" />
-                </div>
-                <Badge className="bg-indigo-600 text-white text-xs">Enhanced</Badge>
-              </div>
-              <CardTitle className="text-lg mt-4">{language === "zh" ? "视力检测 (增强版)" : "Visual Acuity (Enhanced)"}</CardTitle>
-              <CardDescription>
-                {language === "zh" 
-                  ? "屏幕校准 + Tumbling-E自适应阶梯测试 (logMAR)" 
-                  : "Screen calibration + Tumbling-E adaptive staircase (logMAR)"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p>{language === "zh" ? "- 信用卡屏幕校准" : "- Credit card screen calibration"}</p>
-                  <p>{language === "zh" ? "- 40cm观看距离指导" : "- 40cm viewing distance guidance"}</p>
-                  <p>{language === "zh" ? "- 精确logMAR评分" : "- Accurate logMAR scoring"}</p>
-                </div>
-                <Button
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md"
-                  onClick={() => onStartAssessment("visual_enhanced")}
-                >
-                  {language === "zh" ? "开始增强版测试" : "Start Enhanced Test"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Auditory Screening - Classic */}
+          {/* Auditory Screening */}
           <Card
             className={`transition-all duration-200 border-2 ${status.auditory.completed ? "border-green-500 bg-green-50" : "border-pink-200 bg-white hover:border-pink-400"}`}
           >
@@ -522,10 +489,10 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                 >
                   <Ear className="w-8 h-8" />
                 </div>
-                <Badge variant="outline" className="text-xs">Classic</Badge>
+                {status.auditory.completed && <CheckCircle className="w-6 h-6 text-green-600" />}
               </div>
               <CardTitle className="text-lg mt-4">{t("sensory.auditory.title")}</CardTitle>
-              <CardDescription>{language === "zh" ? "基础听力检测" : "Basic hearing test"}</CardDescription>
+              <CardDescription>{t("sensory.auditory.description")}</CardDescription>
             </CardHeader>
             <CardContent>
               {status.auditory.completed ? (
@@ -559,40 +526,7 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
             </CardContent>
           </Card>
 
-          {/* Auditory Screening - Enhanced */}
-          <Card className="transition-all duration-200 border-2 border-pink-300 bg-gradient-to-br from-pink-50 to-white hover:border-pink-500 hover:shadow-lg">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="p-3 rounded-full bg-pink-100 text-pink-600">
-                  <Ear className="w-8 h-8" />
-                </div>
-                <Badge className="bg-pink-600 text-white text-xs">Enhanced</Badge>
-              </div>
-              <CardTitle className="text-lg mt-4">{language === "zh" ? "听力检测 (增强版)" : "Hearing Test (Enhanced)"}</CardTitle>
-              <CardDescription>
-                {language === "zh" 
-                  ? "语音数字三联体噪声测试 (DIN)" 
-                  : "Speech-based Digit-in-Noise test (DIN)"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p>{language === "zh" ? "- 环境噪声检测" : "- Ambient noise measurement"}</p>
-                  <p>{language === "zh" ? "- 语音合成数字播放" : "- Speech synthesis digit playback"}</p>
-                  <p>{language === "zh" ? "- 信噪比自适应测试" : "- Adaptive SNR testing"}</p>
-                </div>
-                <Button
-                  className="w-full bg-pink-600 hover:bg-pink-700 text-white shadow-md"
-                  onClick={() => onStartAssessment("auditory_enhanced")}
-                >
-                  {language === "zh" ? "开始增强版测试" : "Start Enhanced Test"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Olfactory Screening - Classic */}
+          {/* Olfactory Screening */}
           <Card
             className={`transition-all duration-200 border-2 ${status.olfactory.completed ? "border-green-500 bg-green-50" : "border-amber-200 bg-white hover:border-amber-400"}`}
           >
@@ -603,10 +537,10 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                 >
                   <Flower2 className="w-8 h-8" />
                 </div>
-                <Badge variant="outline" className="text-xs">Classic</Badge>
+                {status.olfactory.completed && <CheckCircle className="w-6 h-6 text-green-600" />}
               </div>
               <CardTitle className="text-lg mt-4">{t("sensory.olfactory.title")}</CardTitle>
-              <CardDescription>{language === "zh" ? "基础嗅觉检测" : "Basic smell identification test"}</CardDescription>
+              <CardDescription>{t("sensory.olfactory.description")}</CardDescription>
             </CardHeader>
             <CardContent>
               {status.olfactory.completed ? (
@@ -637,39 +571,6 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                   </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Olfactory Screening - Enhanced */}
-          <Card className="transition-all duration-200 border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-white hover:border-amber-500 hover:shadow-lg">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="p-3 rounded-full bg-amber-100 text-amber-600">
-                  <Flower2 className="w-8 h-8" />
-                </div>
-                <Badge className="bg-amber-600 text-white text-xs">Enhanced</Badge>
-              </div>
-              <CardTitle className="text-lg mt-4">{language === "zh" ? "嗅觉检测 (增强版)" : "Smell Test (Enhanced)"}</CardTitle>
-              <CardDescription>
-                {language === "zh" 
-                  ? "12项气味识别测试 (含干扰项)" 
-                  : "12-item odor identification with distractors"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p>{language === "zh" ? "- 12种常见气味" : "- 12 common odors"}</p>
-                  <p>{language === "zh" ? "- 4选1多选题格式" : "- 4-choice multiple selection"}</p>
-                  <p>{language === "zh" ? "- 标准化UPSIT评分" : "- Standardized UPSIT scoring"}</p>
-                </div>
-                <Button
-                  className="w-full bg-amber-600 hover:bg-amber-700 text-white shadow-md"
-                  onClick={() => onStartAssessment("olfactory_enhanced")}
-                >
-                  {language === "zh" ? "开始增强版测试" : "Start Enhanced Test"}
-                </Button>
-              </div>
             </CardContent>
           </Card>
 
