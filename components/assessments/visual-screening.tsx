@@ -475,7 +475,6 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
             >
               <ChevronDown className="h-6 w-6" />
             </Button>
-            </div>
           </div>
         </CardContent>
       </Card>
