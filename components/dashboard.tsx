@@ -382,7 +382,59 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
             </CardContent>
           </Card>
 
-          {/* Image Upload */}
+          {/* TCM Constitution Assessment */}
+          <Card
+            className={`transition-all duration-200 border-2 ${status.tcm.completed ? "border-green-500 bg-green-50" : "border-emerald-200 bg-white hover:border-emerald-400"}`}
+          >
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div
+                  className={`p-3 rounded-full ${status.tcm.completed ? "bg-green-100 text-green-600" : "bg-emerald-100 text-emerald-600"}`}
+                >
+                  <Leaf className="w-8 h-8" />
+                </div>
+                {status.tcm.completed && <CheckCircle className="w-6 h-6 text-green-600" />}
+              </div>
+              <CardTitle className="text-lg mt-4">{language === "zh" ? "中医体质辨识" : "TCM Constitution"}</CardTitle>
+              <CardDescription>
+                {language === "zh" 
+                  ? "根据中医理论评估您的体质类型" 
+                  : "Assess your body constitution based on TCM principles"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {status.tcm.completed ? (
+                <div className="space-y-3">
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 w-full justify-center py-1">
+                    {t("dashboard.completed")}
+                  </Badge>
+                  <p className="text-center font-bold text-2xl text-green-700">{status.tcm.score}%</p>
+                  <Button
+                    variant="outline"
+                    className="w-full bg-white hover:bg-gray-50 text-sm border-dashed"
+                    onClick={() => handleRetake("tcm")}
+                  >
+                    {t("common.retake")}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <Badge variant="outline" className="border-gray-400 text-gray-600">
+                    <Clock className="w-3 h-3 mr-1" />
+                    {t("dashboard.pending")}
+                  </Badge>
+                  <Button
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
+                    onClick={() => onStartAssessment("tcm")}
+                  >
+                    {t("common.start")}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* TCM Image Upload */}
           <Card
             className={`transition-all duration-200 border-2 ${status.upload.completed ? "border-green-500 bg-green-50" : "border-purple-200 bg-white hover:border-purple-400"}`}
           >
@@ -395,8 +447,8 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                 </div>
                 {status.upload.completed && <CheckCircle className="w-6 h-6 text-green-600" />}
               </div>
-              <CardTitle className="text-lg mt-4">{t("dashboard.upload")}</CardTitle>
-              <CardDescription>{t("dashboard.upload.description")}</CardDescription>
+              <CardTitle className="text-lg mt-4">{language === "zh" ? "中医图像上传" : "TCM Image Upload"}</CardTitle>
+              <CardDescription>{language === "zh" ? "上传舌象、面部等中医诊断图像" : "Upload tongue, face images for TCM diagnosis"}</CardDescription>
               <InstructionAudio instructionKey="upload.instruction" className="mt-2" />
             </CardHeader>
             <CardContent>
@@ -566,58 +618,6 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                   <Button
                     className="w-full bg-amber-600 hover:bg-amber-700 text-white shadow-md"
                     onClick={() => onStartAssessment("olfactory")}
-                  >
-                    {t("common.start")}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* TCM Constitution Assessment */}
-          <Card
-            className={`transition-all duration-200 border-2 ${status.tcm.completed ? "border-green-500 bg-green-50" : "border-emerald-200 bg-white hover:border-emerald-400"}`}
-          >
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div
-                  className={`p-3 rounded-full ${status.tcm.completed ? "bg-green-100 text-green-600" : "bg-emerald-100 text-emerald-600"}`}
-                >
-                  <Leaf className="w-8 h-8" />
-                </div>
-                {status.tcm.completed && <CheckCircle className="w-6 h-6 text-green-600" />}
-              </div>
-              <CardTitle className="text-lg mt-4">{language === "zh" ? "中医体质辨识" : "TCM Constitution"}</CardTitle>
-              <CardDescription>
-                {language === "zh" 
-                  ? "根据中医理论评估您的体质类型" 
-                  : "Assess your body constitution based on TCM principles"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {status.tcm.completed ? (
-                <div className="space-y-3">
-                  <Badge variant="secondary" className="bg-green-100 text-green-800 w-full justify-center py-1">
-                    {t("dashboard.completed")}
-                  </Badge>
-                  <p className="text-center font-bold text-2xl text-green-700">{status.tcm.score}%</p>
-                  <Button
-                    variant="outline"
-                    className="w-full bg-white hover:bg-gray-50 text-sm border-dashed"
-                    onClick={() => handleRetake("tcm")}
-                  >
-                    {t("common.retake")}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <Badge variant="outline" className="border-gray-400 text-gray-600">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {t("dashboard.pending")}
-                  </Badge>
-                  <Button
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
-                    onClick={() => onStartAssessment("tcm")}
                   >
                     {t("common.start")}
                   </Button>
