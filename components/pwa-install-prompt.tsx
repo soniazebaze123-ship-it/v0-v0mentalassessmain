@@ -18,6 +18,20 @@ export function PWAInstallPrompt() {
   const [isStandalone, setIsStandalone] = useState(false)
   const { language } = useLanguage()
 
+  // Register service worker
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((registration) => {
+          console.log("SW registered: ", registration)
+        })
+        .catch((registrationError) => {
+          console.log("SW registration failed: ", registrationError)
+        })
+    }
+  }, [])
+
   useEffect(() => {
     // Check if already installed
     const standalone = window.matchMedia("(display-mode: standalone)").matches
