@@ -33,6 +33,7 @@ import { VisualScreening } from "@/components/assessments/visual-screening"
 import { AuditoryScreening } from "@/components/assessments/auditory-screening"
 import { OlfactoryScreening } from "@/components/assessments/olfactory-screening"
 import { TCMConstitution } from "@/components/assessments/tcm-constitution"
+import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
 
 import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/contexts/language-context"
@@ -384,5 +385,10 @@ function AppContent() {
 }
 
 export default function Home() {
-  return <AppContent />
+  return (
+    <>
+      <AppContent />
+      <PWAInstallPrompt />
+    </>
+  )
 }

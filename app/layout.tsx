@@ -10,8 +10,20 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "MentalAssess - Cognitive Assessment Platform",
-  description: "Professional cognitive assessment application with MoCA and MMSE tests",
+  description: "Professional cognitive assessment application with MoCA, MMSE, TCM Constitution tests and sensory screenings",
   generator: "v0.app",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "MentalAssess",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 }
 
 export default function RootLayout({
@@ -22,6 +34,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="theme-color" content="#3b82f6" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="MentalAssess" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.jpg" />
+        <link rel="icon" type="image/jpeg" sizes="192x192" href="/icons/icon-192x192.jpg" />
+        <link rel="icon" type="image/jpeg" sizes="512x512" href="/icons/icon-512x512.jpg" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -32,6 +51,17 @@ export default function RootLayout({
                   document.documentElement.classList.remove('dark')
                 }
               } catch (_) {}
+              
+              // Register service worker
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                    console.log('SW registered: ', registration);
+                  }).catch(function(registrationError) {
+                    console.log('SW registration failed: ', registrationError);
+                  });
+                });
+              }
             `,
           }}
         />
