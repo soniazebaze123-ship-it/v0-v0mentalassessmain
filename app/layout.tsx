@@ -43,7 +43,7 @@ export default function RootLayout({
         <link rel="icon" type="image/jpeg" sizes="512x512" href="/icons/icon-512x512.jpg" />
       </head>
       <body className={inter.className} suppressHydrationWarning>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider defaultTheme="system">
           <LanguageProvider>
             <UserProvider>{children}</UserProvider>
           </LanguageProvider>
