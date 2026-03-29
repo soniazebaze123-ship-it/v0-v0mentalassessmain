@@ -2,8 +2,8 @@ const CACHE_NAME = 'mentalassess-v1';
 const STATIC_ASSETS = [
   '/',
   '/offline.html',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
+  '/icons/icon-192x192.jpg',
+  '/icons/icon-512x512.jpg',
 ];
 
 // Install event - cache static assets
