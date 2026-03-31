@@ -23,11 +23,11 @@
 - ✅ All documentation in place
 
 ### 3. Git History ✅
-```
+\`\`\`
 5ec6010 docs: Add Vercel deployment guide with testing checklist
 23b1b50 chore: Phase 4 multimodal deferral and type system fixes
 59b6f10 [Previous development work]
-```
+\`\`\`
 
 ---
 
@@ -36,9 +36,9 @@
 ### Quick Start (2 minutes)
 
 **Step 1:** Visit Vercel
-```
+\`\`\`
 https://vercel.com/new
-```
+\`\`\`
 
 **Step 2:** Click "Continue with GitHub"
 - Authorize Vercel to access your GitHub account
@@ -51,10 +51,10 @@ https://vercel.com/new
 **Step 4:** Configure Environment Variables
 Add these in the Vercel import dialog:
 
-```env
+\`\`\`env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-```
+\`\`\`
 
 **Where to find these:**
 1. Go to https://app.supabase.com
@@ -121,11 +121,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
    - Log in to Supabase dashboard
    - Go to SQL Editor
    - Run these scripts in order:
-     ```sql
+     \`\`\`sql
      -- 1. Execute scripts/01-create-tables.sql
      -- 2. Execute scripts/02-create-storage.sql
      -- 3. Execute scripts/03-fix-storage-policies.sql
-     ```
+     \`\`\`
 
 2. **Audio Files** (Optional for Phase 1)
    - If testing audio assessments, place files in `public/audio/`:

@@ -18,10 +18,10 @@ Branch: `development` (latest commit: Phase 4 multimodal deferral + type fixes)
 ### Step 2: Configure Environment Variables in Vercel
 In the Vercel import dialog, add the following environment variables:
 
-```
+\`\`\`
 NEXT_PUBLIC_SUPABASE_URL=<your-supabase-url>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>
-```
+\`\`\`
 
 **Where to find these:**
 - Login to **https://app.supabase.com**
@@ -49,11 +49,11 @@ You'll need to:
 
 1. **Set up Supabase Database**
    - Run migration scripts from `scripts/` folder:
-     ```
+     \`\`\`
      psql -U postgres -h localhost -d postgres -f scripts/01-create-tables.sql
      psql -U postgres -h localhost -d postgres -f scripts/02-create-storage.sql
      psql -U postgres -h localhost -d postgres -f scripts/03-fix-storage-policies.sql
-     ```
+     \`\`\`
 
 2. **Create Test Users**
    - Use phone number registration on the app

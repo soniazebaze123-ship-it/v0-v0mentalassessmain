@@ -105,11 +105,11 @@
 - [ ] Update all `onComplete()` callbacks to save to database
 
 ### Step 3: Add New Libraries (Week 1)
-```bash
+\`\`\`bash
 npm install @react-pdf/renderer
 # OR
 npm install pdfkit
-```
+\`\`\`
 
 ### Step 4: Implement Services (Week 2)
 - [ ] Copy mmse-service.ts to lib/mmse/
@@ -163,10 +163,10 @@ npm install pdfkit
 Before deploying to production:
 
 1. **RLS Verification:**
-   ```sql
+   \`\`\`sql
    SELECT schemaname, tablename, rowsecurity FROM pg_tables 
    WHERE schemaname = 'public' ORDER BY tablename;
-   ```
+   \`\`\`
    Should show `rowsecurity = true` for ALL tables.
 
 2. **No Hardcoded Credentials:**

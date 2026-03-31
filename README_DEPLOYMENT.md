@@ -4,7 +4,7 @@
 
 ## 📊 CURRENT STATUS
 
-```
+\`\`\`
 ✅ GitHub             COMPLETE  
    └─ Repository: https://github.com/soniazebaze123-ship-it/v0-v0mentalassessmain
    └─ Branch: development (4 new commits)
@@ -32,7 +32,7 @@
    └─ Import repository: v0-v0mentalassessmain
    └─ Add Supabase credentials
    └─ Click Deploy!
-```
+\`\`\`
 
 ---
 
@@ -40,7 +40,7 @@
 
 ### Deploy to Vercel in 2 minutes:
 
-```
+\`\`\`
 1. Go to https://vercel.com/new
 2. Click "Continue with GitHub"
 3. Select: v0-v0mentalassessmain
@@ -49,7 +49,7 @@
    NEXT_PUBLIC_SUPABASE_ANON_KEY = [from Supabase console]
 5. Click "Deploy"
 6. Wait 2-5 minutes for live URL ✨
-```
+\`\`\`
 
 ---
 

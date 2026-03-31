@@ -78,7 +78,7 @@ The multimodal section (EEG/neurophysiology + blood biomarkers module) has been 
 
 ### File Structure (Archived)
 
-```
+\`\`\`
 app/multimodal/
 ├── page.txs              # ⛔ DISABLED - Phase 4 archive
 └── [ARCHIVED - Phase 4]
@@ -104,7 +104,7 @@ lib/multimodal/
 ├── constants.ts
 ├── admin-analytics.ts
 └── [ALL ARCHIVED - Phase 4]
-```
+\`\`\`
 
 ### Known Issues Fixed
 
@@ -191,7 +191,7 @@ All multimodal files remain in their original locations for Phase 4 access:
 
 ### Activation Path (Phase 4)
 
-```bash
+\`\`\`bash
 # 1. Enable TypeScript compilation
 mv app/multimodal/page.txs app/multimodal/page.tsx
 
@@ -207,7 +207,7 @@ npm run test
 # 5. Deploy Phase 4
 npm run build
 npm run deploy
-```
+\`\`\`
 
 ---
 
