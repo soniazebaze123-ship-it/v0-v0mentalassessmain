@@ -97,14 +97,14 @@ export function PWAInstallPrompt() {
     zh: {
       title: "安装 MentalAssess",
       description: "添加到主屏幕以便快速访问和离线使用",
-      iosDescription: "点击分享按钮，然后选择"添加到主屏幕"",
+      iosDescription: "点击分享按钮，然后选择'添加到主屏幕'",
       install: "安装",
       dismiss: "暂不安装",
     },
     yue: {
       title: "安裝 MentalAssess",
       description: "加到主畫面方便隨時使用同離線使用",
-      iosDescription: "撳分享掣，然後揀「加到主畫面」",
+      iosDescription: "撳分享掣，然後揀'加到主畫面'",
       install: "安裝",
       dismiss: "之後先",
     },
