@@ -26,7 +26,7 @@ interface User {
   created_at: string
 }
 
-interface Assessment {
+export interface Assessment {
   id: string
   user_id: string
   assessment_type: "MOCA" | "MMSE"

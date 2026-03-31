@@ -123,12 +123,26 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     gender?: string,
   ): Promise<{ success: boolean; error?: string }> => {
     setLoading(true)
-    const supabase = createClient()
 
     try {
       console.log("[v0] Starting registration for phone:", phoneNumber, "name:", name)
 
-      const { data: existingUser } = await supabase.from("users").select("id").eq("phone_number", phoneNumber).limit(1)
+      const supabase = createClient()
+
+      // Check if user already exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("phone_number", phoneNumber)
+        .limit(1)
+
+      if (checkError) {
+        console.log("[v0] Error checking existing user:", checkError)
+        return {
+          success: false,
+          error: "Connection error. Please check your internet connection and try again.",
+        }
+      }
 
       if (existingUser && existingUser.length > 0) {
         console.log("[v0] Phone number already exists")
@@ -140,7 +154,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       console.log("[v0] Creating new user with id:", newUserId, "name:", name, "dob:", dateOfBirth, "gender:", gender)
 
-      const { data: newUser, error: insertError } = await supabase
+      const { data: newUsers, error: insertError } = await supabase
         .from("users")
         .insert({
           id: newUserId,
@@ -151,15 +165,26 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           gender: gender || null,
         })
         .select()
-        .single()
 
-      console.log("[v0] Insert result:", { newUser, insertError })
+      console.log("[v0] Insert result:", { newUsers, insertError })
 
-      if (insertError || !newUser) {
+      if (insertError) {
         console.log("[v0] Registration failed:", insertError)
-        return { success: false, error: insertError?.message || "Registration failed. Please try again." }
+        return {
+          success: false,
+          error: `Registration failed: ${insertError.message}. Please try again.`,
+        }
       }
 
+      if (!newUsers || newUsers.length === 0) {
+        console.log("[v0] No user returned after insert")
+        return {
+          success: false,
+          error: "Registration failed. Please try again.",
+        }
+      }
+
+      const newUser = newUsers[0]
       console.log("[v0] Registration successful, setting user")
       setUser(newUser)
       localStorage.setItem("mental_assess_dummy_user", JSON.stringify(newUser))
@@ -167,7 +192,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       return { success: true }
     } catch (error: any) {
       console.log("[v0] Registration error:", error)
-      return { success: false, error: error.message }
+      if (error.message?.includes("Failed to fetch") || error.message?.includes("fetch")) {
+        return {
+          success: false,
+          error: "Network error. Please disable browser extensions that may block requests and try again.",
+        }
+      }
+      return { success: false, error: error.message || "An unexpected error occurred." }
     } finally {
       setLoading(false)
     }
