@@ -366,10 +366,5 @@ function AppContent() {
 }
 
 export default function Home() {
-  return (
-    <>
-      <AppContent />
-      <PWAInstallPrompt />
-    </>
-  )
+  return <AppContent />
 }
