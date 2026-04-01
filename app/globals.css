@@ -4,56 +4,66 @@
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 224 71% 4%;
+    /* Calming healthcare palette - soft warm neutrals with forest green accent */
+    --background: 30 20% 96%;
+    --foreground: 150 25% 15%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 224 71% 4%;
+    --card: 30 15% 98%;
+    --card-foreground: 150 25% 15%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
+    --popover: 30 15% 98%;
+    --popover-foreground: 150 25% 15%;
 
-    --primary: 220 70% 50%;
-    --primary-foreground: 210 20% 98%;
+    /* Primary: Forest green - calming, professional, medical */
+    --primary: 152 45% 32%;
+    --primary-foreground: 30 20% 98%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 9% 46%;
+    /* Secondary: Warm beige/taupe */
+    --secondary: 30 15% 92%;
+    --secondary-foreground: 150 20% 25%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 30 12% 90%;
+    --muted-foreground: 150 10% 40%;
 
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 9% 46%;
+    /* Accent: Soft teal for highlights */
+    --accent: 175 35% 45%;
+    --accent-foreground: 30 20% 98%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 20% 98%;
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 30 20% 98%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 220 70% 50%;
+    --border: 30 15% 85%;
+    --input: 30 15% 88%;
+    --ring: 152 45% 32%;
 
     --radius: 0.75rem;
 
-    /* Assessment card colors - harmonious health-focused palette */
-    --card-cognitive: 220 70% 50%;
-    --card-cognitive-light: 220 70% 96%;
-    --card-cognitive-secondary: 187 70% 45%;
-    --card-cognitive-secondary-light: 187 70% 96%;
+    /* Assessment card colors - harmonious healthcare palette */
+    /* Cognitive (MoCA/MMSE): Deep teal */
+    --card-cognitive: 175 40% 35%;
+    --card-cognitive-light: 175 30% 95%;
+    --card-cognitive-secondary: 190 35% 40%;
+    --card-cognitive-secondary-light: 190 30% 95%;
     
-    --card-tcm: 152 60% 40%;
-    --card-tcm-light: 152 60% 96%;
-    --card-upload: 262 60% 55%;
-    --card-upload-light: 262 60% 96%;
+    /* TCM: Forest green */
+    --card-tcm: 152 45% 32%;
+    --card-tcm-light: 152 35% 95%;
     
-    --card-visual: 245 60% 55%;
-    --card-visual-light: 245 60% 96%;
-    --card-auditory: 330 65% 50%;
-    --card-auditory-light: 330 65% 96%;
-    --card-olfactory: 35 85% 50%;
-    --card-olfactory-light: 35 85% 96%;
+    /* Visual: Soft indigo */
+    --card-visual: 230 35% 45%;
+    --card-visual-light: 230 30% 95%;
     
-    --card-success: 152 60% 40%;
-    --card-success-light: 152 60% 96%;
+    /* Auditory: Warm coral */
+    --card-auditory: 15 55% 50%;
+    --card-auditory-light: 15 45% 95%;
+    
+    /* Olfactory: Warm amber */
+    --card-olfactory: 35 60% 48%;
+    --card-olfactory-light: 35 50% 95%;
+    
+    /* Success: Soft green */
+    --card-success: 145 45% 38%;
+    --card-success-light: 145 35% 95%;
   }
 
   .dark {
