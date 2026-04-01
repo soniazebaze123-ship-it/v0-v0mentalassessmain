@@ -24,22 +24,22 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
   const [hasPlayedAudio, setHasPlayedAudio] = useState(false)
 
   const getSpeechText = () => {
-    // Enhanced multilingual sentences for MoCA Language Abstraction
+    // Simplified sentences for MoCA Language Abstraction - easier for elderly patients
     const sentences = {
-      en: "The quick brown fox jumps over the lazy dog",
-      zh: "那只敏捷的棕色狐狸跳过那只懒洋洋的狗",
-      yue: "快速嘅啡色狐狸跳過懶狗",
-      fr: "Le renard brun rapide saute par-dessus le chien paresseux",
+      en: "The cat sat under the table waiting for dinner",
+      zh: "他去商店买东西",
+      yue: "佢去商店買嘢",
+      fr: "Le chat est assis sous la table en attendant le dîner",
     }
     return sentences[language] || sentences.en
   }
 
   const getCorrectAnswer = () => {
     const answers = {
-      en: "The quick brown fox jumps over the lazy dog",
-      zh: "敏捷的棕色狐狸跳过懒惰的狗",
-      yue: "敏捷嘅棕色狐狸跳過懶惰嘅狗",
-      fr: "Le renard brun rapide saute par-dessus le chien paresseux",
+      en: "the cat sat under the table waiting for dinner",
+      zh: "他去商店买东西",
+      yue: "佢去商店買嘢",
+      fr: "le chat est assis sous la table en attendant le dîner",
     }
     return answers[language] || answers.en
   }

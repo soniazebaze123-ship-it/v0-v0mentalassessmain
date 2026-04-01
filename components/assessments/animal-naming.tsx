@@ -30,11 +30,31 @@ export function AnimalNaming({ onComplete, onSkip }: AnimalNamingProps) {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
   const [loading, setLoading] = useState(true)
 
-  const defaultAnimals = [
-    { image: "/images/tiger.png", name: t("common.tiger"), alt: t("common.tiger") },
-    { image: "/images/rhinoceros.png", name: t("common.rhinoceros"), alt: t("common.rhinoceros") },
-    { image: "/images/camel.png", name: t("common.camel"), alt: t("common.camel") },
+  // Animal names with all accepted variations for scoring
+  const animalData = [
+    { 
+      image: "/images/tiger.png", 
+      displayName: t("common.tiger"),
+      acceptedAnswers: ["tiger", "老虎", "虎", "lǎohǔ", "老虎仔", "大虎"]
+    },
+    { 
+      image: "/images/rhinoceros.png", 
+      displayName: t("common.rhinoceros"),
+      acceptedAnswers: ["rhinoceros", "rhino", "犀牛", "xīniú", "犀牛仔"]
+    },
+    { 
+      image: "/images/camel.png", 
+      displayName: t("common.camel"),
+      acceptedAnswers: ["camel", "骆驼", "駱駝", "luòtuo", "骆驼仔"]
+    },
   ]
+  
+  const defaultAnimals = animalData.map(animal => ({
+    image: animal.image,
+    name: animal.displayName,
+    alt: animal.displayName,
+    acceptedAnswers: animal.acceptedAnswers
+  }))
 
   useEffect(() => {
     loadUploadedImages()
@@ -89,13 +109,21 @@ export function AnimalNaming({ onComplete, onSkip }: AnimalNamingProps) {
     let score = 0
     animals.forEach((animal, index) => {
       const userAnswer = answers[index].toLowerCase().trim()
-      // For default animals, check against localized name. For uploaded, any non-empty answer gets a point.
+      // For default animals, check against all accepted answers (Chinese, Cantonese, English, Pinyin)
       if (uploadedImages.length >= 3) {
+        // For uploaded images, any non-empty answer gets a point
         if (userAnswer !== "") {
           score += 1
         }
       } else {
-        if (userAnswer === animal.name.toLowerCase()) {
+        // Check if user answer matches any accepted variation
+        const isCorrect = animal.acceptedAnswers?.some((accepted: string) => 
+          userAnswer === accepted.toLowerCase() || 
+          accepted.toLowerCase().includes(userAnswer) ||
+          userAnswer.includes(accepted.toLowerCase())
+        ) || userAnswer === animal.name.toLowerCase()
+        
+        if (isCorrect) {
           score += 1
         }
       }

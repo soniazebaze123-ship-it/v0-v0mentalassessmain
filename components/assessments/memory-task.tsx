@@ -22,13 +22,24 @@ export function MemoryTask({ onComplete, onSkip, words, title }: MemoryTaskProps
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
   const [recallAnswers, setRecallAnswers] = useState<string[]>(new Array(words.length).fill(""))
 
-  // Get localized words
-  const localizedWords =
-    language === "zh"
-      ? title.includes("MoCA")
+  // Get localized words with Cantonese support
+  const getLocalizedWords = (): string[] => {
+    if (language === "zh") {
+      // Simplified Chinese
+      return title.includes("MoCA")
         ? ["脸", "天鹅绒", "教堂", "雏菊", "红色"]
         : ["苹果", "桌子", "硬币"]
-      : words
+    } else if (language === "yue") {
+      // Cantonese
+      return title.includes("MoCA")
+        ? ["面", "絲絨", "教堂", "菊花", "紅色"]
+        : ["蘋果", "枱", "銀仔"]
+    }
+    // Default English
+    return Array.isArray(words) ? words : ["face", "velvet", "church", "daisy", "red"]
+  }
+  
+  const localizedWords = getLocalizedWords()
 
   // Countdown phase
   useEffect(() => {
@@ -62,9 +73,48 @@ export function MemoryTask({ onComplete, onSkip, words, title }: MemoryTaskProps
 
   const checkAnswers = () => {
     let score = 0
+    
+    // Define accepted variations for each word (to handle synonyms and simplified/traditional)
+    const wordVariations: Record<string, string[]> = {
+      // English
+      "face": ["face", "脸", "面", "臉"],
+      "velvet": ["velvet", "天鹅绒", "絲絨", "丝绒"],
+      "church": ["church", "教堂", "教會"],
+      "daisy": ["daisy", "雏菊", "菊花", "雛菊"],
+      "red": ["red", "红色", "紅色", "红", "紅"],
+      "apple": ["apple", "苹果", "蘋果"],
+      "table": ["table", "桌子", "枱", "台", "檯"],
+      "coin": ["coin", "硬币", "銀仔", "硬幣"],
+      // Chinese simplified
+      "脸": ["face", "脸", "面", "臉"],
+      "天鹅绒": ["velvet", "天鹅绒", "絲絨", "丝绒"],
+      "教堂": ["church", "教堂", "教會"],
+      "雏菊": ["daisy", "雏菊", "菊花", "雛菊"],
+      "红色": ["red", "红色", "紅色", "红", "紅"],
+      "苹果": ["apple", "苹果", "蘋果"],
+      "桌子": ["table", "桌子", "枱", "台", "檯"],
+      "硬币": ["coin", "硬币", "銀仔", "硬幣"],
+      // Cantonese
+      "面": ["face", "脸", "面", "臉"],
+      "絲絨": ["velvet", "天鹅绒", "絲絨", "丝绒"],
+      "菊花": ["daisy", "雏菊", "菊花", "雛菊"],
+      "紅色": ["red", "红色", "紅色", "红", "紅"],
+      "蘋果": ["apple", "苹果", "蘋果"],
+      "枱": ["table", "桌子", "枱", "台", "檯"],
+      "銀仔": ["coin", "硬币", "銀仔", "硬幣"],
+    }
+    
     localizedWords.forEach((word, index) => {
       const userAnswer = recallAnswers[index].toLowerCase().trim()
-      if (userAnswer === word.toLowerCase()) {
+      const acceptedAnswers = wordVariations[word] || [word.toLowerCase()]
+      
+      const isCorrect = acceptedAnswers.some(accepted => 
+        userAnswer === accepted.toLowerCase() ||
+        accepted.toLowerCase().includes(userAnswer) ||
+        userAnswer.includes(accepted.toLowerCase())
+      )
+      
+      if (isCorrect) {
         score += 1
       }
     })
