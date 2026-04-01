@@ -124,7 +124,6 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
     if (!audioContextRef.current || !trial) return
 
     setIsPlaying(true)
-    console.log("[v0] Playing trial", index + 1, "digits:", trial.digits.join(""), "SNR:", trial.noiseLevel)
     await playDigitTripletWithNoise(trial.digits, trial.noiseLevel, audioContextRef.current)
     setIsPlaying(false)
   }
@@ -149,8 +148,6 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
       response[1] === trial.digits[1] &&
       response[2] === trial.digits[2]
 
-    console.log("[v0] Trial", currentTrialIndex + 1, "- Expected:", trial.digits.join(""), "Got:", userResponse, "Correct:", isCorrect)
-
     const newResults = [...results, { correct: isCorrect, snr: trial.noiseLevel }]
     setResults(newResults)
     setUserResponse("")
@@ -160,8 +157,6 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
       setCurrentTrialIndex(nextIndex)
       setTimeout(() => playTrialAtIndex(nextIndex), 800)
     } else {
-      const correctCount = newResults.filter((r) => r.correct).length
-      console.log("[v0] All trials complete. Correct:", correctCount, "/", newResults.length)
       finishTest(newResults)
     }
   }
@@ -182,8 +177,6 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
     // Score: 100 = best hearing, 0 = worst
     const score = Math.round(Math.max(0, Math.min(100, 100 - normalizedScore)))
     setFinalScore(score)
-
-    console.log("[v0] Auditory results - Score:", score, "SRT:", speechReceptionThreshold, "Classification:", classification, "Correct:", percentCorrect + "%")
 
     if (user) {
       try {

@@ -218,20 +218,28 @@ export function getRiskLevelLabel(
 // Function to fetch all assessment data and calculate composite score
 export async function fetchAndCalculateRiskProfile(userId: string, supabase: any): Promise<RiskProfile | null> {
   try {
-    const { data: cognitiveData } = await supabase
+    const { data: cognitiveData, error: cogError } = await supabase
       .from("assessments")
       .select("type, score")
       .eq("user_id", userId)
       .order("completed_at", { ascending: false })
       .limit(10)
 
+    if (cogError) {
+      console.error("[v0] Error fetching cognitive data:", cogError)
+    }
+
     // Fetch sensory assessments
-    const { data: sensoryData } = await supabase
+    const { data: sensoryData, error: sensoryError } = await supabase
       .from("sensory_assessments")
       .select("test_type, normalized_score")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(10)
+
+    if (sensoryError) {
+      console.error("[v0] Error fetching sensory data:", sensoryError)
+    }
 
     const cognitive: CognitiveScores = {}
     const sensory: SensoryScores = {}
@@ -267,6 +275,7 @@ export async function fetchAndCalculateRiskProfile(userId: string, supabase: any
 
     return calculateCompositeRiskScore(cognitive, sensory)
   } catch (error) {
+    console.error("[v0] Error calculating risk profile:", error)
     return null
   }
 }

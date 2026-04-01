@@ -212,6 +212,7 @@ function AppContent() {
           .select()
 
         if (error) {
+          console.error("[v0] Error saving assessment:", error)
           alert(`Error saving assessment: ${error.message}`)
           return
         }
@@ -225,6 +226,7 @@ function AppContent() {
           [assessmentType]: { totalScore, sectionScores },
         }))
       } catch (error) {
+        console.error("[v0] Error saving assessment:", error)
         alert(`Error saving assessment: ${error instanceof Error ? error.message : "Unknown error"}`)
         return
       }
@@ -286,7 +288,7 @@ function AppContent() {
     return (
       <TCMConstitution
         onComplete={(score, data) => {
-          console.log("[v0] TCM Constitution completed:", { score, data })
+          
           handleBackToDashboard()
         }}
         onBack={handleBackToDashboard}

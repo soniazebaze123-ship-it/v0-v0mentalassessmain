@@ -103,7 +103,7 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
       setStatus(newStatus)
       setHasAnyAssessments(hasCompleted)
     } catch (error) {
-      // Error loading assessment status - silently continue
+      console.error("[v0] Dashboard: Error loading assessment status:", error)
     } finally {
       setLoading(false)
     }
