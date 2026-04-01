@@ -1,6 +1,6 @@
 "use client"
 
-// MentalAssess - Cognitive Assessment Platform v3.3
+// MentalAssess - Cognitive Assessment Platform v3.4
 import { useState, useEffect } from "react"
 import { useUser } from "@/contexts/user-context"
 import { Registration } from "@/components/registration"

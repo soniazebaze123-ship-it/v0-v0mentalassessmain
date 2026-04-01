@@ -18,11 +18,8 @@ import {
   detectHeadphones,
   type AudiogramData,
 } from "@/lib/auditory-screening-utils"
-import { Headphones, Volume2, VolumeX, AlertCircle, CheckCircle2, Mic } from "lucide-react"
+import { Headphones, Volume2, VolumeX, AlertCircle, CheckCircle2, Mic, Circle } from "lucide-react"
 import { AudiogramChart } from "@/components/audiogram-chart"
-import { TestProgress } from "@/components/ui/test-progress"
-import { ScoreGauge, getScoreRiskLevel } from "@/components/ui/score-gauge"
-import { RiskBadge } from "@/components/ui/risk-badge"
 
 interface AuditoryScreeningProps {
   onComplete: (score: number) => void
@@ -30,13 +27,15 @@ interface AuditoryScreeningProps {
   enhanced?: boolean
 }
 
-type TestPhase = "setup" | "noise-check" | "calibration" | "testing" | "complete"
+type TestPhase = "audio-mode-selection" | "headphone-check" | "noise-check" | "ear-test-left" | "ear-test-right" | "calibration" | "testing" | "complete"
+type AudioMode = "headphones" | "speakers"
 
 export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: AuditoryScreeningProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const { user } = useUser()
 
-  const [phase, setPhase] = useState<TestPhase>("setup")
+  const [phase, setPhase] = useState<TestPhase>("audio-mode-selection")
+  const [audioMode, setAudioMode] = useState<AudioMode | null>(null)
   const [currentTrialIndex, setCurrentTrialIndex] = useState(0)
   const [userResponse, setUserResponse] = useState("")
   const [results, setResults] = useState<{ correct: boolean; snr: number }[]>([])
@@ -48,12 +47,155 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
     message: string
   } | null>(null)
   const [hasHeadphones, setHasHeadphones] = useState<boolean | null>(null)
+  const [headphoneCheckComplete, setHeadphoneCheckComplete] = useState(false)
+  const [leftEarTested, setLeftEarTested] = useState(false)
+  const [rightEarTested, setRightEarTested] = useState(false)
+  const [leftEarResponse, setLeftEarResponse] = useState<"heard" | "not-heard" | null>(null)
+  const [rightEarResponse, setRightEarResponse] = useState<"heard" | "not-heard" | null>(null)
   const [audiogramData, setAudiogramData] = useState<AudiogramData | null>(null)
   const [finalScore, setFinalScore] = useState(0)
   const [speechSupported, setSpeechSupported] = useState(true)
 
   const [trials] = useState(() => generateDigitTriplets(12))
   const audioContextRef = useRef<AudioContext | null>(null)
+
+  // Translations
+  const translations = {
+    en: {
+      title: "Hearing Screening",
+      selectAudioMode: "Select Audio Mode",
+      headphonesOption: "Using Headphones",
+      headphonesDesc: "Recommended for accurate results",
+      speakersOption: "Quiet Environment (No Headphones)",
+      speakersDesc: "Ensure you are in a silent room",
+      checkingHeadphones: "Checking Headphones",
+      headphonesDetected: "Headphones Detected",
+      headphonesNotDetected: "Headphones Not Detected",
+      pleaseConnect: "Please connect your headphones and try again",
+      recheckHeadphones: "Check Again",
+      continueAnyway: "Continue Anyway",
+      leftEarTest: "Left Ear Test",
+      rightEarTest: "Right Ear Test",
+      playTestSound: "Play Test Sound",
+      heardSound: "I Heard the Sound",
+      didNotHear: "I Did Not Hear",
+      earTestInstruction: "Please listen carefully. A tone will be played. Click the button that matches what you heard.",
+      leftEarInstruction: "This test is for your LEFT ear. If using headphones, the sound will play in your left ear only.",
+      rightEarInstruction: "This test is for your RIGHT ear. If using headphones, the sound will play in your right ear only.",
+      noiseCheck: "Checking Ambient Noise",
+      calibration: "Volume Calibration",
+      startTest: "Start Hearing Test",
+      complete: "Hearing Screening Complete",
+      trialOf: "Trial {current} of {total}",
+      enterDigits: "Enter the 3 digits you heard",
+      submit: "Submit",
+      replay: "Replay",
+      correct: "correct",
+      skip: "Skip Test",
+      continue: "Continue",
+    },
+    zh: {
+      title: "听力筛查",
+      selectAudioMode: "选择音频模式",
+      headphonesOption: "使用耳机",
+      headphonesDesc: "推荐使用以获得准确结果",
+      speakersOption: "安静环境（无耳机）",
+      speakersDesc: "请确保您在安静的房间内",
+      checkingHeadphones: "正在检测耳机",
+      headphonesDetected: "已检测到耳机",
+      headphonesNotDetected: "未检测到耳机",
+      pleaseConnect: "请连接耳机后重试",
+      recheckHeadphones: "重新检测",
+      continueAnyway: "继续测试",
+      leftEarTest: "左耳测试",
+      rightEarTest: "右耳测试",
+      playTestSound: "播放测试音",
+      heardSound: "我听到了声音",
+      didNotHear: "我没有听到",
+      earTestInstruction: "请仔细听。将播放一个声音。点击符合您所听到的按钮。",
+      leftEarInstruction: "这是左耳测试。如果使用耳机，声音只会在左耳播放。",
+      rightEarInstruction: "这是右耳测试。如果使用耳机，声音只会在右耳播放。",
+      noiseCheck: "正在检测环境噪音",
+      calibration: "音量校准",
+      startTest: "开始听力测试",
+      complete: "听力筛查完成",
+      trialOf: "第 {current} 次，共 {total} 次",
+      enterDigits: "输入您听到的3个数字",
+      submit: "提交",
+      replay: "重播",
+      correct: "正确",
+      skip: "跳过测试",
+      continue: "继续",
+    },
+    yue: {
+      title: "聽力篩查",
+      selectAudioMode: "選擇音頻模式",
+      headphonesOption: "使用耳機",
+      headphonesDesc: "建議使用以獲得準確結果",
+      speakersOption: "安靜環境（冇耳機）",
+      speakersDesc: "請確保你喺安靜嘅房間入面",
+      checkingHeadphones: "正在檢測耳機",
+      headphonesDetected: "已檢測到耳機",
+      headphonesNotDetected: "未檢測到耳機",
+      pleaseConnect: "請連接耳機後重試",
+      recheckHeadphones: "重新檢測",
+      continueAnyway: "繼續測試",
+      leftEarTest: "左耳測試",
+      rightEarTest: "右耳測試",
+      playTestSound: "播放測試音",
+      heardSound: "我聽到咗聲音",
+      didNotHear: "我冇聽到",
+      earTestInstruction: "請仔細聽。將會播放一個聲音。撳符合你所聽到嘅按鈕。",
+      leftEarInstruction: "呢個係左耳測試。如果用耳機，聲音只會喺左耳播放。",
+      rightEarInstruction: "呢個係右耳測試。如果用耳機，聲音只會喺右耳播放。",
+      noiseCheck: "正在檢測環境噪音",
+      calibration: "音量校準",
+      startTest: "開始聽力測試",
+      complete: "聽力篩查完成",
+      trialOf: "第 {current} 次，共 {total} 次",
+      enterDigits: "輸入你聽到嘅3個數字",
+      submit: "提交",
+      replay: "重播",
+      correct: "正確",
+      skip: "跳過測試",
+      continue: "繼續",
+    },
+    fr: {
+      title: "Dépistage Auditif",
+      selectAudioMode: "Sélectionnez le Mode Audio",
+      headphonesOption: "Utiliser des Écouteurs",
+      headphonesDesc: "Recommandé pour des résultats précis",
+      speakersOption: "Environnement Calme (Sans Écouteurs)",
+      speakersDesc: "Assurez-vous d'être dans une pièce silencieuse",
+      checkingHeadphones: "Vérification des Écouteurs",
+      headphonesDetected: "Écouteurs Détectés",
+      headphonesNotDetected: "Écouteurs Non Détectés",
+      pleaseConnect: "Veuillez connecter vos écouteurs et réessayer",
+      recheckHeadphones: "Vérifier à Nouveau",
+      continueAnyway: "Continuer Quand Même",
+      leftEarTest: "Test Oreille Gauche",
+      rightEarTest: "Test Oreille Droite",
+      playTestSound: "Jouer le Son Test",
+      heardSound: "J'ai Entendu le Son",
+      didNotHear: "Je N'ai Pas Entendu",
+      earTestInstruction: "Écoutez attentivement. Un son sera joué. Cliquez sur le bouton correspondant à ce que vous avez entendu.",
+      leftEarInstruction: "Ce test est pour votre oreille GAUCHE. Si vous utilisez des écouteurs, le son sera joué uniquement dans l'oreille gauche.",
+      rightEarInstruction: "Ce test est pour votre oreille DROITE. Si vous utilisez des écouteurs, le son sera joué uniquement dans l'oreille droite.",
+      noiseCheck: "Vérification du Bruit Ambiant",
+      calibration: "Calibration du Volume",
+      startTest: "Commencer le Test Auditif",
+      complete: "Dépistage Auditif Terminé",
+      trialOf: "Essai {current} sur {total}",
+      enterDigits: "Entrez les 3 chiffres entendus",
+      submit: "Soumettre",
+      replay: "Rejouer",
+      correct: "correct",
+      skip: "Passer le Test",
+      continue: "Continuer",
+    },
+  }
+
+  const txt = translations[language as keyof typeof translations] || translations.en
 
   useEffect(() => {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
@@ -69,30 +211,92 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
     }
   }, [])
 
+  const handleSelectAudioMode = (mode: AudioMode) => {
+    setAudioMode(mode)
+    if (mode === "headphones") {
+      setPhase("headphone-check")
+      handleHeadphoneCheck()
+    } else {
+      setPhase("noise-check")
+      handleNoiseCheck()
+    }
+  }
+
   const handleNoiseCheck = async () => {
     const result = await checkAmbientNoise()
     setNoiseCheckResult(result)
     if (result.acceptable) {
-      setTimeout(() => setPhase("calibration"), 1500)
+      setTimeout(() => {
+        if (audioMode === "headphones") {
+          setPhase("ear-test-left")
+        } else {
+          setPhase("calibration")
+        }
+      }, 1500)
     }
   }
 
   const handleHeadphoneCheck = async () => {
     const detected = await detectHeadphones()
     setHasHeadphones(detected)
+    setHeadphoneCheckComplete(true)
   }
 
-  useEffect(() => {
-    if (phase === "setup") {
-      handleHeadphoneCheck()
-    }
-  }, [phase])
+  const handleContinueFromHeadphoneCheck = () => {
+    setPhase("noise-check")
+    handleNoiseCheck()
+  }
+
+  // Play tone for specific ear
+  const playEarTestTone = async (ear: "left" | "right") => {
+    if (!audioContextRef.current) return
+    setIsPlaying(true)
+
+    const ctx = audioContextRef.current
+    const now = ctx.currentTime
+
+    // Create oscillator
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    
+    // Create stereo panner for ear-specific sound
+    const panner = ctx.createStereoPanner()
+    panner.pan.value = ear === "left" ? -1 : 1
+
+    osc.frequency.value = 1000
+    osc.type = "sine"
+    
+    gain.gain.setValueAtTime(0, now)
+    gain.gain.linearRampToValueAtTime((volumeLevel / 100) * 0.5, now + 0.1)
+    gain.gain.setValueAtTime((volumeLevel / 100) * 0.5, now + 0.9)
+    gain.gain.linearRampToValueAtTime(0, now + 1)
+
+    osc.connect(gain)
+    gain.connect(panner)
+    panner.connect(ctx.destination)
+
+    osc.start(now)
+    osc.stop(now + 1)
+
+    setTimeout(() => setIsPlaying(false), 1100)
+  }
+
+  const handleLeftEarResponse = (heard: boolean) => {
+    setLeftEarResponse(heard ? "heard" : "not-heard")
+    setLeftEarTested(true)
+    setTimeout(() => setPhase("ear-test-right"), 500)
+  }
+
+  const handleRightEarResponse = (heard: boolean) => {
+    setRightEarResponse(heard ? "heard" : "not-heard")
+    setRightEarTested(true)
+    setTimeout(() => setPhase("calibration"), 500)
+  }
 
   const handlePlayCalibrationTone = async () => {
     if (!audioContextRef.current) return
     setIsPlaying(true)
 
-    // Use speech synthesis for calibration too
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel()
       const utterance = new SpeechSynthesisUtterance("1... 2... 3")
@@ -102,7 +306,6 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
       utterance.onerror = () => setIsPlaying(false)
       window.speechSynthesis.speak(utterance)
     } else {
-      // Fallback to tone
       const ctx = audioContextRef.current
       const now = ctx.currentTime
       const osc = ctx.createOscillator()
@@ -174,7 +377,6 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
 
     setAudiogramData(audiogram)
 
-    // Score: 100 = best hearing, 0 = worst
     const score = Math.round(Math.max(0, Math.min(100, 100 - normalizedScore)))
     setFinalScore(score)
 
@@ -192,6 +394,9 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
             percent_correct: percentCorrect,
             srt: speechReceptionThreshold,
             audiogram: audiogram,
+            audio_mode: audioMode,
+            left_ear_response: leftEarResponse,
+            right_ear_response: rightEarResponse,
           },
           device_info: getDeviceAudioInfo(),
           environment_data: {
@@ -201,7 +406,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
           },
         })
       } catch (error) {
-        // Error saving auditory screening - silently continue
+        // Error saving - silently continue
       }
     }
   }
@@ -211,90 +416,121 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
     else onComplete(0)
   }
 
-  // Setup Phase
-  if (phase === "setup") {
+  // Audio Mode Selection Phase
+  if (phase === "audio-mode-selection") {
     return (
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Headphones className="h-6 w-6" />
-            {t("sensory.auditory.title")}
+            {txt.title}
           </CardTitle>
-          <p className="text-sm text-muted-foreground">{t("sensory.auditory.description")}</p>
           <InstructionAudio instructionKey="sensory.auditory.instruction" className="mt-2" />
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Headphone Recommendation */}
-          <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Headphones className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-amber-800 dark:text-amber-200">Headphones Strongly Recommended</p>
-                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                  For accurate hearing assessment results, please use headphones or earbuds. 
-                  This eliminates background interference and ensures precise measurement.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quiet Environment Reminder */}
-          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
-            <div className="flex items-start gap-3">
-              <VolumeX className="h-6 w-6 text-blue-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-blue-800 dark:text-blue-200">Find a Quiet Environment</p>
-                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                  Move to a quiet room away from traffic, conversations, or appliances. 
-                  Background noise can significantly affect your test results.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Test Requirements */}
-          <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-lg space-y-4">
-            <h3 className="font-semibold">Test Checklist</h3>
-            <ul className="space-y-3 text-sm">
-              <li className="flex items-center gap-2">
-                {hasHeadphones ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-amber-500 shrink-0" />
-                )}
-                <span>Headphones: {hasHeadphones ? "Detected - Ready!" : "Not detected (strongly recommended)"}</span>
-              </li>
-              <li className="flex items-center gap-2">
-                {speechSupported ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
-                )}
-                <span>Speech synthesis: {speechSupported ? "Supported" : "Not supported"}</span>
-              </li>
-              <li className="flex items-start gap-2 pt-2 border-t">
-                <Volume2 className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">How this test works:</p>
-                  <ol className="list-decimal list-inside mt-1 space-y-1 text-muted-foreground">
-                    <li>You will hear 3 spoken digits with background noise</li>
-                    <li>Type the 3 digits you heard in order</li>
-                    <li>The noise level increases each round</li>
-                    <li>12 trials total (~3 minutes)</li>
-                  </ol>
+          <h3 className="text-lg font-semibold text-center">{txt.selectAudioMode}</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Headphones Option */}
+            <button
+              onClick={() => handleSelectAudioMode("headphones")}
+              className="p-6 border-2 rounded-xl hover:border-primary hover:bg-primary/5 transition-all text-left space-y-3"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
+                  <Headphones className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                 </div>
-              </li>
-            </ul>
+                <div>
+                  <p className="font-semibold text-lg">{txt.headphonesOption}</p>
+                  <p className="text-sm text-muted-foreground">{txt.headphonesDesc}</p>
+                </div>
+              </div>
+              <Badge variant="secondary" className="mt-2">Recommended</Badge>
+            </button>
+
+            {/* Speakers/Quiet Environment Option */}
+            <button
+              onClick={() => handleSelectAudioMode("speakers")}
+              className="p-6 border-2 rounded-xl hover:border-primary hover:bg-primary/5 transition-all text-left space-y-3"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-amber-100 dark:bg-amber-900 rounded-full">
+                  <VolumeX className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-lg">{txt.speakersOption}</p>
+                  <p className="text-sm text-muted-foreground">{txt.speakersDesc}</p>
+                </div>
+              </div>
+            </button>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-4">
-            <Button variant="outline" onClick={handleSkip} className="w-full sm:w-auto bg-transparent">
-              Skip Test
-            </Button>
-            <Button onClick={() => { setPhase("noise-check"); handleNoiseCheck() }} className="w-full sm:w-auto">
-              Continue to Noise Check
+          <div className="flex justify-center pt-4">
+            <Button variant="outline" onClick={handleSkip} className="bg-transparent">
+              {txt.skip}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Headphone Check Phase
+  if (phase === "headphone-check") {
+    return (
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Headphones className="h-6 w-6" />
+            {txt.checkingHeadphones}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {!headphoneCheckComplete ? (
+            <div className="text-center py-12">
+              <Headphones className="h-16 w-16 mx-auto mb-4 animate-pulse text-blue-600" />
+              <p>{txt.checkingHeadphones}...</p>
+            </div>
+          ) : (
+            <div className={`p-6 rounded-xl ${hasHeadphones ? "bg-green-50 dark:bg-green-950 border-2 border-green-500" : "bg-amber-50 dark:bg-amber-950 border-2 border-amber-500"}`}>
+              <div className="flex items-center gap-4">
+                {hasHeadphones ? (
+                  <>
+                    <div className="p-3 bg-green-100 dark:bg-green-900 rounded-full">
+                      <CheckCircle2 className="h-10 w-10 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-xl text-green-700 dark:text-green-300">{txt.headphonesDetected}</p>
+                      <p className="text-sm text-green-600 dark:text-green-400">Your headphones are ready for testing</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-3 bg-amber-100 dark:bg-amber-900 rounded-full">
+                      <AlertCircle className="h-10 w-10 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-xl text-amber-700 dark:text-amber-300">{txt.headphonesNotDetected}</p>
+                      <p className="text-sm text-amber-600 dark:text-amber-400">{txt.pleaseConnect}</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {headphoneCheckComplete && (
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+              {!hasHeadphones && (
+                <Button variant="outline" onClick={() => { setHeadphoneCheckComplete(false); handleHeadphoneCheck(); }} className="bg-transparent">
+                  {txt.recheckHeadphones}
+                </Button>
+              )}
+              <Button onClick={handleContinueFromHeadphoneCheck}>
+                {hasHeadphones ? txt.continue : txt.continueAnyway}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     )
@@ -307,12 +543,12 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mic className="h-6 w-6" />
-            Checking Ambient Noise
+            {txt.noiseCheck}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {noiseCheckResult ? (
-            <div className={`p-6 rounded-lg ${noiseCheckResult.acceptable ? "bg-green-50" : "bg-red-50"}`}>
+            <div className={`p-6 rounded-lg ${noiseCheckResult.acceptable ? "bg-green-50 dark:bg-green-950" : "bg-red-50 dark:bg-red-950"}`}>
               <div className="flex items-center gap-3 mb-4">
                 {noiseCheckResult.acceptable ? (
                   <CheckCircle2 className="h-8 w-8 text-green-600" />
@@ -329,8 +565,8 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
                   <Button onClick={handleNoiseCheck} variant="outline" className="bg-transparent">
                     Check Again
                   </Button>
-                  <Button onClick={() => setPhase("calibration")} variant="secondary">
-                    Continue Anyway
+                  <Button onClick={() => audioMode === "headphones" ? setPhase("ear-test-left") : setPhase("calibration")} variant="secondary">
+                    {txt.continueAnyway}
                   </Button>
                 </div>
               )}
@@ -347,6 +583,152 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
     )
   }
 
+  // Left Ear Test Phase
+  if (phase === "ear-test-left") {
+    return (
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Circle className="h-4 w-4 fill-blue-500 text-blue-500" />
+              {txt.leftEarTest}
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Ear indicator */}
+          <div className="flex justify-center">
+            <div className="relative">
+              <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center">
+                <Headphones className="h-16 w-16 text-muted-foreground" />
+              </div>
+              {/* Left ear indicator */}
+              <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-blue-500 animate-pulse" />
+              {/* Right ear indicator (dimmed) */}
+              <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-300" />
+            </div>
+          </div>
+
+          <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg text-center">
+            <p className="text-sm">{txt.leftEarInstruction}</p>
+          </div>
+
+          <p className="text-center text-muted-foreground">{txt.earTestInstruction}</p>
+
+          <div className="flex justify-center">
+            <Button 
+              onClick={() => playEarTestTone("left")} 
+              disabled={isPlaying}
+              size="lg"
+              className="gap-2"
+            >
+              <Volume2 className="h-5 w-5" />
+              {isPlaying ? "Playing..." : txt.playTestSound}
+            </Button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+            <Button 
+              onClick={() => handleLeftEarResponse(true)} 
+              variant="outline" 
+              className="bg-green-50 hover:bg-green-100 border-green-300 text-green-700"
+              size="lg"
+            >
+              <CheckCircle2 className="h-5 w-5 mr-2" />
+              {txt.heardSound}
+            </Button>
+            <Button 
+              onClick={() => handleLeftEarResponse(false)} 
+              variant="outline"
+              className="bg-red-50 hover:bg-red-100 border-red-300 text-red-700"
+              size="lg"
+            >
+              <AlertCircle className="h-5 w-5 mr-2" />
+              {txt.didNotHear}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Right Ear Test Phase
+  if (phase === "ear-test-right") {
+    return (
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              {/* Left ear status */}
+              {leftEarResponse === "heard" ? (
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-amber-500" />
+              )}
+              <Circle className="h-4 w-4 fill-blue-500 text-blue-500" />
+              {txt.rightEarTest}
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Ear indicator */}
+          <div className="flex justify-center">
+            <div className="relative">
+              <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center">
+                <Headphones className="h-16 w-16 text-muted-foreground" />
+              </div>
+              {/* Left ear indicator (tested) */}
+              <div className={`absolute -left-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full ${leftEarResponse === "heard" ? "bg-green-500" : "bg-amber-500"}`}>
+                {leftEarResponse === "heard" && <CheckCircle2 className="h-6 w-6 text-white" />}
+              </div>
+              {/* Right ear indicator (active) */}
+              <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-blue-500 animate-pulse" />
+            </div>
+          </div>
+
+          <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg text-center">
+            <p className="text-sm">{txt.rightEarInstruction}</p>
+          </div>
+
+          <p className="text-center text-muted-foreground">{txt.earTestInstruction}</p>
+
+          <div className="flex justify-center">
+            <Button 
+              onClick={() => playEarTestTone("right")} 
+              disabled={isPlaying}
+              size="lg"
+              className="gap-2"
+            >
+              <Volume2 className="h-5 w-5" />
+              {isPlaying ? "Playing..." : txt.playTestSound}
+            </Button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+            <Button 
+              onClick={() => handleRightEarResponse(true)} 
+              variant="outline" 
+              className="bg-green-50 hover:bg-green-100 border-green-300 text-green-700"
+              size="lg"
+            >
+              <CheckCircle2 className="h-5 w-5 mr-2" />
+              {txt.heardSound}
+            </Button>
+            <Button 
+              onClick={() => handleRightEarResponse(false)} 
+              variant="outline"
+              className="bg-red-50 hover:bg-red-100 border-red-300 text-red-700"
+              size="lg"
+            >
+              <AlertCircle className="h-5 w-5 mr-2" />
+              {txt.didNotHear}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   // Calibration Phase
   if (phase === "calibration") {
     return (
@@ -354,10 +736,32 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Volume2 className="h-6 w-6" />
-            Volume Calibration
+            {txt.calibration}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Ear test results summary if headphones were used */}
+          {audioMode === "headphones" && (
+            <div className="flex justify-center gap-6 p-4 bg-muted rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Left Ear:</span>
+                {leftEarResponse === "heard" ? (
+                  <Badge variant="default" className="bg-green-500">Passed</Badge>
+                ) : (
+                  <Badge variant="secondary" className="bg-amber-500 text-white">Check Needed</Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Right Ear:</span>
+                {rightEarResponse === "heard" ? (
+                  <Badge variant="default" className="bg-green-500">Passed</Badge>
+                ) : (
+                  <Badge variant="secondary" className="bg-amber-500 text-white">Check Needed</Badge>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="bg-yellow-50 dark:bg-yellow-950 p-6 rounded-lg space-y-2">
             <p className="font-semibold">Adjust your device volume</p>
             <p className="text-sm text-muted-foreground">
@@ -388,13 +792,13 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
               className="w-full bg-transparent"
             >
               <Volume2 className="h-4 w-4 mr-2" />
-              {isPlaying ? "Playing..." : "Play Test Sound"}
+              {isPlaying ? "Playing..." : txt.playTestSound}
             </Button>
           </div>
 
           <div className="flex justify-center pt-4">
             <Button onClick={handleStartTest} size="lg">
-              Start Hearing Test
+              {txt.startTest}
             </Button>
           </div>
         </CardContent>
@@ -411,10 +815,10 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Trial {currentTrialIndex + 1} / {trials.length}</span>
+            <span>{txt.trialOf.replace("{current}", String(currentTrialIndex + 1)).replace("{total}", String(trials.length))}</span>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-xs">SNR: {currentTrial.noiseLevel} dB</Badge>
-              <Badge variant="secondary" className="text-xs">{correctSoFar} correct</Badge>
+              <Badge variant="secondary" className="text-xs">{correctSoFar} {txt.correct}</Badge>
             </div>
           </CardTitle>
         </CardHeader>
@@ -431,7 +835,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
             ) : (
               <div className="flex flex-col items-center gap-3">
                 <Volume2 className="h-16 w-16 text-muted-foreground" />
-                <p className="text-lg text-muted-foreground">Enter the digits you heard</p>
+                <p className="text-lg text-muted-foreground">{txt.enterDigits}</p>
               </div>
             )}
 
@@ -442,13 +846,13 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
               size="sm"
             >
               <Volume2 className="h-4 w-4 mr-2" />
-              Replay
+              {txt.replay}
             </Button>
           </div>
 
           <div className="space-y-4">
             <label className="text-sm font-medium block text-center">
-              Type the 3 digits you heard
+              {txt.enterDigits}
             </label>
             <Input
               type="text"
@@ -467,7 +871,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
               className="w-full"
               size="lg"
             >
-              Submit Answer
+              {txt.submit}
             </Button>
           </div>
 
@@ -494,13 +898,35 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle>Hearing Screening Complete</CardTitle>
+        <CardTitle>{txt.complete}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="text-center space-y-4">
           <CheckCircle2 className="h-16 w-16 mx-auto text-green-600" />
-          <p className="text-lg font-semibold">Your hearing screening is complete!</p>
+          <p className="text-lg font-semibold">{txt.complete}</p>
         </div>
+
+        {/* Ear test results */}
+        {audioMode === "headphones" && (
+          <div className="flex justify-center gap-6 p-4 bg-muted rounded-lg">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Left Ear:</span>
+              {leftEarResponse === "heard" ? (
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-amber-500" />
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Right Ear:</span>
+              {rightEarResponse === "heard" ? (
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-amber-500" />
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Key metrics */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -522,38 +948,18 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
             <p className="text-xs text-muted-foreground">responses</p>
           </div>
           <div className="bg-muted px-3 py-3 rounded-lg text-center">
-            <p className="text-xs text-muted-foreground">Ambient Noise</p>
-            <p className="text-xl font-bold">{noiseCheckResult?.noiseLevel ?? "N/A"}</p>
-            <p className="text-xs text-muted-foreground">dBA</p>
+            <p className="text-xs text-muted-foreground">Score</p>
+            <p className="text-xl font-bold">{finalScore}</p>
+            <p className="text-xs text-muted-foreground">/ 100</p>
           </div>
         </div>
 
-        {/* Score bar */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Hearing Score</span>
-            <span className="font-semibold">{finalScore}%</span>
-          </div>
-          <div className="w-full bg-muted rounded-full h-3">
-            <div
-              className={`rounded-full h-3 transition-all ${
-                finalScore >= 70 ? "bg-green-500" : finalScore >= 40 ? "bg-yellow-500" : "bg-red-500"
-              }`}
-              style={{ width: `${finalScore}%` }}
-            ></div>
-          </div>
-        </div>
-
-        {/* Audiogram chart */}
-        {audiogramData && (
-          <div className="mt-4">
-            <AudiogramChart data={audiogramData} />
-          </div>
-        )}
+        {/* Audiogram */}
+        {audiogramData && <AudiogramChart data={audiogramData} />}
 
         <div className="flex justify-center pt-4">
           <Button onClick={() => onComplete(finalScore)} size="lg">
-            Continue
+            {txt.continue}
           </Button>
         </div>
       </CardContent>
