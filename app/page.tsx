@@ -1,6 +1,6 @@
 "use client"
 
-// MentalAssess - Cognitive Assessment Platform v3.0
+// MentalAssess - Cognitive Assessment Platform v3.1
 import { useState, useEffect } from "react"
 import { useUser } from "@/contexts/user-context"
 import { Registration } from "@/components/registration"
@@ -62,22 +62,25 @@ function AppContent() {
   const [assessmentType, setAssessmentType] = useState<"MOCA" | "MMSE">("MOCA")
   const [completedAssessments, setCompletedAssessments] = useState<Record<string, any>>({})
 
+  // MoCA uses 5 words: face, velvet, church, daisy, red
+  const mocaWords = ["face", "velvet", "church", "daisy", "red"]
+  
   const mocaSteps = [
     { component: InteractiveClock, props: { targetTime: { hour: 2, minute: 10 } } },
     { component: TrailMakingTask, props: {} },
     { component: AnimalNaming, props: {} },
-    {
-      component: MemoryTask,
-      props: { words: t("memory.moca.words"), title: t("moca.memory") },
-    },
+    { component: MemoryTask, props: { words: mocaWords, title: "MoCA Memory" } },
     { component: AttentionTask, props: {} },
     { component: LanguageAbstraction, props: {} },
     { component: OrientationTask, props: {} },
   ]
 
+  // MMSE uses 3 words: apple, table, coin
+  const mmseWords = ["apple", "table", "coin"]
+  
   const mmseSteps = [
     { component: MMSEOrientation, props: {} },
-    { component: MemoryTask, props: { words: t("memory.mmse.words"), title: t("mmse.registration") } },
+    { component: MemoryTask, props: { words: mmseWords, title: "MMSE Registration" } },
     { component: MMSEAttention, props: {} },
     { component: ObjectNaming, props: {} },
     { component: MMSERepetition, props: {} },
