@@ -17,26 +17,18 @@ interface MemoryTaskProps {
 
 export function MemoryTask({ onComplete, onSkip, words, title }: MemoryTaskProps) {
   const { t, language } = useLanguage()
-  
-  // Ensure words is always a valid array
-  const safeWords = Array.isArray(words) ? words : ["face", "velvet", "church", "daisy", "red"]
-  
   const [phase, setPhase] = useState<"countdown" | "presentation" | "recall">("countdown")
   const [countdown, setCountdown] = useState(10)
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
-  const [recallAnswers, setRecallAnswers] = useState<string[]>(new Array(safeWords.length).fill(""))
+  const [recallAnswers, setRecallAnswers] = useState<string[]>(new Array(words.length).fill(""))
 
-  // Get localized words - ensure it's always an array
-  const getLocalizedWords = (): string[] => {
-    if (language === "zh") {
-      const translatedWords = title.includes("MoCA") ? t("memory.moca.words") : t("memory.mmse.words")
-      if (Array.isArray(translatedWords)) {
-        return translatedWords
-      }
-    }
-    return safeWords
-  }
-  const localizedWords = getLocalizedWords()
+  // Get localized words
+  const localizedWords =
+    language === "zh"
+      ? title.includes("MoCA")
+        ? ["脸", "天鹅绒", "教堂", "雏菊", "红色"]
+        : ["苹果", "桌子", "硬币"]
+      : words
 
   // Countdown phase
   useEffect(() => {
@@ -48,13 +40,13 @@ export function MemoryTask({ onComplete, onSkip, words, title }: MemoryTaskProps
     }
   }, [phase, countdown])
 
-  // Word presentation phase - reduced from 3 seconds to 2 seconds
+  // Word presentation phase
   useEffect(() => {
     if (phase === "presentation") {
       if (currentWordIndex < localizedWords.length) {
         const timer = setTimeout(() => {
           setCurrentWordIndex(currentWordIndex + 1)
-        }, 3000) // Increased from 2000 to 3000 to give more time
+        }, 3000)
         return () => clearTimeout(timer)
       } else {
         setPhase("recall")
