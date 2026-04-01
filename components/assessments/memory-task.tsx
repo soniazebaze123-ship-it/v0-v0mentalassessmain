@@ -17,10 +17,14 @@ interface MemoryTaskProps {
 
 export function MemoryTask({ onComplete, onSkip, words, title }: MemoryTaskProps) {
   const { t, language } = useLanguage()
+  
+  // Ensure words is always a valid array
+  const safeWords = Array.isArray(words) ? words : ["face", "velvet", "church", "daisy", "red"]
+  
   const [phase, setPhase] = useState<"countdown" | "presentation" | "recall">("countdown")
-  const [countdown, setCountdown] = useState(10) // Reduced from 15 to 10
+  const [countdown, setCountdown] = useState(10)
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
-  const [recallAnswers, setRecallAnswers] = useState<string[]>(new Array(words.length).fill(""))
+  const [recallAnswers, setRecallAnswers] = useState<string[]>(new Array(safeWords.length).fill(""))
 
   // Get localized words - ensure it's always an array
   const getLocalizedWords = (): string[] => {
@@ -29,10 +33,8 @@ export function MemoryTask({ onComplete, onSkip, words, title }: MemoryTaskProps
       if (Array.isArray(translatedWords)) {
         return translatedWords
       }
-      // If translation returns a string, fall back to the original words
-      return words
     }
-    return words
+    return safeWords
   }
   const localizedWords = getLocalizedWords()
 
