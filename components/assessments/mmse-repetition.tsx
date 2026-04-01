@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AssessmentInput } from "@/components/ui/assessment-input"
 import { Button } from "@/components/ui/button"
@@ -14,19 +14,30 @@ interface MMSERepetitionProps {
 }
 
 export function MMSERepetition({ onComplete, onSkip }: MMSERepetitionProps) {
-  const { t, language } = useLanguage()
+  const { t, language, getSpeechSettings, getBestVoice } = useLanguage()
   const [answer, setAnswer] = useState("")
   const [isPlaying, setIsPlaying] = useState(false)
   const [hasPlayedAudio, setHasPlayedAudio] = useState(false)
 
-  const getSpeechText = () => {
-    // This text is for the MMSE repetition sentence
-    return language === "zh" ? "他画了一幅画" : "He drew a picture"
-  }
+  const targetSentence = useMemo(() => {
+    switch (language) {
+      case "zh":
+        return "他画了一幅画"
+      case "yue":
+        return "佢畫咗一幅畫"
+      case "fr":
+        return "Il a dessiné une image"
+      default:
+        return "He drew a picture"
+    }
+  }, [language])
 
-  const getSpeechLanguage = () => {
-    // Map language codes to BCP 47 tags for Web Speech API
-    return language === "zh" ? "zh-CN" : "en-US"
+  const normalizeText = (text: string) => {
+    return text
+      .trim()
+      .toLowerCase()
+      .replace(/[.,!?;:，。！？；：]/g, "")
+      .replace(/\s+/g, " ")
   }
 
   const playAudio = () => {
@@ -35,22 +46,19 @@ export function MMSERepetition({ onComplete, onSkip }: MMSERepetitionProps) {
       return
     }
 
-    // Cancel any ongoing speech
     window.speechSynthesis.cancel()
 
-    const textToSpeak = getSpeechText()
-    const utterance = new SpeechSynthesisUtterance(textToSpeak)
-    utterance.lang = getSpeechLanguage()
-    utterance.rate = 0.5 // Slower for repetition tasks
-    utterance.pitch = 1.0
-    utterance.volume = 1.0
+    const settings = getSpeechSettings(language)
+    const utterance = new SpeechSynthesisUtterance(targetSentence)
 
-    // Try to find a voice that matches the language
-    const voices = window.speechSynthesis.getVoices()
-    const preferredVoice = voices.find((voice) => voice.lang.startsWith(getSpeechLanguage().split("-")[0]))
+    utterance.lang = settings.lang
+    utterance.rate = 0.75
+    utterance.pitch = settings.pitch
+    utterance.volume = settings.volume
 
-    if (preferredVoice) {
-      utterance.voice = preferredVoice
+    const voice = getBestVoice(language)
+    if (voice) {
+      utterance.voice = voice
     }
 
     utterance.onstart = () => setIsPlaying(true)
@@ -60,8 +68,8 @@ export function MMSERepetition({ onComplete, onSkip }: MMSERepetitionProps) {
     }
     utterance.onerror = (event) => {
       console.error("SpeechSynthesisUtterance.onerror", event)
-      alert(t("audio.error_playing"))
       setIsPlaying(false)
+      alert(t("audio.error_playing"))
     }
 
     try {
@@ -74,8 +82,9 @@ export function MMSERepetition({ onComplete, onSkip }: MMSERepetitionProps) {
   }
 
   const checkAnswer = () => {
-    const actualTargetSentence = language === "zh" ? "他画了一幅画" : "He drew a picture"
-    const score = answer.toLowerCase().trim() === actualTargetSentence.toLowerCase() ? 2 : 0
+    const normalizedAnswer = normalizeText(answer)
+    const normalizedTarget = normalizeText(targetSentence)
+    const score = normalizedAnswer === normalizedTarget ? 2 : 0
     onComplete(score)
   }
 
@@ -93,9 +102,15 @@ export function MMSERepetition({ onComplete, onSkip }: MMSERepetitionProps) {
         <CardTitle>{t("mmse.repetition")}</CardTitle>
         <p className="text-sm text-gray-600">{t("mmse.repetition.instruction")}</p>
       </CardHeader>
+
       <CardContent className="space-y-6">
         <div className="text-center space-y-4">
-          <Button onClick={playAudio} disabled={isPlaying} className="w-full max-w-xs bg-transparent" variant="outline">
+          <Button
+            onClick={playAudio}
+            disabled={isPlaying}
+            className="w-full max-w-xs"
+            variant="outline"
+          >
             {isPlaying ? (
               <>
                 <VolumeX className="w-4 h-4 mr-2" />
@@ -109,7 +124,9 @@ export function MMSERepetition({ onComplete, onSkip }: MMSERepetitionProps) {
             )}
           </Button>
 
-          {hasPlayedAudio && <p className="text-sm text-green-600">✓ {t("audio.played_success")}</p>}
+          {hasPlayedAudio && (
+            <p className="text-sm text-green-600">✓ {t("audio.played_success")}</p>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -128,7 +145,12 @@ export function MMSERepetition({ onComplete, onSkip }: MMSERepetitionProps) {
           <Button variant="outline" onClick={handleSkip}>
             {t("common.skip_task")}
           </Button>
-          <Button onClick={checkAnswer} disabled={!hasPlayedAudio || answer.trim() === ""} className="w-full max-w-xs">
+
+          <Button
+            onClick={checkAnswer}
+            disabled={!hasPlayedAudio || answer.trim() === ""}
+            className="w-full max-w-xs"
+          >
             {t("common.submit")}
           </Button>
         </div>
