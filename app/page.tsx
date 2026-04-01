@@ -363,12 +363,7 @@ function AppContent() {
       onResumeAssessment={handleResumeAssessment}
       onViewResults={handleViewResults}
       onViewRiskProfile={handleViewRiskProfile}
-    >
-      <div className="space-y-8 w-full max-w-2xl">
-        <LanguageAbstraction onComplete={(score) => console.log("Language Abstraction Score:", score)} />
-        <MMSERepetition onComplete={(score) => console.log("MMSE Repetition Score:", score)} />
-      </div>
-    </Dashboard>
+    />
   )
 }
 
