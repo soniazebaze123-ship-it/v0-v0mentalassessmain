@@ -158,7 +158,7 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
           },
         })
       } catch (error) {
-        console.error("[v0] Error saving olfactory screening:", error)
+        // Error saving olfactory screening - silently continue
       }
     }
 

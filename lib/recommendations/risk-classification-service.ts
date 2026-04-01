@@ -191,7 +191,6 @@ export async function saveRecommendations(
     .single();
 
   if (error) {
-    console.error("❌ Error saving recommendations:", error);
     throw error;
   }
 
@@ -212,7 +211,6 @@ export async function getRecommendations(sessionId: string) {
     .single();
 
   if (error && error.code !== "PGRST116") {
-    console.error("❌ Error retrieving recommendations:", error);
     throw error;
   }
 
@@ -225,6 +223,5 @@ export async function getRecommendations(sessionId: string) {
 
 export function updateThresholds(newThresholds: typeof THRESHOLDS) {
   // This would typically be stored in a settings table
-  // For now, log a reminder to configure per institution
-  console.log("📋 Remember to configure risk thresholds with your PI:", newThresholds);
+  // Configuration per institution can be added here
 }

@@ -75,8 +75,7 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
       setIsPlaying(false)
       setHasPlayedAudio(true)
     }
-    utterance.onerror = (event) => {
-      console.error("SpeechSynthesisUtterance.onerror", event)
+    utterance.onerror = () => {
       alert(t("audio.error_playing") || "Error playing audio.")
       setIsPlaying(false)
     }

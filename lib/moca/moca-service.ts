@@ -242,7 +242,6 @@ export async function saveMoCAResults(
     .single();
 
   if (error) {
-    console.error("❌ Error saving MoCA results:", error);
     throw error;
   }
 
@@ -264,7 +263,6 @@ export async function getMoCAResults(sessionId: string) {
 
   if (error && error.code !== "PGRST116") {
     // PGRST116 = no rows
-    console.error("❌ Error retrieving MoCA results:", error);
     throw error;
   }
 

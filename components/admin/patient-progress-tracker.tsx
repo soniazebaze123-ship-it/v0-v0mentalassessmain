@@ -117,7 +117,7 @@ export function PatientProgressTracker({ onBack }: PatientProgressTrackerProps) 
       const sortedHistory = Array.from(historyMap.values()).sort((a, b) => a.date.localeCompare(b.date))
       setHistory(sortedHistory)
     } catch (error) {
-      console.error("Error loading patient history:", error)
+      // Error loading patient history - silently continue
     } finally {
       setLoading(false)
     }

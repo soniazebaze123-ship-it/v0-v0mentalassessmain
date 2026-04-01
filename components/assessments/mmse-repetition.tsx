@@ -58,8 +58,7 @@ export function MMSERepetition({ onComplete, onSkip }: MMSERepetitionProps) {
       setIsPlaying(false)
       setHasPlayedAudio(true)
     }
-    utterance.onerror = (event) => {
-      console.error("SpeechSynthesisUtterance.onerror", event)
+    utterance.onerror = () => {
       alert(t("audio.error_playing"))
       setIsPlaying(false)
     }
@@ -67,7 +66,6 @@ export function MMSERepetition({ onComplete, onSkip }: MMSERepetitionProps) {
     try {
       window.speechSynthesis.speak(utterance)
     } catch (error) {
-      console.error("Failed to start speech synthesis:", error)
       setIsPlaying(false)
       alert(t("audio.error_playing"))
     }

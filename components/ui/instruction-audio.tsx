@@ -40,8 +40,7 @@ export function InstructionAudio({ instructionKey, className }: InstructionAudio
 
     utterance.onstart = () => setIsPlaying(true)
     utterance.onend = () => setIsPlaying(false)
-    utterance.onerror = (event) => {
-      console.error("Speech synthesis error:", event)
+    utterance.onerror = () => {
       setIsPlaying(false)
       alert(t("audio.error_playing"))
     }
@@ -49,7 +48,6 @@ export function InstructionAudio({ instructionKey, className }: InstructionAudio
     try {
       window.speechSynthesis.speak(utterance)
     } catch (error) {
-      console.error("Failed to start speech synthesis:", error)
       setIsPlaying(false)
       alert(t("audio.error_playing"))
     }

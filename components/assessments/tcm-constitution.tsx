@@ -331,7 +331,6 @@ export function TCMConstitution({ onComplete, onBack, language = "en" }: TCMCons
       
       setUploadProgress(100)
     } catch (error) {
-      console.error("Upload error:", error)
       setUploadError(language === "zh" ? "上传失败，请重试" : "Upload failed, please try again")
     } finally {
       setUploading(false)
@@ -343,7 +342,7 @@ export function TCMConstitution({ onComplete, onBack, language = "en" }: TCMCons
       await supabase.from("uploaded_files").delete().eq("id", imageId)
       setUploadedImages(prev => prev.filter(img => img.id !== imageId))
     } catch (error) {
-      console.error("Error removing image:", error)
+      // Error removing image - silently continue
     }
   }
 

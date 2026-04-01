@@ -186,7 +186,7 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
           },
         })
       } catch (error) {
-        console.error("Error saving visual screening:", error)
+        // Error saving visual screening - silently continue
       }
     }
   }

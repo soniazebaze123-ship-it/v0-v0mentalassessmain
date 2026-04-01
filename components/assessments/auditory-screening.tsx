@@ -201,7 +201,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
           },
         })
       } catch (error) {
-        console.error("[v0] Error saving auditory screening:", error)
+        // Error saving auditory screening - silently continue
       }
     }
   }

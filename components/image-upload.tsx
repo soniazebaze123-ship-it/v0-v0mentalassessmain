@@ -91,7 +91,6 @@ export function ImageUpload({ onComplete }: ImageUploadProps) {
           })
 
         if (uploadError) {
-          console.error("Upload error:", uploadError)
           throw uploadError
         }
 
@@ -135,7 +134,6 @@ export function ImageUpload({ onComplete }: ImageUploadProps) {
 
       setFiles((prev) => [...prev, ...uploadedFiles])
     } catch (error) {
-      console.error("Upload error:", error)
       setError(`${t("upload.error.failed")}: ${error instanceof Error ? error.message : "Unknown error"}`)
     } finally {
       setUploading(false)
@@ -151,7 +149,6 @@ export function ImageUpload({ onComplete }: ImageUploadProps) {
       // Remove from state
       setFiles((prev) => prev.filter((f) => f.id !== fileId))
     } catch (error) {
-      console.error("Error removing file:", error)
       setError(t("upload.error.remove_failed"))
     }
   }

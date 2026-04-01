@@ -64,7 +64,7 @@ export function AnimalNaming({ onComplete, onSkip }: AnimalNamingProps) {
         setUploadedImages(images)
       }
     } catch (error) {
-      console.error("Error loading uploaded images:", error)
+      // Error loading uploaded images - silently continue
     } finally {
       setLoading(false)
     }

@@ -132,7 +132,7 @@ export function AdminPanel() {
       setUploadedFiles(filesData || [])
       setUserProgress(progressData || [])
     } catch (error) {
-      console.error("Error loading data:", error)
+      // Error loading data - silently continue
     } finally {
       setLoading(false)
     }
@@ -148,7 +148,6 @@ export function AdminPanel() {
       setLabAnalysis("")
       alert("Laboratory analysis updated successfully")
     } catch (error) {
-      console.error("Error updating lab analysis:", error)
       alert("Failed to update laboratory analysis")
     }
   }
