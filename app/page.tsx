@@ -210,7 +210,6 @@ function AppContent() {
           .select()
 
         if (error) {
-          console.error("[v0] Error saving assessment:", error)
           alert(`Error saving assessment: ${error.message}`)
           return
         }
@@ -224,7 +223,6 @@ function AppContent() {
           [assessmentType]: { totalScore, sectionScores },
         }))
       } catch (error) {
-        console.error("[v0] Error saving assessment:", error)
         alert(`Error saving assessment: ${error instanceof Error ? error.message : "Unknown error"}`)
         return
       }

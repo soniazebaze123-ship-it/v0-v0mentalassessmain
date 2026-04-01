@@ -231,9 +231,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         },
       }))
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Error saving progress:", error)
-      }
+      // Error saving progress - silently continue
     }
   }
 
@@ -259,9 +257,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         return newProgress
       })
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Error clearing progress:", error)
-      }
+      // Error clearing progress - silently continue
     }
   }
 
