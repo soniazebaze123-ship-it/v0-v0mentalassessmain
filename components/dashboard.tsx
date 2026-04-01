@@ -103,7 +103,7 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
       setStatus(newStatus)
       setHasAnyAssessments(hasCompleted)
     } catch (error) {
-      console.error("[v0] Dashboard: Error loading assessment status:", error)
+      // Error loading assessment status - silently continue
     } finally {
       setLoading(false)
     }
@@ -137,7 +137,7 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
         return !data || data.length === 0
       }
     } catch (error) {
-      console.error("Error checking test availability:", error)
+      // Error checking test availability - allow test
       return true
     }
   }

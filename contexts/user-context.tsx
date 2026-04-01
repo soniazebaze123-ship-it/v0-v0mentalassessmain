@@ -75,9 +75,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setProgress(newProgress)
       }
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Error loading user progress:", error)
-      }
+      // Error loading user progress - silently continue
     } finally {
       setLoading(false)
     }

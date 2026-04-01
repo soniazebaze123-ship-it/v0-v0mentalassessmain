@@ -225,10 +225,6 @@ export async function fetchAndCalculateRiskProfile(userId: string, supabase: any
       .order("completed_at", { ascending: false })
       .limit(10)
 
-    if (cogError) {
-      console.error("[v0] Error fetching cognitive data:", cogError)
-    }
-
     // Fetch sensory assessments
     const { data: sensoryData, error: sensoryError } = await supabase
       .from("sensory_assessments")
@@ -236,10 +232,6 @@ export async function fetchAndCalculateRiskProfile(userId: string, supabase: any
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(10)
-
-    if (sensoryError) {
-      console.error("[v0] Error fetching sensory data:", sensoryError)
-    }
 
     const cognitive: CognitiveScores = {}
     const sensory: SensoryScores = {}
@@ -275,7 +267,6 @@ export async function fetchAndCalculateRiskProfile(userId: string, supabase: any
 
     return calculateCompositeRiskScore(cognitive, sensory)
   } catch (error) {
-    console.error("[v0] Error calculating risk profile:", error)
     return null
   }
 }

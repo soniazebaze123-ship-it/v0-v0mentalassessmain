@@ -123,9 +123,7 @@ function AppContent() {
         setCompletedAssessments(completed)
       }
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Error loading completed assessments:", error)
-      }
+      // Error loading completed assessments - silently continue
     }
   }
 
