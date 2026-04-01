@@ -22,9 +22,19 @@ export function MemoryTask({ onComplete, onSkip, words, title }: MemoryTaskProps
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
   const [recallAnswers, setRecallAnswers] = useState<string[]>(new Array(words.length).fill(""))
 
-  // Get localized words
-  const localizedWords =
-    language === "zh" ? (title.includes("MoCA") ? t("memory.moca.words") : t("memory.mmse.words")) : words
+  // Get localized words - ensure it's always an array
+  const getLocalizedWords = (): string[] => {
+    if (language === "zh") {
+      const translatedWords = title.includes("MoCA") ? t("memory.moca.words") : t("memory.mmse.words")
+      if (Array.isArray(translatedWords)) {
+        return translatedWords
+      }
+      // If translation returns a string, fall back to the original words
+      return words
+    }
+    return words
+  }
+  const localizedWords = getLocalizedWords()
 
   // Countdown phase
   useEffect(() => {
