@@ -218,34 +218,20 @@ export function getRiskLevelLabel(
 // Function to fetch all assessment data and calculate composite score
 export async function fetchAndCalculateRiskProfile(userId: string, supabase: any): Promise<RiskProfile | null> {
   try {
-    console.log("[v0] Fetching risk profile for user:", userId)
-
-    const { data: cognitiveData, error: cogError } = await supabase
+    const { data: cognitiveData } = await supabase
       .from("assessments")
       .select("type, score")
       .eq("user_id", userId)
       .order("completed_at", { ascending: false })
       .limit(10)
 
-    if (cogError) {
-      console.error("[v0] Error fetching cognitive data:", cogError)
-    }
-
-    console.log("[v0] Cognitive data:", cognitiveData)
-
     // Fetch sensory assessments
-    const { data: sensoryData, error: sensoryError } = await supabase
+    const { data: sensoryData } = await supabase
       .from("sensory_assessments")
       .select("test_type, normalized_score")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(10)
-
-    if (sensoryError) {
-      console.error("[v0] Error fetching sensory data:", sensoryError)
-    }
-
-    console.log("[v0] Sensory data:", sensoryData)
 
     const cognitive: CognitiveScores = {}
     const sensory: SensoryScores = {}
@@ -257,11 +243,9 @@ export async function fetchAndCalculateRiskProfile(userId: string, supabase: any
 
       if (moca) {
         cognitive.moca = moca.score
-        console.log("[v0] Found MOCA score:", moca.score)
       }
       if (mmse) {
         cognitive.mmse = mmse.score
-        console.log("[v0] Found MMSE score:", mmse.score)
       }
     }
 
@@ -276,17 +260,13 @@ export async function fetchAndCalculateRiskProfile(userId: string, supabase: any
       if (olfactory) sensory.olfactory = olfactory.normalized_score
     }
 
-    console.log("[v0] Processed scores - Cognitive:", cognitive, "Sensory:", sensory)
-
     // Need at least one assessment to calculate risk
     if (Object.keys(cognitive).length === 0 && Object.keys(sensory).length === 0) {
-      console.log("[v0] No assessment data found")
       return null
     }
 
     return calculateCompositeRiskScore(cognitive, sensory)
   } catch (error) {
-    console.error("[v0] Error calculating risk profile:", error)
     return null
   }
 }

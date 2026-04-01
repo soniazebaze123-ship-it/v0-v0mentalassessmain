@@ -125,8 +125,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setLoading(true)
 
     try {
-      console.log("[v0] Starting registration for phone:", phoneNumber, "name:", name)
-
       const supabase = createClient()
 
       // Check if user already exists
@@ -137,7 +135,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         .limit(1)
 
       if (checkError) {
-        console.log("[v0] Error checking existing user:", checkError)
         return {
           success: false,
           error: "Connection error. Please check your internet connection and try again.",
@@ -145,14 +142,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (existingUser && existingUser.length > 0) {
-        console.log("[v0] Phone number already exists")
         return { success: false, error: "Phone number already registered." }
       }
 
       const newUserId = uuidv4()
       const generatedEmail = `${phoneNumber.replace(/[^0-9]/g, "")}@mentalassess.app`
-
-      console.log("[v0] Creating new user with id:", newUserId, "name:", name, "dob:", dateOfBirth, "gender:", gender)
 
       const { data: newUsers, error: insertError } = await supabase
         .from("users")
@@ -166,10 +160,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         })
         .select()
 
-      console.log("[v0] Insert result:", { newUsers, insertError })
-
       if (insertError) {
-        console.log("[v0] Registration failed:", insertError)
         return {
           success: false,
           error: `Registration failed: ${insertError.message}. Please try again.`,
@@ -177,7 +168,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!newUsers || newUsers.length === 0) {
-        console.log("[v0] No user returned after insert")
         return {
           success: false,
           error: "Registration failed. Please try again.",
@@ -185,13 +175,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
 
       const newUser = newUsers[0]
-      console.log("[v0] Registration successful, setting user")
       setUser(newUser)
       localStorage.setItem("mental_assess_dummy_user", JSON.stringify(newUser))
       await loadUserProgress(newUser.id)
       return { success: true }
     } catch (error: any) {
-      console.log("[v0] Registration error:", error)
       if (error.message?.includes("Failed to fetch") || error.message?.includes("fetch")) {
         return {
           success: false,

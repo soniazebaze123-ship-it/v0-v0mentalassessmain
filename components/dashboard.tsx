@@ -53,12 +53,8 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
     if (!user) return
 
     try {
-      console.log("[v0] Dashboard: Loading assessment status for user:", user.id)
-
       // Load assessment results
       const { data: assessments } = await supabase.from("assessments").select("*").eq("user_id", user.id)
-
-      console.log("[v0] Dashboard: Found assessments:", assessments)
 
       const { data: sensoryAssessments } = await supabase.from("sensory_assessments").select("*").eq("user_id", user.id)
 
@@ -82,11 +78,9 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
           if (assessment.type === "MOCA" || assessment.type === "MoCA") {
             newStatus.moca = { completed: true, score: assessment.score }
             hasCompleted = true
-            console.log("[v0] Dashboard: MoCA completed with score:", assessment.score)
           } else if (assessment.type === "MMSE") {
             newStatus.mmse = { completed: true, score: assessment.score }
             hasCompleted = true
-            console.log("[v0] Dashboard: MMSE completed with score:", assessment.score)
           }
         })
       }
@@ -106,11 +100,10 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
         newStatus.upload = { completed: true, fileCount: files.length }
       }
 
-      console.log("[v0] Dashboard: Final status:", newStatus)
       setStatus(newStatus)
       setHasAnyAssessments(hasCompleted)
     } catch (error) {
-      console.error("[v0] Dashboard: Error loading assessment status:", error)
+      // Error loading assessment status - silently continue
     } finally {
       setLoading(false)
     }

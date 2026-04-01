@@ -174,7 +174,6 @@ function AppContent() {
   }
 
   const handleStepComplete = async (score: number) => {
-    console.log("[v0] Step complete - Score:", score, "Assessment:", assessmentType, "Step:", currentStep)
     const newScores = [...scores, score]
     setScores(newScores)
 
@@ -185,7 +184,6 @@ function AppContent() {
       setCurrentStep(currentStep + 1)
     } else {
       const totalScore = newScores.reduce((sum, s) => sum + s, 0)
-      console.log("[v0] Assessment complete - Scores array:", newScores, "Total:", totalScore)
 
       const sectionNames =
         assessmentType === "MOCA"
@@ -203,13 +201,6 @@ function AppContent() {
       const supabase = createClient()
 
       try {
-        console.log("[v0] Saving assessment to DB:", {
-          user_id: user!.id,
-          type: assessmentType,
-          score: totalScore,
-          data: sectionScores,
-        })
-
         const { data, error } = await supabase
           .from("assessments")
           .insert({
@@ -220,10 +211,7 @@ function AppContent() {
           })
           .select()
 
-        console.log("[v0] Assessment save result:", { data, error })
-
         if (error) {
-          console.error("[v0] Error saving assessment:", error)
           alert(`Error saving assessment: ${error.message}`)
           return
         }
@@ -237,7 +225,6 @@ function AppContent() {
           [assessmentType]: { totalScore, sectionScores },
         }))
       } catch (error) {
-        console.error("[v0] Error saving assessment:", error)
         alert(`Error saving assessment: ${error instanceof Error ? error.message : "Unknown error"}`)
         return
       }
