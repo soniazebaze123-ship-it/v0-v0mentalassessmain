@@ -7,14 +7,13 @@ import { Badge } from "@/components/ui/badge"
 import { useLanguage } from "@/contexts/language-context"
 import { useUser } from "@/contexts/user-context"
 import { supabase } from "@/lib/supabase"
-import { Brain, Upload, CheckCircle, Clock, LogOut, Eye, Ear, Flower2, TrendingUp, Leaf } from "lucide-react"
+import { Brain, CheckCircle, Clock, LogOut, Eye, Ear, Flower2, TrendingUp, Leaf } from "lucide-react"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 interface AssessmentStatus {
   moca: { completed: boolean; score?: number }
   mmse: { completed: boolean; score?: number }
-  upload: { completed: boolean; fileCount?: number }
   visual: { completed: boolean; score?: number }
   auditory: { completed: boolean; score?: number }
   olfactory: { completed: boolean; score?: number }
@@ -22,7 +21,7 @@ interface AssessmentStatus {
 }
 
 interface DashboardProps {
-  onStartAssessment: (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm") => void
+  onStartAssessment: (type: "moca" | "mmse" | "visual" | "auditory" | "olfactory" | "tcm") => void
   onResumeAssessment?: (type: "moca" | "mmse", step: number, scores: number[]) => void
   onViewResults?: (type: "moca" | "mmse") => void
   onViewRiskProfile?: () => void
@@ -32,7 +31,6 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
   const [status, setStatus] = useState<AssessmentStatus>({
     moca: { completed: false },
     mmse: { completed: false },
-    upload: { completed: false },
     visual: { completed: false },
     auditory: { completed: false },
     olfactory: { completed: false },
@@ -58,13 +56,9 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
 
       const { data: sensoryAssessments } = await supabase.from("sensory_assessments").select("*").eq("user_id", user.id)
 
-      // Load uploaded files
-      const { data: files } = await supabase.from("uploaded_files").select("*").eq("user_id", user.id)
-
       const newStatus: AssessmentStatus = {
         moca: { completed: false },
         mmse: { completed: false },
-        upload: { completed: false },
         visual: { completed: false },
         auditory: { completed: false },
         olfactory: { completed: false },
@@ -94,10 +88,6 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
           }
           hasCompleted = true
         })
-      }
-
-      if (files && files.length > 0) {
-        newStatus.upload = { completed: true, fileCount: files.length }
       }
 
       setStatus(newStatus)
@@ -423,57 +413,6 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                     onClick={() => onStartAssessment("tcm")}
                   >
                     {t("common.start")}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* TCM Image Upload */}
-          <Card
-            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.upload.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-violet-50 via-white to-purple-50 hover:from-violet-100 hover:to-purple-100"}`}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div
-                  className={`p-3 rounded-2xl shadow-sm ${status.upload.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-violet-500 to-purple-500 text-white"}`}
-                >
-                  <Upload className="w-7 h-7" />
-                </div>
-                {status.upload.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
-              </div>
-              <CardTitle className="text-lg mt-4 font-semibold">{language === "zh" ? "中医图像上传" : "TCM Image Upload"}</CardTitle>
-              <CardDescription className="text-sm">{language === "zh" ? "上传舌象、面部等中医诊断图像" : "Upload tongue, face images for TCM diagnosis"}</CardDescription>
-              <InstructionAudio instructionKey="upload.instruction" className="mt-2" />
-            </CardHeader>
-            <CardContent>
-              {status.upload.completed ? (
-                <div className="space-y-3">
-                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 text-center">
-                    <p className="text-lg font-semibold text-emerald-600">
-                      {t("dashboard.files_uploaded", { count: status.upload.fileCount })}
-                    </p>
-                    <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-emerald-200"
-                    onClick={() => onStartAssessment("upload")}
-                  >
-                    {t("dashboard.manage_files")}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center text-sm text-violet-600">
-                    <Clock className="w-4 h-4 mr-1.5" />
-                    <span>{t("dashboard.pending")}</span>
-                  </div>
-                  <Button 
-                    className="w-full bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white shadow-md rounded-xl font-medium"
-                    onClick={() => onStartAssessment("upload")}
-                  >
-                    {t("dashboard.upload_files")}
                   </Button>
                 </div>
               )}

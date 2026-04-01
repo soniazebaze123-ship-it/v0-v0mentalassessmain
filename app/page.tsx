@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { useUser } from "@/contexts/user-context"
 import { Registration } from "@/components/registration"
 import { Dashboard } from "@/components/dashboard"
-import { ImageUpload } from "@/components/image-upload"
+
 import { ResultsDisplay } from "@/components/results-display"
 import { RiskProfileDisplay } from "@/components/risk-profile-display"
 import { Login } from "@/components/login"
@@ -238,10 +238,6 @@ function AppContent() {
     handleStepComplete(0)
   }
 
-  const handleUploadComplete = () => {
-    setCurrentView("dashboard")
-  }
-
   const handleBackToDashboard = () => {
     setCurrentView("dashboard")
     setCurrentStep(0)
@@ -265,10 +261,6 @@ function AppContent() {
     } else {
       return <Login onRegister={() => setCurrentView("register")} onAdminLogin={() => setCurrentView("admin")} />
     }
-  }
-
-  if (currentView === "upload") {
-    return <ImageUpload onComplete={handleUploadComplete} />
   }
 
   if (currentView === "visual") {
