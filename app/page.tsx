@@ -82,7 +82,7 @@ function AppContent() {
     { component: AnimalNaming, props: {} },
     {
       component: MemoryTask,
-      props: { words: t("memory.moca.words"), title: t("moca.memory") },
+      props: { words: t("memory.moca.words"), title: t("moca.memory"), assessmentType: "MOCA" },
     },
     { component: AttentionTask, props: {} },
     { component: LanguageAbstraction, props: {} },
@@ -91,7 +91,7 @@ function AppContent() {
 
   const mmseSteps = [
     { component: MMSEOrientation, props: {} },
-    { component: MemoryTask, props: { words: t("memory.mmse.words"), title: t("mmse.registration") } },
+    { component: MemoryTask, props: { words: t("memory.mmse.words"), title: t("mmse.registration"), assessmentType: "MMSE" } },
     { component: MMSEAttention, props: {} },
     { component: ObjectNaming, props: {} },
     { component: MMSERepetition, props: {} },
