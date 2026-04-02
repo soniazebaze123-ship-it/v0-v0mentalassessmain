@@ -28,12 +28,12 @@ create index if not exists multimodal_assessments_created_at_idx
 
 alter table public.multimodal_assessments enable row level security;
 
-create policy if not exists "Users can view their own multimodal assessments"
-  on public.multimodal_assessments
-  for select
-  using (auth.uid() = user_id);
+drop policy if exists "Users can view their own multimodal assessments" on public.multimodal_assessments;
+drop policy if exists "Users can insert their own multimodal assessments" on public.multimodal_assessments;
+drop policy if exists "Allow all access to multimodal_assessments" on public.multimodal_assessments;
 
-create policy if not exists "Users can insert their own multimodal assessments"
+create policy "Allow all access to multimodal_assessments"
   on public.multimodal_assessments
-  for insert
-  with check (auth.uid() = user_id);
+  for all
+  using (true)
+  with check (true);
