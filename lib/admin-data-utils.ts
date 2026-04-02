@@ -17,6 +17,30 @@ export interface TrendData {
   type: string // Include type for potential multi-line chart
 }
 
+export type TrajectoryStatus = "Improved" | "Stable" | "Deteriorated"
+
+export interface PatientTrajectoryData {
+  userId: string
+  assessmentType: "MOCA" | "MMSE"
+  baselineScore: number
+  latestScore: number
+  delta: number
+  baselineDate: string
+  latestDate: string
+  status: TrajectoryStatus
+}
+
+export interface TrajectoryWorkflowData {
+  assessmentType: "MOCA" | "MMSE"
+  cohortSize: number
+  improvedCount: number
+  stableCount: number
+  deterioratedCount: number
+  baselineAverage: number
+  latestAverage: number
+  avgDelta: number
+}
+
 // Define score bands for MoCA and MMSE
 const MOCA_SCORE_BANDS = [
   { name: "26-30 (Normal)", min: 26, max: 30, color: "#22c55e" }, // green-500
@@ -106,4 +130,88 @@ export function getScoreTrends(
     score: a.total_score,
     type: a.assessment_type, // Include type for potential multi-line chart
   }))
+}
+
+function getTrajectoryStatus(delta: number): TrajectoryStatus {
+  if (delta >= 2) {
+    return "Improved"
+  }
+
+  if (delta <= -2) {
+    return "Deteriorated"
+  }
+
+  return "Stable"
+}
+
+export function getPatientTrajectories(assessments: Assessment[]): PatientTrajectoryData[] {
+  if (!assessments || assessments.length === 0) {
+    return []
+  }
+
+  const grouped = new Map<string, Assessment[]>()
+
+  assessments.forEach((assessment) => {
+    const key = `${assessment.user_id}:${assessment.assessment_type}`
+    const existing = grouped.get(key) ?? []
+    existing.push(assessment)
+    grouped.set(key, existing)
+  })
+
+  const trajectories: PatientTrajectoryData[] = []
+
+  grouped.forEach((groupedAssessments) => {
+    if (groupedAssessments.length < 2) {
+      return
+    }
+
+    const sorted = [...groupedAssessments].sort(
+      (a, b) => new Date(a.completed_at).getTime() - new Date(b.completed_at).getTime(),
+    )
+
+    const baseline = sorted[0]
+    const latest = sorted[sorted.length - 1]
+    const delta = latest.total_score - baseline.total_score
+
+    trajectories.push({
+      userId: latest.user_id,
+      assessmentType: latest.assessment_type,
+      baselineScore: baseline.total_score,
+      latestScore: latest.total_score,
+      delta,
+      baselineDate: baseline.completed_at,
+      latestDate: latest.completed_at,
+      status: getTrajectoryStatus(delta),
+    })
+  })
+
+  return trajectories.sort((a, b) => a.delta - b.delta)
+}
+
+export function getTrajectoryWorkflowData(assessments: Assessment[]): TrajectoryWorkflowData[] {
+  const trajectories = getPatientTrajectories(assessments)
+
+  return (["MOCA", "MMSE"] as const).map((assessmentType) => {
+    const filtered = trajectories.filter((trajectory) => trajectory.assessmentType === assessmentType)
+    const cohortSize = filtered.length
+    const improvedCount = filtered.filter((trajectory) => trajectory.status === "Improved").length
+    const stableCount = filtered.filter((trajectory) => trajectory.status === "Stable").length
+    const deterioratedCount = filtered.filter((trajectory) => trajectory.status === "Deteriorated").length
+    const baselineAverage =
+      cohortSize > 0 ? filtered.reduce((sum, trajectory) => sum + trajectory.baselineScore, 0) / cohortSize : 0
+    const latestAverage =
+      cohortSize > 0 ? filtered.reduce((sum, trajectory) => sum + trajectory.latestScore, 0) / cohortSize : 0
+    const avgDelta = cohortSize > 0 ? filtered.reduce((sum, trajectory) => sum + trajectory.delta, 0) / cohortSize : 0
+
+    return {
+      assessmentType,
+      cohortSize,
+      improvedCount,
+      stableCount,
+      deterioratedCount,
+      baselineAverage,
+      latestAverage,
+      avgDelta,
+    }
+  })
 }

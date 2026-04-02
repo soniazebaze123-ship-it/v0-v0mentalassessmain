@@ -14,10 +14,11 @@ import { useLanguage } from "@/contexts/language-context"
 
 // Add imports for new chart components and data utilities
 import { AverageScoreChart } from "@/components/admin/average-score-chart"
+import { DeteriorationWorkflowChart } from "@/components/admin/deterioration-workflow-chart"
 import { ScoreDistributionChart } from "@/components/admin/score-distribution-chart"
 import { ProgressTrendChart } from "@/components/admin/progress-trend-chart"
 import { PatientProgressTracker } from "@/components/admin/patient-progress-tracker"
-import { getScoreDistribution, getScoreTrends } from "@/lib/admin-data-utils"
+import { getPatientTrajectories, getScoreDistribution, getScoreTrends, getTrajectoryWorkflowData } from "@/lib/admin-data-utils"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 interface User {
@@ -292,6 +293,8 @@ export function AdminPanel() {
   const mocaDistributionData = getScoreDistribution(assessments, "MOCA")
   const mmseDistributionData = getScoreDistribution(assessments, "MMSE")
   const trendData = getScoreTrends(assessments, selectedTrendUser, selectedTrendAssessmentType)
+  const trajectoryWorkflowData = getTrajectoryWorkflowData(assessments)
+  const patientTrajectories = getPatientTrajectories(assessments)
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
@@ -381,6 +384,11 @@ export function AdminPanel() {
             onSelectUser={(value) => setSelectedTrendUser(value === "all" ? null : value)}
             selectedAssessmentType={selectedTrendAssessmentType}
             onSelectAssessmentType={(value) => setSelectedTrendAssessmentType(value)}
+          />
+          <DeteriorationWorkflowChart
+            workflowData={trajectoryWorkflowData}
+            trajectories={patientTrajectories}
+            users={users}
           />
         </div>
 
