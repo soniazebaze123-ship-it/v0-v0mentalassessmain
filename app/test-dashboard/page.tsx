@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -239,10 +240,10 @@ export default function TestDashboardPage() {
             </CardHeader>
             <CardContent className="space-y-2">
               <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
-                <a href="/">Main App</a>
+                <Link href="/">Main App</Link>
               </Button>
               <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
-                <a href="/admin">Admin Panel</a>
+                <Link href="/admin">Admin Panel</Link>
               </Button>
             </CardContent>
           </Card>

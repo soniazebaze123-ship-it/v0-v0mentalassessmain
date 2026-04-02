@@ -20,6 +20,12 @@ In the Vercel import dialog, add the following environment variables:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=<your-supabase-url>
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-supabase-publishable-key>
+```
+
+Alternative supported env name:
+
+```
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>
 ```
 
@@ -27,7 +33,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>
 - Login to **https://app.supabase.com**
 - Select your project
 - Go to **Settings → API**
-- Copy the **Project URL** and **anon (public) key**
+- Copy the **Project URL** and **publishable / anon (public) key**
 
 ### Step 3: Deploy
 1. Click **"Deploy"**
@@ -42,6 +48,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>
 - ✅ Phase 4 multimodal deferred (not active)
 - ✅ Type system fixed (compilation should pass)
 - ✅ Phase 1-3 core modules ready
+- ✅ Current production build completes cleanly with Supabase SSR middleware
 
 ### Before Testing - IMPORTANT
 

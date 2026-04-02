@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -7,9 +8,23 @@ import { Badge } from "@/components/ui/badge"
 import { useLanguage } from "@/contexts/language-context"
 import { useUser } from "@/contexts/user-context"
 import { supabase } from "@/lib/supabase"
-import { Brain, Upload, CheckCircle, Clock, LogOut, Eye, Ear, Flower2, TrendingUp, Leaf } from "lucide-react"
+import { Brain, Upload, CheckCircle, Clock, LogOut, Eye, Ear, Flower2, TrendingUp, Leaf, Activity } from "lucide-react"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
+
+function isSameCalendarDay(value?: string | null) {
+  if (!value) {
+    return false
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return false
+  }
+
+  return date.toDateString() === new Date().toDateString()
+}
 
 interface AssessmentStatus {
   moca: { completed: boolean; score?: number }
@@ -24,11 +39,18 @@ interface AssessmentStatus {
 interface DashboardProps {
   onStartAssessment: (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm") => void
   onResumeAssessment?: (type: "moca" | "mmse", step: number, scores: number[]) => void
+  onResetAssessmentSession?: (type: "moca" | "mmse") => Promise<void>
   onViewResults?: (type: "moca" | "mmse") => void
   onViewRiskProfile?: () => void
 }
 
-export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults, onViewRiskProfile }: DashboardProps) {
+export function Dashboard({
+  onStartAssessment,
+  onResumeAssessment,
+  onResetAssessmentSession,
+  onViewResults,
+  onViewRiskProfile,
+}: DashboardProps) {
   const [status, setStatus] = useState<AssessmentStatus>({
     moca: { completed: false },
     mmse: { completed: false },
@@ -42,6 +64,9 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
   const [hasAnyAssessments, setHasAnyAssessments] = useState(false)
   const { t, language, setLanguage } = useLanguage()
   const { user, logout, progress } = useUser()
+  const displayName = user?.name?.trim() || "-"
+  const displayId = user?.id || "-"
+  const displayPhone = user?.phone_number || "-"
 
   useEffect(() => {
     if (user) {
@@ -79,12 +104,18 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
 
       if (assessments) {
         assessments.forEach((assessment) => {
+          const completedToday = isSameCalendarDay(assessment.completed_at)
+
           if (assessment.type === "MOCA" || assessment.type === "MoCA") {
-            newStatus.moca = { completed: true, score: assessment.score }
+            if (completedToday) {
+              newStatus.moca = { completed: true, score: assessment.score }
+            }
             hasCompleted = true
             console.log("[v0] Dashboard: MoCA completed with score:", assessment.score)
           } else if (assessment.type === "MMSE") {
-            newStatus.mmse = { completed: true, score: assessment.score }
+            if (completedToday) {
+              newStatus.mmse = { completed: true, score: assessment.score }
+            }
             hasCompleted = true
             console.log("[v0] Dashboard: MMSE completed with score:", assessment.score)
           }
@@ -93,10 +124,13 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
 
       if (sensoryAssessments) {
         sensoryAssessments.forEach((assessment) => {
+          const completedToday = assessment.test_date === new Date().toISOString().split("T")[0]
           const type = assessment.test_type as "visual" | "auditory" | "olfactory"
-          newStatus[type] = {
-            completed: true,
-            score: Math.round(assessment.normalized_score || 0),
+          if (completedToday) {
+            newStatus[type] = {
+              completed: true,
+              score: Math.round(assessment.normalized_score || 0),
+            }
           }
           hasCompleted = true
         })
@@ -135,13 +169,11 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
       } else {
         const { data } = await supabase
           .from("assessments")
-          .select("id")
+          .select("completed_at")
           .eq("user_id", user.id)
           .eq("type", testType.toUpperCase())
-          .eq("test_date", today)
-          .limit(1)
 
-        return !data || data.length === 0
+        return !(data ?? []).some((assessment) => isSameCalendarDay(assessment.completed_at))
       }
     } catch (error) {
       console.error("Error checking test availability:", error)
@@ -181,6 +213,16 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
     }
   }
 
+  const handleResetSession = async (type: "moca" | "mmse") => {
+    if (!onResetAssessmentSession) {
+      return
+    }
+
+    if (confirm("Reset the current session and start again from zero?")) {
+      await onResetAssessmentSession(type)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -199,9 +241,17 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
         <div className="flex flex-col lg:flex-row justify-between items-center mb-8 gap-4">
           <div className="text-center lg:text-left">
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">{t("dashboard.title")}</h1>
-            <p className="text-gray-600 mt-2">
-              {t("dashboard.phone")}: {user?.phone_number}
-            </p>
+            <div className="mt-2 flex flex-col gap-1 text-xs text-gray-600 lg:text-sm">
+              <p>
+                {t("dashboard.name")}: <span className="font-medium text-gray-800">{displayName}</span>
+              </p>
+              <p>
+                {t("dashboard.id")}: <span className="font-mono text-gray-800">{displayId}</span>
+              </p>
+              <p>
+                {t("dashboard.phone")}: <span className="font-medium text-gray-800">{displayPhone}</span>
+              </p>
+            </div>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Button
@@ -315,12 +365,30 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                     <Clock className="w-4 h-4 mr-1.5" />
                     <span>{progress.MOCA ? t("dashboard.resume") : t("dashboard.pending")}</span>
                   </div>
-                  <Button
-                    className="w-full bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-md rounded-xl font-medium"
-                    onClick={() => handleAssessmentAction("moca")}
-                  >
-                    {progress.MOCA ? t("common.resume") : t("common.start")}
-                  </Button>
+                  {progress.MOCA ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        className="w-full bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-md rounded-xl font-medium"
+                        onClick={() => handleAssessmentAction("moca")}
+                      >
+                        {t("common.resume")}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-blue-300"
+                        onClick={() => handleResetSession("moca")}
+                      >
+                        Start New Session
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      className="w-full bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-md rounded-xl font-medium"
+                      onClick={() => handleAssessmentAction("moca")}
+                    >
+                      {t("common.start")}
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -373,12 +441,30 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                     <Clock className="w-4 h-4 mr-1.5" />
                     <span>{progress.MMSE ? t("dashboard.resume") : t("dashboard.pending")}</span>
                   </div>
-                  <Button
-                    className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-md rounded-xl font-medium"
-                    onClick={() => handleAssessmentAction("mmse")}
-                  >
-                    {progress.MMSE ? t("common.resume") : t("common.start")}
-                  </Button>
+                  {progress.MMSE ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-md rounded-xl font-medium"
+                        onClick={() => handleAssessmentAction("mmse")}
+                      >
+                        {t("common.resume")}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-teal-300"
+                        onClick={() => handleResetSession("mmse")}
+                      >
+                        Start New Session
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-md rounded-xl font-medium"
+                      onClick={() => handleAssessmentAction("mmse")}
+                    >
+                      {t("common.start")}
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -433,6 +519,32 @@ export function Dashboard({ onStartAssessment, onResumeAssessment, onViewResults
                   </Button>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card className="transition-all duration-300 border-0 shadow-lg hover:shadow-xl bg-gradient-to-br from-slate-50 via-white to-cyan-50 hover:from-slate-100 hover:to-cyan-100">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="p-3 rounded-2xl shadow-sm bg-gradient-to-br from-slate-700 to-cyan-600 text-white">
+                  <Activity className="w-7 h-7" />
+                </div>
+              </div>
+              <CardTitle className="text-lg mt-4 font-semibold">{t("dashboard.multimodal")}</CardTitle>
+              <CardDescription className="text-sm">{t("dashboard.multimodal.description")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center text-sm text-slate-600">
+                  <Clock className="w-4 h-4 mr-1.5" />
+                  <span>EEG, blood biomarkers, and sensory fusion preview</span>
+                </div>
+                <Button
+                  asChild
+                  className="w-full bg-gradient-to-r from-slate-700 to-cyan-600 hover:from-slate-800 hover:to-cyan-700 text-white shadow-md rounded-xl font-medium"
+                >
+                  <Link href="/multimodal">Open Multimodal Module</Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

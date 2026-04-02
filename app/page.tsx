@@ -39,6 +39,20 @@ import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
 import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/contexts/language-context"
 
+function isSameCalendarDay(value?: string | null) {
+  if (!value) {
+    return false
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return false
+  }
+
+  return date.toDateString() === new Date().toDateString()
+}
+
 function AppContent() {
   const { user, loading, progress, saveProgress, clearProgress } = useUser()
   const { t } = useLanguage()
@@ -111,17 +125,23 @@ function AppContent() {
     try {
       const { data: assessments } = await supabase.from("assessments").select("*").eq("user_id", user.id)
 
+      const completed: Record<string, any> = {}
+
       if (assessments) {
-        const completed: Record<string, any> = {}
         assessments.forEach((assessment) => {
+          if (!isSameCalendarDay(assessment.completed_at)) {
+            return
+          }
+
           completed[assessment.type] = {
             totalScore: assessment.score,
             sectionScores: assessment.data,
             completedAt: assessment.completed_at,
           }
         })
-        setCompletedAssessments(completed)
       }
+
+      setCompletedAssessments(completed)
     } catch (error) {
       if (process.env.NODE_ENV === "development") {
         console.error("Error loading completed assessments:", error)
@@ -162,6 +182,17 @@ function AppContent() {
     setAssessmentType(assessmentKey)
     setCurrentStep(step)
     setScores(savedScores)
+  }
+
+  const handleResetAssessmentSession = async (type: "moca" | "mmse") => {
+    const assessmentKey = type.toUpperCase() as "MOCA" | "MMSE"
+
+    await clearProgress(assessmentKey)
+    setAssessmentType(assessmentKey)
+    setCurrentStep(0)
+    setScores([])
+    setCurrentView(type)
+    await saveProgress(assessmentKey, 0, [])
   }
 
   const handleViewResults = (type: "moca" | "mmse") => {
@@ -234,7 +265,11 @@ function AppContent() {
 
         setCompletedAssessments((prev) => ({
           ...prev,
-          [assessmentType]: { totalScore, sectionScores },
+          [assessmentType]: {
+            totalScore,
+            sectionScores,
+            completedAt: new Date().toISOString(),
+          },
         }))
       } catch (error) {
         console.error("[v0] Error saving assessment:", error)
@@ -374,6 +409,7 @@ function AppContent() {
     <Dashboard
       onStartAssessment={handleStartAssessment}
       onResumeAssessment={handleResumeAssessment}
+      onResetAssessmentSession={handleResetAssessmentSession}
       onViewResults={handleViewResults}
       onViewRiskProfile={handleViewRiskProfile}
     >

@@ -39,6 +39,20 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined)
 
+function isSameCalendarDay(value?: string | null) {
+  if (!value) {
+    return false
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return false
+  }
+
+  return date.toDateString() === new Date().toDateString()
+}
+
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -66,6 +80,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       } else {
         const newProgress: Record<string, AssessmentProgress> = {}
         data.forEach((p) => {
+          const progressTimestamp = (p as { last_updated?: string; updated_at?: string }).last_updated ??
+            (p as { last_updated?: string; updated_at?: string }).updated_at
+
+          if (!isSameCalendarDay(progressTimestamp)) {
+            return
+          }
+
           newProgress[p.assessment_type] = {
             assessment_type: p.assessment_type,
             current_step: p.current_step,

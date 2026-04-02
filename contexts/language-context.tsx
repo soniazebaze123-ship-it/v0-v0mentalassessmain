@@ -94,6 +94,8 @@ const englishTranslations: TranslationMap = {
   "dashboard.manage_files": "Manage Files",
   "dashboard.upload_files": "Upload Files",
   "dashboard.files_uploaded": "Files uploaded: {count}",
+  "dashboard.name": "Name",
+  "dashboard.id": "ID",
   "dashboard.phone": "Phone",
   "dashboard.logout": "Logout",
   "dashboard.sensory": "Sensory Screening",
@@ -456,6 +458,9 @@ const zhOverrides: TranslationMap = {
   "registration.description": "请输入手机号以开始心理健康评估",
 
   "dashboard.title": "心理健康评估面板",
+  "dashboard.name": "姓名",
+  "dashboard.id": "编号",
+  "dashboard.phone": "电话",
   "dashboard.resume": "继续评估",
   "dashboard.retake": "重新测试",
   "dashboard.confirm_retake": "确认重测",
@@ -584,6 +589,9 @@ const yueOverrides: TranslationMap = {
   "registration.description": "輸入你嘅電話號碼開始心理健康評估",
 
   "dashboard.title": "心理健康評估面板",
+  "dashboard.name": "姓名",
+  "dashboard.id": "編號",
+  "dashboard.phone": "電話",
   "dashboard.resume": "繼續評估",
   "dashboard.retake": "重新測試",
   "dashboard.confirm_retake": "確認重測",
@@ -711,6 +719,9 @@ const frOverrides: TranslationMap = {
   "registration.description": "Entrez votre numéro de téléphone pour commencer l'évaluation de santé mentale",
 
   "dashboard.title": "Tableau de bord d'évaluation cognitive",
+  "dashboard.name": "Nom",
+  "dashboard.id": "ID",
+  "dashboard.phone": "Téléphone",
   "dashboard.resume": "Reprendre l'évaluation",
   "dashboard.retake": "Repasser le test",
   "dashboard.confirm_retake": "Confirmer la reprise",

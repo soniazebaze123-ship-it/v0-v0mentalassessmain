@@ -368,7 +368,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
           <div className="bg-yellow-50 dark:bg-yellow-950 p-6 rounded-lg space-y-2">
             <p className="font-semibold">Adjust your device volume</p>
             <p className="text-sm text-muted-foreground">
-              Click "Play Test Sound" below. You should hear "1, 2, 3" spoken clearly.
+              Click &quot;Play Test Sound&quot; below. You should hear &quot;1, 2, 3&quot; spoken clearly.
               Adjust your device volume until you can hear comfortably.
             </p>
           </div>

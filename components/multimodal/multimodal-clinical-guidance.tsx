@@ -1,9 +1,30 @@
-"use client";
+"use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-export function MultimodalClinicalGuidance({ result }: any) {
-  if (!result) return null;
+interface MultimodalClinicalGuidanceResult {
+  summary: string
+  profile: {
+    probableAD: boolean
+    mixedNonAD: boolean
+    specialistReferral: boolean
+  }
+  eegFlags: {
+    slowingDetected: boolean
+    p300DelayDetected: boolean
+    p300AmplitudeReduced: boolean
+  }
+  sensoryFlags: {
+    multisensoryImpairment: boolean
+  }
+}
+
+interface MultimodalClinicalGuidanceProps {
+  result: MultimodalClinicalGuidanceResult | null
+}
+
+export function MultimodalClinicalGuidance({ result }: MultimodalClinicalGuidanceProps) {
+  if (!result) return null
 
   return (
     <Card className="rounded-3xl shadow-sm">
@@ -49,5 +70,5 @@ export function MultimodalClinicalGuidance({ result }: any) {
         )}
       </CardContent>
     </Card>
-  );
+  )
 }

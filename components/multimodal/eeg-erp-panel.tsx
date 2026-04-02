@@ -16,7 +16,7 @@ function toNullableNumber(value: string): number | null {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-export function EEGERPPanel({ value, onChange }: Props) {
+export function EegErpPanel({ value, onChange }: Props) {
   const thetaAlphaRatio =
     value.thetaPower !== null && value.alphaPower !== null && value.alphaPower !== 0
       ? value.thetaPower / value.alphaPower

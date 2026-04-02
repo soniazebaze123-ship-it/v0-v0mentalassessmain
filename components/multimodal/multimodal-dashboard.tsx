@@ -1,23 +1,21 @@
-"use client";
+"use client"
 
-// ⚠️ PHASE 4 DEFERRED - Multimodal module archived for future implementation
-// This component will be reactivated when multimodal scoring is clinically validated
-// See: PHASE_4_MULTIMODAL_DEFERRAL.md for context
+import { useEffect, useMemo, useState, useTransition } from "react"
 
-import { useMemo, useState, useTransition } from "react";
-import { saveMultimodalAssessment } from "@/app/api/multimodal-score/actions";
-import { runMultimodalEngine } from "@/lib/multimodal/multimodal-engine";
-import type { MultimodalFormData } from "@/lib/multimodal/types";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { EegErpPanel } from "./eeg-erp-panel";
-import { SensoryIntelligencePanel } from "./sensory-intelligence-panel";
-import { BloodBiomarkerPanel } from "./blood-biomarker-panel";
-import { MultimodalStatusHero } from "./multimodal-status-hero";
-import { MultimodalRiskSummary } from "./multimodal-risk-summary";
-import { MultimodalClinicalGuidance } from "./multimodal-clinical-guidance";
+import { useUser } from "@/contexts/user-context"
+import { createClient } from "@/lib/supabase/client"
+import { runMultimodalEngine, type MultimodalEngineResult } from "@/lib/multimodal/multimodal-engine"
+import type { MultimodalFormData } from "@/lib/multimodal/types"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { EegErpPanel } from "./eeg-erp-panel"
+import { SensoryIntelligencePanel } from "./sensory-intelligence-panel"
+import { BloodBiomarkerPanel } from "./blood-biomarker-panel"
+import { MultimodalStatusHero } from "./multimodal-status-hero"
+import { MultimodalRiskSummary } from "./multimodal-risk-summary"
+import { MultimodalClinicalGuidance } from "./multimodal-clinical-guidance"
 
 const initialData: MultimodalFormData = {
   userId: "",
@@ -52,49 +50,95 @@ const initialData: MultimodalFormData = {
     tnfAlpha: null,
   },
   notes: "",
-};
+}
+
+function toRiskPercent(result: MultimodalEngineResult) {
+  return Math.min(100, Math.max(0, Number(((result.totalScore / 21) * 100).toFixed(2))))
+}
+
+function saveDraftLocally(data: MultimodalFormData, preview: MultimodalEngineResult) {
+  const drafts = JSON.parse(window.localStorage.getItem("mental_assess_multimodal_drafts") ?? "[]") as Array<Record<string, unknown>>
+
+  drafts.unshift({
+    savedAt: new Date().toISOString(),
+    userId: data.userId,
+    eeg: data.eeg,
+    sensory: data.sensory,
+    blood: data.blood,
+    notes: data.notes ?? "",
+    result: preview,
+  })
+
+  window.localStorage.setItem("mental_assess_multimodal_drafts", JSON.stringify(drafts.slice(0, 10)))
+}
 
 export function MultimodalDashboard() {
-  const [data, setData] = useState<MultimodalFormData>(initialData);
-  const [message, setMessage] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const { user } = useUser()
+  const [data, setData] = useState<MultimodalFormData>(initialData)
+  const [message, setMessage] = useState("")
+  const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    if (!user?.id) {
+      return
+    }
+
+    setData((current) => (current.userId ? current : { ...current, userId: user.id }))
+  }, [user?.id])
 
   const preview = useMemo(() => {
-  try {
-    return runMultimodalEngine({
-      cognitive: {
-        // ⚠️ For now optional (until we connect MMSE/MoCA later)
-        mocaScore: null,
-        mmseScore: null,
-      },
-      sensory: {
-        visualScore: data.sensory.visualFlag ? 5 : 10,
-        auditoryScore: data.sensory.hearingFlag ? 5 : 10,
-        olfactoryScore: data.sensory.olfactoryScore,
-      },
-      eeg: {
-        thetaPower: data.eeg.thetaPower,
-        alphaPower: data.eeg.alphaPower,
-        p300Latency: data.eeg.p300Latency,
-        p300Amplitude: data.eeg.p300Amplitude,
-      },
-      blood: data.blood,
-    });
-  } catch {
-    return null;
-  }
-}, [data]);
+    try {
+      return runMultimodalEngine({
+        cognitive: {
+          mocaScore: null,
+          mmseScore: null,
+        },
+        sensory: {
+          visualScore: data.sensory.visualFlag ? 5 : 10,
+          auditoryScore: data.sensory.hearingFlag ? 5 : 10,
+          olfactoryScore: data.sensory.olfactoryScore,
+        },
+        eeg: data.eeg,
+        blood: data.blood,
+      })
+    } catch {
+      return null
+    }
+  }, [data])
 
   function handleSave() {
-    setMessage("");
+    setMessage("")
+
     startTransition(async () => {
-      const response = await saveMultimodalAssessment(data);
-      if (!response.ok) {
-        setMessage("Unable to save multimodal assessment.");
-        return;
+      if (!preview) {
+        setMessage("Enter assessment values to generate a multimodal result before saving.")
+        return
       }
-      setMessage("Multimodal assessment saved successfully.");
-    });
+
+      const supabase = createClient()
+      const riskPercent = toRiskPercent(preview)
+      const { error } = await supabase.from("multimodal_assessments").insert({
+        user_id: data.userId,
+        eeg_input: data.eeg,
+        sensory_input: data.sensory,
+        blood_input: data.blood,
+        result_payload: preview,
+        cognitive_band: preview.stage,
+        probable_ad_profile: preview.profile.probableAD,
+        mixed_non_ad_pattern: preview.profile.mixedNonAD,
+        specialist_referral: preview.profile.specialistReferral,
+        risk_percent: riskPercent,
+        notes: data.notes?.trim() || null,
+      })
+
+      if (error) {
+        saveDraftLocally(data, preview)
+        setMessage(`Supabase save failed (${error.message}). Saved locally in this browser for preview.`)
+        return
+      }
+
+      setMessage("Multimodal assessment saved successfully.")
+    })
   }
 
   return (
@@ -122,9 +166,14 @@ export function MultimodalDashboard() {
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={data.userId}
                 onChange={(e) => setData({ ...data, userId: e.target.value })}
-                placeholder="Paste Supabase user UUID"
+                placeholder="Paste user UUID or use the logged-in user"
               />
             </div>
+            {user ? (
+              <p className="text-xs text-slate-500">
+                Signed in as {user.name?.trim() || user.phone_number} ({user.id})
+              </p>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="notes">Clinical Notes</Label>
               <Textarea
@@ -134,7 +183,7 @@ export function MultimodalDashboard() {
                 placeholder="Add clinician interpretation, medication context, functional observations, or follow-up notes"
               />
             </div>
-            <Button onClick={handleSave} disabled={isPending || !data.userId} className="rounded-2xl">
+            <Button onClick={handleSave} disabled={isPending || !data.userId || !preview} className="rounded-2xl">
               {isPending ? "Saving..." : "Save Multimodal Assessment"}
             </Button>
             {message ? <p className="text-sm text-slate-600">{message}</p> : null}
@@ -144,5 +193,5 @@ export function MultimodalDashboard() {
         <MultimodalClinicalGuidance result={preview} />
       </div>
     </div>
-  );
+  )
 }

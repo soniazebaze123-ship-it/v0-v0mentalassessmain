@@ -53,6 +53,12 @@ Add these in the Vercel import dialog:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key_here
+```
+
+Alternative supported env name:
+
+```env
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 ```
 
@@ -61,7 +67,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 2. Select your project
 3. Settings → API
 4. Copy the **Project URL** (NEXT_PUBLIC_SUPABASE_URL)
-5. Copy the **anon (public) key** (NEXT_PUBLIC_SUPABASE_ANON_KEY)
+5. Copy the **publishable / anon (public) key**
+  - Preferred: `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+  - Also supported: `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
 **Step 5:** Click "Deploy"
 - Vercel will build and deploy automatically
@@ -148,14 +156,15 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 ### Build & Deployment Notes
 
 **Expected Build Warnings:**
-- Unused variables in Phase 4 archived code (expected)
-- TypeScript errors in multimodal folder (expected - Phase 4 only)
+- Unused variables in archived or in-progress code may still appear in lint output
+- Multimodal remains deferred to Phase 4 and is not part of the active route surface
 
 **Build Should Succeed If:**
 - ✅ All Phase 1-3 files compile
 - ✅ Supabase types import correctly
 - ✅ No missing UI components
 - ✅ Environment variables are set
+- ✅ No active multimodal route is enabled in Phase 1-3
 
 ---
 

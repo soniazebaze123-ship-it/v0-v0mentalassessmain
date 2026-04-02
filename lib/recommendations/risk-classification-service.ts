@@ -54,7 +54,7 @@ const THRESHOLDS = {
 
 export function classifyRisk(input: RiskClassificationInput): RiskClassificationOutput {
   let riskLevel: "normal" | "mild_risk" | "moderate_risk" | "high_risk" = "normal";
-  let riskFactors: string[] = [];
+  const riskFactors: string[] = [];
 
   // Evaluate MMSE score
   if (input.mmse_score !== undefined) {
