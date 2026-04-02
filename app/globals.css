@@ -4,66 +4,68 @@
 
 @layer base {
   :root {
-    /* Calming healthcare palette - soft warm neutrals with forest green accent */
-    --background: 30 20% 96%;
-    --foreground: 150 25% 15%;
+    /* Vibrant, colorful palette - light warm background with bold accents */
+    --background: 45 30% 97%;
+    --foreground: 240 10% 15%;
 
-    --card: 30 15% 98%;
-    --card-foreground: 150 25% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 15%;
 
-    --popover: 30 15% 98%;
-    --popover-foreground: 150 25% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 15%;
 
-    /* Primary: Forest green - calming, professional, medical */
-    --primary: 152 45% 32%;
-    --primary-foreground: 30 20% 98%;
+    /* Primary: Vibrant blue */
+    --primary: 220 90% 55%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Warm beige/taupe */
-    --secondary: 30 15% 92%;
-    --secondary-foreground: 150 20% 25%;
+    /* Secondary: Soft gray */
+    --secondary: 220 15% 94%;
+    --secondary-foreground: 220 10% 30%;
 
-    --muted: 30 12% 90%;
-    --muted-foreground: 150 10% 40%;
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 10% 45%;
 
-    /* Accent: Soft teal for highlights */
-    --accent: 175 35% 45%;
-    --accent-foreground: 30 20% 98%;
+    /* Accent: Vibrant pink */
+    --accent: 330 85% 60%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 65% 50%;
-    --destructive-foreground: 30 20% 98%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 30 15% 85%;
-    --input: 30 15% 88%;
-    --ring: 152 45% 32%;
+    --border: 220 15% 88%;
+    --input: 220 15% 90%;
+    --ring: 220 90% 55%;
 
     --radius: 0.75rem;
 
-    /* Assessment card colors - harmonious healthcare palette */
-    /* Cognitive (MoCA/MMSE): Deep teal */
-    --card-cognitive: 175 40% 35%;
-    --card-cognitive-light: 175 30% 95%;
-    --card-cognitive-secondary: 190 35% 40%;
-    --card-cognitive-secondary-light: 190 30% 95%;
+    /* Assessment card colors - Vibrant distinct colors */
+    /* MoCA: Sky Blue */
+    --card-cognitive: 200 85% 50%;
+    --card-cognitive-light: 200 85% 95%;
     
-    /* TCM: Forest green */
-    --card-tcm: 152 45% 32%;
-    --card-tcm-light: 152 35% 95%;
+    /* MMSE: Purple/Violet */
+    --card-cognitive-secondary: 270 70% 55%;
+    --card-cognitive-secondary-light: 270 70% 95%;
     
-    /* Visual: Soft indigo */
-    --card-visual: 230 35% 45%;
-    --card-visual-light: 230 30% 95%;
+    /* TCM: Emerald Green */
+    --card-tcm: 155 70% 42%;
+    --card-tcm-light: 155 70% 94%;
     
-    /* Auditory: Warm coral */
-    --card-auditory: 15 55% 50%;
-    --card-auditory-light: 15 45% 95%;
+    /* Visual: Indigo Blue */
+    --card-visual: 240 65% 55%;
+    --card-visual-light: 240 65% 95%;
     
-    /* Olfactory: Warm amber */
-    --card-olfactory: 35 60% 48%;
-    --card-olfactory-light: 35 50% 95%;
+    /* Auditory: Rose Pink */
+    --card-auditory: 340 75% 55%;
+    --card-auditory-light: 340 75% 95%;
     
-    /* Success: Soft green */
-    --card-success: 145 45% 38%;
-    --card-success-light: 145 35% 95%;
+    /* Olfactory: Warm Orange */
+    --card-olfactory: 25 90% 55%;
+    --card-olfactory-light: 25 90% 95%;
+    
+    /* Success: Bright Green */
+    --card-success: 145 70% 45%;
+    --card-success-light: 145 70% 94%;
   }
 
   .dark {

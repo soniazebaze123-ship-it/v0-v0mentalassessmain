@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 
 export async function getMultimodalAssessmentStats() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("multimodal_assessments")
