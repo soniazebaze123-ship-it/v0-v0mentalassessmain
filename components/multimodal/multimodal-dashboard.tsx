@@ -133,6 +133,11 @@ export function MultimodalDashboard() {
 
       if (error) {
         saveDraftLocally(data, preview)
+        if (error.code === "PGRST205") {
+          setMessage("Supabase table multimodal_assessments is not deployed yet. Saved locally in this browser for preview. Apply supabase/20260329_create_multimodal_assessments.sql in Supabase to enable persistent saves.")
+          return
+        }
+
         setMessage(`Supabase save failed (${error.message}). Saved locally in this browser for preview.`)
         return
       }
