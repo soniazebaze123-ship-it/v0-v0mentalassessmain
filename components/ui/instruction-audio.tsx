@@ -11,10 +11,50 @@ interface InstructionAudioProps {
 }
 
 export function InstructionAudio({ instructionKey, className }: InstructionAudioProps) {
-  const { t, getSpeechLanguage, language } = useLanguage()
+  const { t, getSpeechSettings, getBestVoice, language } = useLanguage()
   const [isPlaying, setIsPlaying] = useState(false)
+  const [enhancedInstruction, setEnhancedInstruction] = useState<string | null>(null)
 
-  const playInstruction = () => {
+  const resolveInstructionText = async () => {
+    if (enhancedInstruction) {
+      return enhancedInstruction
+    }
+
+    const baseInstruction = t(instructionKey)
+
+    if (language === "en") {
+      return baseInstruction
+    }
+
+    try {
+      const response = await fetch("/api/translate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: baseInstruction,
+          targetLanguage: language,
+        }),
+      })
+
+      if (!response.ok) {
+        return baseInstruction
+      }
+
+      const payload = await response.json()
+      if (payload.translatedText) {
+        setEnhancedInstruction(payload.translatedText)
+        return payload.translatedText
+      }
+    } catch (error) {
+      console.error("Instruction translation enhancement failed:", error)
+    }
+
+    return baseInstruction
+  }
+
+  const playInstruction = async () => {
     if (!("speechSynthesis" in window)) {
       alert(t("audio.not_supported"))
       return
@@ -23,19 +63,18 @@ export function InstructionAudio({ instructionKey, className }: InstructionAudio
     // Cancel any ongoing speech
     window.speechSynthesis.cancel()
 
-    const instructionText = t(instructionKey)
+    const instructionText = await resolveInstructionText()
+    const speechSettings = getSpeechSettings(language)
     const utterance = new SpeechSynthesisUtterance(instructionText)
-    utterance.lang = getSpeechLanguage(language)
-    utterance.rate = 0.7
-    utterance.pitch = 1.0
-    utterance.volume = 1.0
+    utterance.lang = speechSettings.lang
+    utterance.rate = speechSettings.rate
+    utterance.pitch = speechSettings.pitch
+    utterance.volume = speechSettings.volume
 
-    // Try to find a voice that matches the language
-    const voices = window.speechSynthesis.getVoices()
-    const preferredVoice = voices.find((voice) => voice.lang.startsWith(getSpeechLanguage(language).split("-")[0]))
-
+    const preferredVoice = getBestVoice(language)
     if (preferredVoice) {
       utterance.voice = preferredVoice
+      utterance.lang = preferredVoice.lang || speechSettings.lang
     }
 
     utterance.onstart = () => setIsPlaying(true)
@@ -64,8 +103,16 @@ export function InstructionAudio({ instructionKey, className }: InstructionAudio
     if ("speechSynthesis" in window) {
       loadVoices()
       window.speechSynthesis.onvoiceschanged = loadVoices
+
+      return () => {
+        window.speechSynthesis.onvoiceschanged = null
+      }
     }
   }, [])
+
+  useEffect(() => {
+    setEnhancedInstruction(null)
+  }, [instructionKey, language])
 
   return (
     <Button onClick={playInstruction} disabled={isPlaying} variant="outline" size="sm" className={className}>

@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AssessmentInput } from "@/components/ui/assessment-input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import Image from "next/image"
 import { useLanguage } from "@/contexts/language-context"
 import { useUser } from "@/contexts/user-context"
 import { supabase } from "@/lib/supabase"
@@ -24,7 +23,7 @@ interface UploadedImage {
 }
 
 export function AnimalNaming({ onComplete, onSkip }: AnimalNamingProps) {
-  const { t, language } = useLanguage()
+  const { t } = useLanguage()
   const { user } = useUser()
   const [answers, setAnswers] = useState<string[]>(["", "", ""])
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
@@ -52,9 +51,10 @@ export function AnimalNaming({ onComplete, onSkip }: AnimalNamingProps) {
         .select("*")
         .eq("user_id", user.id)
         .like("file_type", "image%")
+        .order("uploaded_at", { ascending: false })
         .limit(3)
 
-      if (files && files.length >= 3) {
+      if (files && files.length > 0) {
         const images = files.slice(0, 3).map((file) => ({
           id: file.id,
           filename: file.filename,
@@ -70,14 +70,25 @@ export function AnimalNaming({ onComplete, onSkip }: AnimalNamingProps) {
     }
   }
 
-  const animals =
-    uploadedImages.length >= 3
-      ? uploadedImages.map((img, index) => ({
-          image: img.url,
-          name: `${t("common.animal")}${index + 1}`, // Generic name for uploaded images
-          alt: img.filename,
-        }))
-      : defaultAnimals
+  const animals = defaultAnimals.map((animal, index) => {
+    const uploadedImage = uploadedImages[index]
+
+    if (!uploadedImage) {
+      return {
+        ...animal,
+        fallbackImage: animal.image,
+        isUploaded: false,
+      }
+    }
+
+    return {
+      image: uploadedImage.url,
+      fallbackImage: animal.image,
+      name: `${t("common.animal")} ${index + 1}`,
+      alt: uploadedImage.filename,
+      isUploaded: true,
+    }
+  })
 
   const handleAnswerChange = (index: number, value: string) => {
     const newAnswers = [...answers]
@@ -90,7 +101,7 @@ export function AnimalNaming({ onComplete, onSkip }: AnimalNamingProps) {
     animals.forEach((animal, index) => {
       const userAnswer = answers[index].toLowerCase().trim()
       // For default animals, check against localized name. For uploaded, any non-empty answer gets a point.
-      if (uploadedImages.length >= 3) {
+      if (animal.isUploaded) {
         if (userAnswer !== "") {
           score += 1
         }
@@ -127,14 +138,26 @@ export function AnimalNaming({ onComplete, onSkip }: AnimalNamingProps) {
         <CardTitle>{t("moca.naming")}</CardTitle>
         <p className="text-sm text-gray-600">{t("moca.naming.instruction")}</p>
         <InstructionAudio instructionKey="moca.naming.instruction" className="mt-2" />
-        {uploadedImages.length >= 3 && <p className="text-sm text-green-600">✓ {t("upload.using_uploaded_images")}</p>}
+        {uploadedImages.length > 0 && <p className="text-sm text-green-600">✓ {t("upload.using_uploaded_images")}</p>}
       </CardHeader>
       <CardContent>
         <div className="grid md:grid-cols-3 gap-6">
           {animals.map((animal, index) => (
             <div key={index} className="space-y-4">
-              <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
-                <Image src={animal.image || "/placeholder.svg"} alt={animal.alt} fill className="object-cover" />
+              <div className="h-48 w-full overflow-hidden rounded-lg bg-gray-100">
+                <img
+                  src={animal.image || animal.fallbackImage || "/placeholder.svg"}
+                  alt={animal.alt}
+                  className="h-full w-full object-contain bg-white p-2"
+                  onError={(event) => {
+                    if (event.currentTarget.src.endsWith(animal.fallbackImage)) {
+                      event.currentTarget.src = "/placeholder.svg"
+                      return
+                    }
+
+                    event.currentTarget.src = animal.fallbackImage
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor={`animal-${index}`}>{t("question.animal_label", { index: index + 1 })}</Label>

@@ -23,14 +23,14 @@ interface AssessmentProgress {
 interface UserContextType {
   user: User | null
   loading: boolean
-  login: (phoneNumber: string) => Promise<{ success: boolean; error?: string }>
+  login: (phoneNumber: string, password: string) => Promise<{ success: boolean; error?: string }>
   register: (
     phoneNumber: string,
+    password: string,
     name?: string,
     dateOfBirth?: string,
     gender?: string,
   ) => Promise<{ success: boolean; error?: string }>
-  sendOtp: (phoneNumber: string) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   progress: Record<string, AssessmentProgress>
   saveProgress: (assessmentType: "MOCA" | "MMSE", step: number, scores: number[]) => Promise<void>
@@ -104,31 +104,27 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const sendOtp = async (phoneNumber: string): Promise<{ success: boolean; error?: string }> => {
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    return { success: true }
-  }
-
-  const login = async (phoneNumber: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (phoneNumber: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setLoading(true)
-    const supabase = createClient()
 
     try {
-      const { data, error } = await supabase.from("users").select("*").eq("phone_number", phoneNumber).limit(1)
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ phoneNumber, password }),
+      })
 
-      if (error) {
-        return { success: false, error: "Database error during login." }
+      const payload = await response.json()
+
+      if (!response.ok || !payload.user) {
+        return { success: false, error: payload.error || "Invalid phone number or password." }
       }
 
-      const existingUser = data ? data[0] : null
-
-      if (!existingUser) {
-        return { success: false, error: "Invalid phone number. Please register or check your number." }
-      }
-
-      setUser(existingUser)
-      localStorage.setItem("mental_assess_dummy_user", JSON.stringify(existingUser))
-      await loadUserProgress(existingUser.id)
+      setUser(payload.user)
+      localStorage.setItem("mental_assess_dummy_user", JSON.stringify(payload.user))
+      await loadUserProgress(payload.user.id)
       return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
@@ -139,6 +135,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (
     phoneNumber: string,
+    password: string,
     name?: string,
     dateOfBirth?: string,
     gender?: string,
@@ -146,73 +143,34 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setLoading(true)
 
     try {
-      console.log("[v0] Starting registration for phone:", phoneNumber, "name:", name)
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phoneNumber,
+          password,
+          name,
+          dateOfBirth,
+          gender,
+        }),
+      })
 
-      const supabase = createClient()
+      const payload = await response.json()
 
-      // Check if user already exists
-      const { data: existingUser, error: checkError } = await supabase
-        .from("users")
-        .select("id")
-        .eq("phone_number", phoneNumber)
-        .limit(1)
-
-      if (checkError) {
-        console.log("[v0] Error checking existing user:", checkError)
+      if (!response.ok || !payload.user) {
         return {
           success: false,
-          error: "Connection error. Please check your internet connection and try again.",
+          error: payload.error || "Registration failed. Please try again.",
         }
       }
 
-      if (existingUser && existingUser.length > 0) {
-        console.log("[v0] Phone number already exists")
-        return { success: false, error: "Phone number already registered." }
-      }
-
-      const newUserId = uuidv4()
-      const generatedEmail = `${phoneNumber.replace(/[^0-9]/g, "")}@mentalassess.app`
-
-      console.log("[v0] Creating new user with id:", newUserId, "name:", name, "dob:", dateOfBirth, "gender:", gender)
-
-      const { data: newUsers, error: insertError } = await supabase
-        .from("users")
-        .insert({
-          id: newUserId,
-          phone_number: phoneNumber,
-          email: generatedEmail,
-          name: name || null,
-          date_of_birth: dateOfBirth || null,
-          gender: gender || null,
-        })
-        .select()
-
-      console.log("[v0] Insert result:", { newUsers, insertError })
-
-      if (insertError) {
-        console.log("[v0] Registration failed:", insertError)
-        return {
-          success: false,
-          error: `Registration failed: ${insertError.message}. Please try again.`,
-        }
-      }
-
-      if (!newUsers || newUsers.length === 0) {
-        console.log("[v0] No user returned after insert")
-        return {
-          success: false,
-          error: "Registration failed. Please try again.",
-        }
-      }
-
-      const newUser = newUsers[0]
-      console.log("[v0] Registration successful, setting user")
-      setUser(newUser)
-      localStorage.setItem("mental_assess_dummy_user", JSON.stringify(newUser))
-      await loadUserProgress(newUser.id)
+      setUser(payload.user)
+      localStorage.setItem("mental_assess_dummy_user", JSON.stringify(payload.user))
+      await loadUserProgress(payload.user.id)
       return { success: true }
     } catch (error: any) {
-      console.log("[v0] Registration error:", error)
       if (error.message?.includes("Failed to fetch") || error.message?.includes("fetch")) {
         return {
           success: false,
@@ -307,7 +265,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         loading,
         login,
         register,
-        sendOtp,
         logout,
         progress,
         saveProgress,

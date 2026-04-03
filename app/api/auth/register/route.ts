@@ -1,0 +1,68 @@
+import { NextResponse } from "next/server"
+import { v4 as uuidv4 } from "uuid"
+import { createClient } from "@/lib/supabase/server"
+import { hashPassword } from "@/lib/auth/password"
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const phoneNumber = typeof body.phoneNumber === "string" ? body.phoneNumber.trim() : ""
+    const name = typeof body.name === "string" ? body.name.trim() : ""
+    const dateOfBirth = typeof body.dateOfBirth === "string" ? body.dateOfBirth : ""
+    const gender = typeof body.gender === "string" ? body.gender : ""
+    const password = typeof body.password === "string" ? body.password : ""
+
+    if (phoneNumber.length < 6 || name.length < 2 || !dateOfBirth || !gender || password.length < 8) {
+      return NextResponse.json({ error: "Missing required registration fields." }, { status: 400 })
+    }
+
+    const supabase = await createClient()
+    const { data: existingUsers, error: checkError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("phone_number", phoneNumber)
+      .limit(1)
+
+    if (checkError) {
+      return NextResponse.json({ error: "Could not verify existing account." }, { status: 500 })
+    }
+
+    if (existingUsers && existingUsers.length > 0) {
+      return NextResponse.json({ error: "Phone number already registered." }, { status: 409 })
+    }
+
+    const generatedEmail = `${phoneNumber.replace(/[^0-9]/g, "")}@mentalassess.app`
+    const passwordHash = hashPassword(password)
+
+    const { data: newUsers, error: insertError } = await supabase
+      .from("users")
+      .insert({
+        id: uuidv4(),
+        phone_number: phoneNumber,
+        email: generatedEmail,
+        name,
+        date_of_birth: dateOfBirth,
+        gender,
+        password_hash: passwordHash,
+      })
+      .select("id, email, phone_number, name, date_of_birth, gender")
+
+    if (insertError) {
+      if (insertError.message.includes("password_hash")) {
+        return NextResponse.json(
+          { error: "Password registration is not ready yet. Run scripts/08-add-user-password-auth.sql in Supabase first." },
+          { status: 503 },
+        )
+      }
+
+      return NextResponse.json({ error: insertError.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ user: newUsers?.[0] ?? null })
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Unexpected registration error." },
+      { status: 500 },
+    )
+  }
+}

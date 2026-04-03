@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge"
 import { AssessmentTextarea } from "@/components/ui/assessment-textarea"
 import { supabase } from "@/lib/supabase"
 import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp } from "lucide-react"
-import Image from "next/image"
 import { useLanguage } from "@/contexts/language-context"
 
 // Add imports for new chart components and data utilities
@@ -469,11 +468,17 @@ export function AdminPanel() {
                           </div>
                           {file.file_type.startsWith("image/") && (
                             <div className="relative w-full h-32 bg-gray-100 rounded overflow-hidden">
-                              <Image
+                              <img
                                 src={getFileUrl(file.file_path) || "/placeholder.svg"}
                                 alt={file.filename}
-                                fill
-                                className="object-cover"
+                                className="h-full w-full object-cover"
+                                onError={(event) => {
+                                  if (event.currentTarget.src.endsWith("/placeholder.svg")) {
+                                    return
+                                  }
+
+                                  event.currentTarget.src = "/placeholder.svg"
+                                }}
                               />
                             </div>
                           )}

@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AssessmentInput } from "@/components/ui/assessment-input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import Image from "next/image"
 import { useUser } from "@/contexts/user-context"
 import { supabase } from "@/lib/supabase"
 import { useLanguage } from "@/contexts/language-context"
@@ -52,9 +51,10 @@ export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
         .select("*")
         .eq("user_id", user.id)
         .like("file_type", "image%")
+        .order("uploaded_at", { ascending: false })
         .limit(3)
 
-      if (files && files.length >= 3) {
+      if (files && files.length > 0) {
         const images = files.slice(0, 3).map((file) => ({
           id: file.id,
           filename: file.filename,
@@ -70,14 +70,25 @@ export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
     }
   }
 
-  const objects =
-    uploadedImages.length >= 3
-      ? uploadedImages.map((img, index) => ({
-          image: img.url,
-          name: `${t("common.object")}${index + 1}`, // Generic name for uploaded images
-          alt: img.filename,
-        }))
-      : defaultObjects
+  const objects = defaultObjects.map((object, index) => {
+    const uploadedImage = uploadedImages[index]
+
+    if (!uploadedImage) {
+      return {
+        ...object,
+        fallbackImage: object.image,
+        isUploaded: false,
+      }
+    }
+
+    return {
+      image: uploadedImage.url,
+      fallbackImage: object.image,
+      name: `${t("common.object")} ${index + 1}`,
+      alt: uploadedImage.filename,
+      isUploaded: true,
+    }
+  })
 
   const handleAnswerChange = (index: number, value: string) => {
     const newAnswers = [...answers]
@@ -90,7 +101,7 @@ export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
     objects.forEach((object, index) => {
       const userAnswer = answers[index].toLowerCase().trim()
       // For default objects, check against localized name. For uploaded, any non-empty answer gets a point.
-      if (uploadedImages.length >= 3) {
+      if (object.isUploaded) {
         if (userAnswer !== "") {
           score += 1
         }
@@ -127,7 +138,7 @@ export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
         <CardTitle>{t("mmse.naming")}</CardTitle>
         <p className="text-sm text-muted-foreground">{t("mmse.naming.instruction")}</p>
         <InstructionAudio instructionKey="mmse.naming.instruction" className="mt-2" />
-        {uploadedImages.length >= 3 && <p className="text-sm text-green-600">✓ {t("upload.using_uploaded_images")}</p>}
+        {uploadedImages.length > 0 && <p className="text-sm text-green-600">✓ {t("upload.using_uploaded_images")}</p>}
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
@@ -139,14 +150,21 @@ export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
                   index === 1 ? "h-40 sm:h-48" : "h-48"
                 }`}
               >
-                <Image
-                  src={object.image || "/placeholder.svg"}
+                <img
+                  src={object.image || object.fallbackImage || "/placeholder.svg"}
                   alt={object.alt}
-                  fill
-                  className={`${
+                  className={`h-full w-full bg-white ${
                     // Special handling for Object 2 (index 1) - contain instead of cover for better fit
-                    index === 1 ? "object-contain p-2" : "object-cover"
+                    index === 1 ? "object-contain p-2" : "object-contain p-2"
                   }`}
+                  onError={(event) => {
+                    if (event.currentTarget.src.endsWith(object.fallbackImage)) {
+                      event.currentTarget.src = "/placeholder.svg"
+                      return
+                    }
+
+                    event.currentTarget.src = object.fallbackImage
+                  }}
                 />
               </div>
               <div className="space-y-2">

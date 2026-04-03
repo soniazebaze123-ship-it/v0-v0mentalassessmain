@@ -16,24 +16,18 @@ interface LoginProps {
 
 export function Login({ onRegister, onAdminLogin }: LoginProps) {
   const { t, language, setLanguage } = useLanguage()
-  const { login, sendOtp } = useUser()
+  const { login } = useUser()
   const [phoneNumber, setPhoneNumber] = useState("")
+  const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const handleSendOtpAndLogin = async () => {
+  const handleLogin = async () => {
     setLoading(true)
     setError(null)
-    // Simulate OTP send (no actual OTP needed for this dummy auth)
-    const otpResult = await sendOtp(phoneNumber)
-    if (otpResult.success) {
-      // Directly attempt login after "OTP sent" simulation
-      const loginResult = await login(phoneNumber)
-      if (!loginResult.success) {
-        setError(loginResult.error || t("login.error.notfound"))
-      }
-    } else {
-      setError(otpResult.error || t("login.error.notfound"))
+    const loginResult = await login(phoneNumber, password)
+    if (!loginResult.success) {
+      setError(loginResult.error || t("login.error.invalid_credentials"))
     }
     setLoading(false)
   }
@@ -94,10 +88,22 @@ export function Login({ onRegister, onAdminLogin }: LoginProps) {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="password">{t("login.password")}</Label>
+            <AssessmentInput
+              id="password"
+              type="password"
+              placeholder={t("login.password.placeholder")}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
           <Button
-            onClick={handleSendOtpAndLogin}
+            onClick={handleLogin}
             className="w-full touch-target"
-            disabled={loading || phoneNumber.length < 10}
+            disabled={loading || phoneNumber.length < 6 || password.length < 8}
           >
             {loading ? t("common.loading") : t("common.next")}
           </Button>

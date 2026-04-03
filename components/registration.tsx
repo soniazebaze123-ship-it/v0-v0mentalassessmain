@@ -16,27 +16,37 @@ interface RegistrationProps {
 
 export function Registration({ onBackToLogin }: RegistrationProps) {
   const { t, language, setLanguage } = useLanguage()
-  const { register, sendOtp } = useUser()
+  const { register } = useUser()
   const [name, setName] = useState("")
   const [phoneNumber, setPhoneNumber] = useState("")
   const [dateOfBirth, setDateOfBirth] = useState("")
   const [gender, setGender] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const handleSendOtpAndRegister = async () => {
+  const handleRegister = async () => {
     setLoading(true)
     setError(null)
-    // Simulate OTP send (no actual OTP needed for this dummy auth)
-    const otpResult = await sendOtp(phoneNumber)
-    if (otpResult.success) {
-      const registerResult = await register(phoneNumber, name, dateOfBirth, gender)
-      if (!registerResult.success) {
-        setError(registerResult.error || t("register.error.invalid"))
-      }
-    } else {
-      setError(otpResult.error || t("register.error.invalid"))
+
+    if (password.length < 8) {
+      setError(t("register.error.password_short"))
+      setLoading(false)
+      return
     }
+
+    if (password !== confirmPassword) {
+      setError(t("register.error.password_mismatch"))
+      setLoading(false)
+      return
+    }
+
+    const registerResult = await register(phoneNumber, password, name, dateOfBirth, gender)
+    if (!registerResult.success) {
+      setError(registerResult.error || t("register.error.invalid"))
+    }
+
     setLoading(false)
   }
 
@@ -129,16 +139,46 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
               <SelectContent>
                 <SelectItem value="male">{t("register.gender.male")}</SelectItem>
                 <SelectItem value="female">{t("register.gender.female")}</SelectItem>
-                <SelectItem value="other">{t("register.gender.other")}</SelectItem>
-                <SelectItem value="prefer_not_to_say">{t("register.gender.prefer_not_to_say")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="password">{t("register.password")}</Label>
+            <AssessmentInput
+              id="password"
+              type="password"
+              placeholder={t("register.password.placeholder")}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">{t("register.confirm_password")}</Label>
+            <AssessmentInput
+              id="confirm-password"
+              type="password"
+              placeholder={t("register.confirm_password.placeholder")}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
           <Button
-            onClick={handleSendOtpAndRegister}
+            onClick={handleRegister}
             className="w-full touch-target"
-            disabled={loading || phoneNumber.length < 10 || name.trim().length < 2 || !dateOfBirth || !gender}
+            disabled={
+              loading ||
+              phoneNumber.length < 6 ||
+              name.trim().length < 2 ||
+              !dateOfBirth ||
+              !gender ||
+              password.length < 8 ||
+              confirmPassword.length < 8
+            }
           >
             {loading ? t("common.loading") : t("common.next")}
           </Button>
