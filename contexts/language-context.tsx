@@ -613,6 +613,7 @@ const zhOverrides: TranslationMap = {
 
   "sensory.visual.title": "视力筛查",
   "sensory.visual.description": "使用翻转 E 视标进行视力测试",
+  "sensory.visual.instruction": "您会看到字母 E 指向不同方向，请选择它所指的方向。",
   "sensory.auditory.title": "听力筛查",
   "sensory.auditory.description": "通过噪声数字测试进行听力筛查",
   "sensory.olfactory.title": "嗅觉识别测试",
@@ -807,6 +808,7 @@ const yueOverrides: TranslationMap = {
 
   "sensory.visual.title": "視力篩查",
   "sensory.visual.description": "用翻轉 E 視標測試視力",
+  "sensory.visual.instruction": "你會見到字母 E 指向唔同方向，請選擇佢指向嘅方向。",
   "sensory.auditory.title": "聽力篩查",
   "sensory.auditory.description": "透過噪音數字測試進行聽力篩查",
   "sensory.olfactory.title": "嗅覺識別測試",
@@ -980,6 +982,7 @@ const frOverrides: TranslationMap = {
 
   "sensory.visual.title": "Dépistage visuel",
   "sensory.visual.description": "Évaluez l'acuité visuelle avec le test du E directionnel",
+  "sensory.visual.instruction": "Vous verrez la lettre E orientée dans différentes directions. Sélectionnez la direction indiquée.",
   "sensory.auditory.title": "Dépistage auditif",
   "sensory.auditory.description": "Évaluez l'audition avec un test de chiffres dans le bruit",
   "sensory.olfactory.title": "Test d'identification des odeurs",
