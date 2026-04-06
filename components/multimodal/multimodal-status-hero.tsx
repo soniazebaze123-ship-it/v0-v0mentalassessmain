@@ -8,6 +8,9 @@ export function MultimodalStatusHero({ result }: any) {
   const { t, localizeText } = useLanguage();
   if (!result) return null;
 
+  const text = (en: string, zh: string, yue: string, fr: string) =>
+    localizeText(en, { zh, yue, fr })
+
   const colorMap: Record<string, string> = {
     Normal: "text-green-600",
     "At Risk": "text-yellow-600",
@@ -47,12 +50,12 @@ export function MultimodalStatusHero({ result }: any) {
     <Card className="rounded-3xl shadow-sm">
       <CardContent className="flex flex-col md:flex-row items-center justify-between gap-4 p-6">
         <div>
-          <p className="text-sm text-slate-500">{localizeText("Cognitive Status", "认知状态")}</p>
+          <p className="text-sm text-slate-500">{text("Cognitive Status", "认知状态", "認知狀態", "État cognitif")}</p>
           <h1 className={`text-2xl font-bold ${colorMap[result.stage]}`}>
             {stageLabelMap[result.stage] ?? result.stage}
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            {localizeText("Risk Level", "风险等级")}: {riskLabelMap[result.riskLevel] ?? result.riskLevel}
+            {text("Risk Level", "风险等级", "風險等級", "Niveau de risque")}: {riskLabelMap[result.riskLevel] ?? result.riskLevel}
           </p>
         </div>
 
