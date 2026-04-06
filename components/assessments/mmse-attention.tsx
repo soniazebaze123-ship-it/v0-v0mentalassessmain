@@ -15,16 +15,12 @@ interface MMSEAttentionProps {
 
 export function MMSEAttention({ onComplete, onSkip }: MMSEAttentionProps) {
   const { t } = useLanguage()
-  const [phase, setPhase] = useState<"subtraction" | "addition">("subtraction")
 
   const [subtractionAnswer1, setSubtractionAnswer1] = useState("")
   const [subtractionAnswer2, setSubtractionAnswer2] = useState("")
   const [subtractionAnswer3, setSubtractionAnswer3] = useState("")
   const [subtractionAnswer4, setSubtractionAnswer4] = useState("")
   const [subtractionAnswer5, setSubtractionAnswer5] = useState("")
-
-  const [additionAnswer, setAdditionAnswer] = useState("")
-
   const checkSubtraction = () => {
     let score = 0
     // Serial 7s: 100-7=93, 93-7=86, 86-7=79, 79-7=72, 72-7=65
@@ -35,14 +31,7 @@ export function MMSEAttention({ onComplete, onSkip }: MMSEAttentionProps) {
     if (Number.parseInt(subtractionAnswer5) === 65) score += 1
     return score // Max 5 points
   }
-
-  const checkAddition = () => {
-    // Keeping the original logic for addition/spell check if it exists, or just scoring the serial 7s
-    return additionAnswer === "B" ? 0 : 0 // Assuming we focus on serial 7s for calculation
-  }
-
   const handleSubmit = () => {
-    // For this update, we focus on the requested "more mathematical questions"
     const score = checkSubtraction()
     onComplete(score)
   }

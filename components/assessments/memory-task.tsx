@@ -50,7 +50,8 @@ function countMatches(expectedWords: string[], answers: string[]) {
 }
 
 export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }: MemoryTaskProps) {
-  const { t, language } = useLanguage()
+  const { t, language, localizeText } = useLanguage()
+  const instructionKey = assessmentType === "MMSE" ? "mmse.registration.instruction" : "moca.memory.instruction"
   const [phase, setPhase] = useState<"countdown" | "presentation" | "recall">("countdown")
   const [countdown, setCountdown] = useState(10)
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
@@ -59,6 +60,7 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
   const splitIndex = Math.ceil(memoryWords.length / 2)
   const segmentedWords = [memoryWords.slice(0, splitIndex), memoryWords.slice(splitIndex)].filter((segment) => segment.length > 0)
   const [recallAnswers, setRecallAnswers] = useState<string[]>(new Array(memoryWords.length).fill(""))
+  const uiText = (englishText: string, chineseText: string) => localizeText(englishText, { zh: chineseText })
 
   useEffect(() => {
     setRecallAnswers(new Array(memoryWords.length).fill(""))
@@ -113,9 +115,9 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
         <CardHeader>
           <CardTitle>{title}</CardTitle>
           <p className="text-sm text-muted-foreground">
-            {t("moca.memory.instruction", { count: memoryWords.length })}
+            {t(instructionKey, { count: memoryWords.length })}
           </p>
-          <InstructionAudio instructionKey="moca.memory.instruction" className="mt-2" />
+          <InstructionAudio instructionKey={instructionKey} className="mt-2" />
         </CardHeader>
         <CardContent className="text-center space-y-6">
           <div className="text-4xl sm:text-6xl font-bold text-blue-600">{countdown}</div>
@@ -142,7 +144,7 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
           {currentWordIndex < memoryWords.length ? (
             <>
               <div className="rounded-full bg-blue-50 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
-                Segment {currentWordIndex < splitIndex ? 1 : 2}
+                {uiText(`Segment ${currentWordIndex < splitIndex ? 1 : 2}`, `第 ${currentWordIndex < splitIndex ? 1 : 2} 段`)}
               </div>
               <div className="text-6xl sm:text-7xl md:text-9xl font-black text-blue-800 py-12 animate-in fade-in zoom-in duration-300">
                 {memoryWords[currentWordIndex]}
@@ -172,7 +174,10 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 text-sm text-blue-900">
-          Two-step evaluation: recall the first segment, then the second. Answers can be entered in any order within each segment.
+          {uiText(
+            "Two-step evaluation: recall the first segment, then the second. Answers can be entered in any order within each segment.",
+            "分两步回忆：先回忆第一段，再回忆第二段。每一段中的答案可以按任意顺序填写。",
+          )}
         </div>
 
         {segmentedWords.map((segment, segmentIndex) => {
@@ -181,8 +186,13 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
           return (
             <div key={segmentIndex} className="space-y-3 rounded-xl border p-4">
               <div>
-                <h3 className="text-base font-semibold text-slate-900">Segment {segmentIndex + 1}</h3>
-                <p className="text-xs text-muted-foreground">Recall {segment.length} item{segment.length > 1 ? "s" : ""} from this segment.</p>
+                <h3 className="text-base font-semibold text-slate-900">{uiText(`Segment ${segmentIndex + 1}`, `第 ${segmentIndex + 1} 段`)}</h3>
+                <p className="text-xs text-muted-foreground">
+                  {uiText(
+                    `Recall ${segment.length} item${segment.length > 1 ? "s" : ""} from this segment.`,
+                    `请回忆这一段中的 ${segment.length} 个词语。`,
+                  )}
+                </p>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
