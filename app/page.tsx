@@ -97,10 +97,13 @@ function AppContent() {
 
   // Initialize view based on user and loading state
   useEffect(() => {
+    console.log("[v0] User state changed:", { user: user?.id, loading, currentView })
     if (!loading) {
       if (user) {
+        console.log("[v0] User logged in, switching to dashboard")
         setCurrentView("dashboard")
       } else {
+        console.log("[v0] No user, showing login")
         setCurrentView("login")
       }
     }

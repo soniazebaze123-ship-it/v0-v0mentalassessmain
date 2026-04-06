@@ -27,17 +27,26 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
   const handleSendOtpAndRegister = async () => {
     setLoading(true)
     setError(null)
+    console.log("[v0] Starting registration for:", phoneNumber)
+    
     // Simulate OTP send (no actual OTP needed for this dummy auth)
     const otpResult = await sendOtp(phoneNumber)
+    console.log("[v0] OTP result:", otpResult)
+    
     if (otpResult.success) {
       const registerResult = await register(phoneNumber, name, dateOfBirth, gender)
+      console.log("[v0] Register result:", registerResult)
+      
       if (!registerResult.success) {
         setError(registerResult.error || t("register.error.invalid"))
+        setLoading(false)
       }
+      // If successful, user state will be set in UserContext and useEffect in page.tsx 
+      // will automatically redirect to dashboard
     } else {
       setError(otpResult.error || t("register.error.invalid"))
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
