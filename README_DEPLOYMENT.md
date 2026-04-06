@@ -47,8 +47,13 @@
 4. Add Environment Variables:
    NEXT_PUBLIC_SUPABASE_URL = [from Supabase console]
    NEXT_PUBLIC_SUPABASE_ANON_KEY = [from Supabase console]
+   QWEN_API_KEY = [your Qwen / DashScope API key]
+   QWEN_MODEL = qwen-plus
+   QWEN_BASE_URL = https://dashscope-intl.aliyuncs.com/compatible-mode/v1
 5. Click "Deploy"
 6. Wait 2-5 minutes for live URL ✨
+
+The translation endpoint uses the Qwen values on the server side. If `QWEN_API_KEY` is missing, translations fall back to the original text.
 ```
 
 ---

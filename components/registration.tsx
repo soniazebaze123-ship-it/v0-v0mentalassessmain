@@ -26,7 +26,8 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const handleRegister = async () => {
+  const handleRegister = async (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault()
     setLoading(true)
     setError(null)
 
@@ -94,94 +95,106 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
             <ThemeToggle />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="name">{t("register.name")}</Label>
-            <AssessmentInput
-              id="name"
-              type="text"
-              placeholder={t("register.name.placeholder")}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={loading}
-            />
-          </div>
+          <form className="space-y-6" onSubmit={handleRegister} autoComplete="on">
+            <div className="space-y-2">
+              <Label htmlFor="name">{t("register.name")}</Label>
+              <AssessmentInput
+                id="name"
+                name="name"
+                type="text"
+                placeholder={t("register.name.placeholder")}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={loading}
+                autoComplete="name"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="phone">{t("phone")}</Label>
-            <AssessmentInput
-              id="phone"
-              type="tel"
-              placeholder="+86 123 4567 8901"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              disabled={loading}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">{t("phone")}</Label>
+              <AssessmentInput
+                id="phone"
+                name="username"
+                type="tel"
+                placeholder="+86 123 4567 8901"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                disabled={loading}
+                autoComplete="username tel"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="dob">{t("register.date_of_birth")}</Label>
-            <AssessmentInput
-              id="dob"
-              type="date"
-              value={dateOfBirth}
-              onChange={(e) => setDateOfBirth(e.target.value)}
-              disabled={loading}
-              max={new Date().toISOString().split("T")[0]}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="dob">{t("register.date_of_birth")}</Label>
+              <AssessmentInput
+                id="dob"
+                name="bday"
+                type="date"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+                disabled={loading}
+                max={new Date().toISOString().split("T")[0]}
+                autoComplete="bday"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="gender">{t("register.gender")}</Label>
-            <Select value={gender} onValueChange={setGender} disabled={loading}>
-              <SelectTrigger id="gender">
-                <SelectValue placeholder={t("register.gender.placeholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="male">{t("register.gender.male")}</SelectItem>
-                <SelectItem value="female">{t("register.gender.female")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="gender">{t("register.gender")}</Label>
+              <Select value={gender} onValueChange={setGender} disabled={loading}>
+                <SelectTrigger id="gender">
+                  <SelectValue placeholder={t("register.gender.placeholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">{t("register.gender.male")}</SelectItem>
+                  <SelectItem value="female">{t("register.gender.female")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">{t("register.password")}</Label>
-            <AssessmentInput
-              id="password"
-              type="password"
-              placeholder={t("register.password.placeholder")}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">{t("register.password")}</Label>
+              <AssessmentInput
+                id="password"
+                name="new-password"
+                type="password"
+                placeholder={t("register.password.placeholder")}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                autoComplete="new-password"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="confirm-password">{t("register.confirm_password")}</Label>
-            <AssessmentInput
-              id="confirm-password"
-              type="password"
-              placeholder={t("register.confirm_password.placeholder")}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={loading}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">{t("register.confirm_password")}</Label>
+              <AssessmentInput
+                id="confirm-password"
+                name="confirm-password"
+                type="password"
+                placeholder={t("register.confirm_password.placeholder")}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={loading}
+                autoComplete="new-password"
+              />
+            </div>
 
-          <Button
-            onClick={handleRegister}
-            className="w-full touch-target"
-            disabled={
-              loading ||
-              phoneNumber.length < 6 ||
-              name.trim().length < 2 ||
-              !dateOfBirth ||
-              !gender ||
-              password.length < 8 ||
-              confirmPassword.length < 8
-            }
-          >
-            {loading ? t("common.loading") : t("common.next")}
-          </Button>
+            <Button
+              type="submit"
+              className="w-full touch-target"
+              disabled={
+                loading ||
+                phoneNumber.length < 6 ||
+                name.trim().length < 2 ||
+                !dateOfBirth ||
+                !gender ||
+                password.length < 8 ||
+                confirmPassword.length < 8
+              }
+            >
+              {loading ? t("common.loading") : t("common.next")}
+            </Button>
+          </form>
 
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 

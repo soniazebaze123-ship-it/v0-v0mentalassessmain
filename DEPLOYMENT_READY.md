@@ -54,6 +54,9 @@ Add these in the Vercel import dialog:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key_here
+QWEN_API_KEY=your_qwen_api_key_here
+QWEN_MODEL=qwen-plus
+QWEN_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
 ```
 
 Alternative supported env name:
@@ -61,6 +64,8 @@ Alternative supported env name:
 ```env
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 ```
+
+For server-side translation, `app/api/translate/route.ts` also accepts `DASHSCOPE_API_KEY` as an alternative to `QWEN_API_KEY`.
 
 **Where to find these:**
 1. Go to https://app.supabase.com

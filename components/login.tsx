@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { AssessmentInput } from "@/components/ui/assessment-input"
@@ -19,12 +19,29 @@ export function Login({ onRegister, onAdminLogin }: LoginProps) {
   const { login } = useUser()
   const [phoneNumber, setPhoneNumber] = useState("")
   const [password, setPassword] = useState("")
+  const [rememberPhone, setRememberPhone] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = async () => {
+  useEffect(() => {
+    const rememberedPhoneNumber = localStorage.getItem("mental_assess_remembered_phone")
+
+    if (rememberedPhoneNumber) {
+      setPhoneNumber(rememberedPhoneNumber)
+    }
+  }, [])
+
+  const handleLogin = async (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault()
     setLoading(true)
     setError(null)
+
+    if (rememberPhone) {
+      localStorage.setItem("mental_assess_remembered_phone", phoneNumber)
+    } else {
+      localStorage.removeItem("mental_assess_remembered_phone")
+    }
+
     const loginResult = await login(phoneNumber, password)
     if (!loginResult.success) {
       setError(loginResult.error || t("login.error.invalid_credentials"))
@@ -76,37 +93,53 @@ export function Login({ onRegister, onAdminLogin }: LoginProps) {
             <ThemeToggle />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="phone">{t("phone")}</Label>
-            <AssessmentInput
-              id="phone"
-              type="tel"
-              placeholder="+86 123 4567 8901"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              disabled={loading}
-            />
-          </div>
+          <form className="space-y-6" onSubmit={handleLogin} autoComplete="on">
+            <div className="space-y-2">
+              <Label htmlFor="phone">{t("phone")}</Label>
+              <AssessmentInput
+                id="phone"
+                name="username"
+                type="tel"
+                placeholder="+86 123 4567 8901"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                disabled={loading}
+                autoComplete="username tel"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">{t("login.password")}</Label>
-            <AssessmentInput
-              id="password"
-              type="password"
-              placeholder={t("login.password.placeholder")}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">{t("login.password")}</Label>
+              <AssessmentInput
+                id="password"
+                name="password"
+                type="password"
+                placeholder={t("login.password.placeholder")}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                autoComplete="current-password"
+              />
+            </div>
 
-          <Button
-            onClick={handleLogin}
-            className="w-full touch-target"
-            disabled={loading || phoneNumber.length < 6 || password.length < 8}
-          >
-            {loading ? t("common.loading") : t("common.next")}
-          </Button>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={rememberPhone}
+                onChange={(event) => setRememberPhone(event.target.checked)}
+                disabled={loading}
+              />
+              <span>Remember phone number on this device</span>
+            </label>
+
+            <Button
+              type="submit"
+              className="w-full touch-target"
+              disabled={loading || phoneNumber.length < 6 || password.length < 8}
+            >
+              {loading ? t("common.loading") : t("common.next")}
+            </Button>
+          </form>
 
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 

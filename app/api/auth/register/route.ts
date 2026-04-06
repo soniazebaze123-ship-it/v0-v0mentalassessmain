@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const supabase = await createClient()
     const { data: existingUsers, error: checkError } = await supabase
       .from("users")
-      .select("id")
+      .select("id, email, phone_number, name, date_of_birth, gender, password_hash")
       .eq("phone_number", phoneNumber)
       .limit(1)
 
@@ -27,12 +27,41 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Could not verify existing account." }, { status: 500 })
     }
 
-    if (existingUsers && existingUsers.length > 0) {
-      return NextResponse.json({ error: "Phone number already registered." }, { status: 409 })
-    }
-
     const generatedEmail = `${phoneNumber.replace(/[^0-9]/g, "")}@mentalassess.app`
     const passwordHash = hashPassword(password)
+
+    const existingUser = existingUsers?.[0]
+
+    if (existingUser) {
+      if (existingUser.password_hash) {
+        return NextResponse.json({ error: "Phone number already registered." }, { status: 409 })
+      }
+
+      const { data: updatedUsers, error: updateError } = await supabase
+        .from("users")
+        .update({
+          email: existingUser.email || generatedEmail,
+          name,
+          date_of_birth: dateOfBirth,
+          gender,
+          password_hash: passwordHash,
+        })
+        .eq("id", existingUser.id)
+        .select("id, email, phone_number, name, date_of_birth, gender")
+
+      if (updateError) {
+        if (updateError.message.includes("password_hash")) {
+          return NextResponse.json(
+            { error: "Password registration is not ready yet. Run scripts/08-add-user-password-auth.sql in Supabase first." },
+            { status: 503 },
+          )
+        }
+
+        return NextResponse.json({ error: updateError.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ user: updatedUsers?.[0] ?? null })
+    }
 
     const { data: newUsers, error: insertError } = await supabase
       .from("users")

@@ -52,7 +52,12 @@
 ```
 NEXT_PUBLIC_SUPABASE_URL = [your-supabase-url]
 NEXT_PUBLIC_SUPABASE_ANON_KEY = [your-supabase-key]
+QWEN_API_KEY = [your-qwen-api-key]
+QWEN_MODEL = qwen-plus
+QWEN_BASE_URL = https://dashscope-intl.aliyuncs.com/compatible-mode/v1
 ```
+
+These Qwen variables are used by the server-side translation route.
 
 **Step 4:** Click "Deploy"
 - ⏳ Wait 2-5 minutes
