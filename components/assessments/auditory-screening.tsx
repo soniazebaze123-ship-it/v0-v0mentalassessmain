@@ -33,8 +33,9 @@ interface AuditoryScreeningProps {
 type TestPhase = "setup" | "noise-check" | "calibration" | "testing" | "complete"
 
 export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: AuditoryScreeningProps) {
-  const { t } = useLanguage()
+  const { t, language, localizeText, getSpeechSettings, getBestVoice } = useLanguage()
   const { user } = useUser()
+  const uiText = (englishText: string, chineseText: string) => localizeText(englishText, { zh: chineseText })
 
   const [phase, setPhase] = useState<TestPhase>("setup")
   const [currentTrialIndex, setCurrentTrialIndex] = useState(0)
@@ -54,6 +55,8 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
 
   const [trials] = useState(() => generateDigitTriplets(12))
   const audioContextRef = useRef<AudioContext | null>(null)
+  const speechSettings = getSpeechSettings(language)
+  const preferredVoice = getBestVoice(language)
 
   useEffect(() => {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
@@ -95,9 +98,20 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
     // Use speech synthesis for calibration too
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel()
-      const utterance = new SpeechSynthesisUtterance("1... 2... 3")
+      const calibrationText =
+        language === "zh" || language === "yue"
+          ? "一... 二... 三"
+          : language === "fr"
+            ? "un... deux... trois"
+            : "one... two... three"
+      const utterance = new SpeechSynthesisUtterance(calibrationText)
       utterance.rate = 0.7
       utterance.volume = volumeLevel / 100
+      utterance.lang = speechSettings.lang
+      if (preferredVoice) {
+        utterance.voice = preferredVoice
+        utterance.lang = preferredVoice.lang || speechSettings.lang
+      }
       utterance.onend = () => setIsPlaying(false)
       utterance.onerror = () => setIsPlaying(false)
       window.speechSynthesis.speak(utterance)
@@ -125,7 +139,11 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
 
     setIsPlaying(true)
     console.log("[v0] Playing trial", index + 1, "digits:", trial.digits.join(""), "SNR:", trial.noiseLevel)
-    await playDigitTripletWithNoise(trial.digits, trial.noiseLevel, audioContextRef.current)
+    await playDigitTripletWithNoise(trial.digits, trial.noiseLevel, audioContextRef.current, {
+      language,
+      langCode: speechSettings.lang,
+      voice: preferredVoice,
+    })
     setIsPlaying(false)
   }
 
@@ -236,10 +254,12 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
             <div className="flex items-start gap-3">
               <Headphones className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-amber-800 dark:text-amber-200">Headphones Strongly Recommended</p>
+                <p className="font-semibold text-amber-800 dark:text-amber-200">{uiText("Headphones Strongly Recommended", "强烈建议使用耳机")}</p>
                 <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                  For accurate hearing assessment results, please use headphones or earbuds. 
-                  This eliminates background interference and ensures precise measurement.
+                  {uiText(
+                    "For accurate hearing assessment results, please use headphones or earbuds. This eliminates background interference and ensures precise measurement.",
+                    "为了获得更准确的听力评估结果，请使用耳机或耳塞。这可以减少背景干扰并提高测量准确性。",
+                  )}
                 </p>
               </div>
             </div>
@@ -250,10 +270,12 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
             <div className="flex items-start gap-3">
               <VolumeX className="h-6 w-6 text-blue-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-blue-800 dark:text-blue-200">Find a Quiet Environment</p>
+                <p className="font-semibold text-blue-800 dark:text-blue-200">{uiText("Find a Quiet Environment", "请寻找安静环境")}</p>
                 <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                  Move to a quiet room away from traffic, conversations, or appliances. 
-                  Background noise can significantly affect your test results.
+                  {uiText(
+                    "Move to a quiet room away from traffic, conversations, or appliances. Background noise can significantly affect your test results.",
+                    "请移动到远离交通、交谈或电器噪音的安静房间。背景噪音会显著影响测试结果。",
+                  )}
                 </p>
               </div>
             </div>
@@ -261,7 +283,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
 
           {/* Test Requirements */}
           <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-lg space-y-4">
-            <h3 className="font-semibold">Test Checklist</h3>
+            <h3 className="font-semibold">{uiText("Test Checklist", "测试清单")}</h3>
             <ul className="space-y-3 text-sm">
               <li className="flex items-center gap-2">
                 {hasHeadphones ? (
@@ -269,7 +291,9 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
                 ) : (
                   <AlertCircle className="h-5 w-5 text-amber-500 shrink-0" />
                 )}
-                <span>Headphones: {hasHeadphones ? "Detected - Ready!" : "Not detected (strongly recommended)"}</span>
+                <span>
+                  {uiText("Headphones", "耳机")}: {hasHeadphones ? uiText("Detected - Ready!", "已检测到，可以开始") : uiText("Not detected (strongly recommended)", "未检测到（强烈建议使用）")}
+                </span>
               </li>
               <li className="flex items-center gap-2">
                 {speechSupported ? (
@@ -277,17 +301,19 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
                 ) : (
                   <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
                 )}
-                <span>Speech synthesis: {speechSupported ? "Supported" : "Not supported"}</span>
+                <span>
+                  {uiText("Speech synthesis", "语音合成")}: {speechSupported ? uiText("Supported", "支持") : uiText("Not supported", "不支持")}
+                </span>
               </li>
               <li className="flex items-start gap-2 pt-2 border-t">
                 <Volume2 className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium">How this test works:</p>
+                  <p className="font-medium">{uiText("How this test works:", "测试方式：")}</p>
                   <ol className="list-decimal list-inside mt-1 space-y-1 text-muted-foreground">
-                    <li>You will hear 3 spoken digits with background noise</li>
-                    <li>Type the 3 digits you heard in order</li>
-                    <li>The noise level increases each round</li>
-                    <li>12 trials total (~3 minutes)</li>
+                    <li>{uiText("You will hear 3 spoken digits with background noise", "您会听到带有背景噪音的 3 个数字")}</li>
+                    <li>{uiText("Type the 3 digits you heard in order", "请按顺序输入您听到的 3 个数字")}</li>
+                    <li>{uiText("The noise level increases each round", "每一轮的噪音强度都会增加")}</li>
+                    <li>{uiText("12 trials total (~3 minutes)", "共 12 轮（约 3 分钟）")}</li>
                   </ol>
                 </div>
               </li>
@@ -296,10 +322,10 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
 
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-4">
             <Button variant="outline" onClick={handleSkip} className="w-full sm:w-auto bg-transparent">
-              Skip Test
+              {uiText("Skip Test", "跳过测试")}
             </Button>
             <Button onClick={() => { setPhase("noise-check"); handleNoiseCheck() }} className="w-full sm:w-auto">
-              Continue to Noise Check
+              {uiText("Continue to Noise Check", "继续进行噪音检测")}
             </Button>
           </div>
         </CardContent>
@@ -314,7 +340,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mic className="h-6 w-6" />
-            Checking Ambient Noise
+            {uiText("Checking Ambient Noise", "正在检测环境噪音")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -327,17 +353,21 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
                   <AlertCircle className="h-8 w-8 text-red-600" />
                 )}
                 <div>
-                  <p className="font-semibold">Ambient Noise Level: {noiseCheckResult.noiseLevel} dBA</p>
-                  <p className="text-sm text-muted-foreground">{noiseCheckResult.message}</p>
+                  <p className="font-semibold">{uiText("Ambient Noise Level", "环境噪音等级")}: {noiseCheckResult.noiseLevel} dBA</p>
+                  <p className="text-sm text-muted-foreground">
+                    {noiseCheckResult.acceptable
+                      ? uiText("Ambient noise level acceptable for testing", "环境噪音水平适合测试")
+                      : uiText(`Ambient noise too high (${noiseCheckResult.noiseLevel} dBA). Please find a quieter location.`, `环境噪音过高（${noiseCheckResult.noiseLevel} dBA），请寻找更安静的位置。`)}
+                  </p>
                 </div>
               </div>
               {!noiseCheckResult.acceptable && (
                 <div className="flex gap-3">
                   <Button onClick={handleNoiseCheck} variant="outline" className="bg-transparent">
-                    Check Again
+                    {uiText("Check Again", "重新检测")}
                   </Button>
                   <Button onClick={() => setPhase("calibration")} variant="secondary">
-                    Continue Anyway
+                    {uiText("Continue Anyway", "仍然继续")}
                   </Button>
                 </div>
               )}
@@ -345,8 +375,8 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
           ) : (
             <div className="text-center py-12">
               <Mic className="h-16 w-16 mx-auto mb-4 animate-pulse text-blue-600" />
-              <p>Measuring ambient noise level...</p>
-              <p className="text-sm text-muted-foreground mt-2">Please remain quiet</p>
+              <p>{uiText("Measuring ambient noise level...", "正在测量环境噪音水平...")}</p>
+              <p className="text-sm text-muted-foreground mt-2">{uiText("Please remain quiet", "请保持安静")}</p>
             </div>
           )}
         </CardContent>
@@ -361,15 +391,17 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Volume2 className="h-6 w-6" />
-            Volume Calibration
+            {uiText("Volume Calibration", "音量校准")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="bg-yellow-50 dark:bg-yellow-950 p-6 rounded-lg space-y-2">
-            <p className="font-semibold">Adjust your device volume</p>
+            <p className="font-semibold">{uiText("Adjust your device volume", "请调整设备音量")}</p>
             <p className="text-sm text-muted-foreground">
-              Click &quot;Play Test Sound&quot; below. You should hear &quot;1, 2, 3&quot; spoken clearly.
-              Adjust your device volume until you can hear comfortably.
+              {uiText(
+                'Click "Play Test Sound" below. You should hear "1, 2, 3" spoken clearly. Adjust your device volume until you can hear comfortably.',
+                '点击下方“播放测试声音”。您应该能清楚听到“一、二、三”。请调整设备音量直到听感舒适。',
+              )}
             </p>
           </div>
 
@@ -395,13 +427,13 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
               className="w-full bg-transparent"
             >
               <Volume2 className="h-4 w-4 mr-2" />
-              {isPlaying ? "Playing..." : "Play Test Sound"}
+              {isPlaying ? uiText("Playing...", "播放中...") : uiText("Play Test Sound", "播放测试声音")}
             </Button>
           </div>
 
           <div className="flex justify-center pt-4">
             <Button onClick={handleStartTest} size="lg">
-              Start Hearing Test
+              {t("sensory.auditory.start_test")}
             </Button>
           </div>
         </CardContent>
@@ -418,10 +450,10 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Trial {currentTrialIndex + 1} / {trials.length}</span>
+            <span>{t("sensory.auditory.trial")} {currentTrialIndex + 1} / {trials.length}</span>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-xs">SNR: {currentTrial.noiseLevel} dB</Badge>
-              <Badge variant="secondary" className="text-xs">{correctSoFar} correct</Badge>
+              <Badge variant="secondary" className="text-xs">{correctSoFar} {uiText("correct", "正确")}</Badge>
             </div>
           </CardTitle>
         </CardHeader>
@@ -433,12 +465,12 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
                   <Volume2 className="h-16 w-16 text-blue-600 animate-pulse" />
                   <div className="absolute -inset-4 border-2 border-blue-200 rounded-full animate-ping opacity-30"></div>
                 </div>
-                <p className="text-lg font-medium">Listen carefully...</p>
+                <p className="text-lg font-medium">{t("sensory.auditory.listening")}</p>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-3">
                 <Volume2 className="h-16 w-16 text-muted-foreground" />
-                <p className="text-lg text-muted-foreground">Enter the digits you heard</p>
+                <p className="text-lg text-muted-foreground">{uiText("Enter the digits you heard", "请输入你听到的数字")}</p>
               </div>
             )}
 
@@ -449,13 +481,13 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
               size="sm"
             >
               <Volume2 className="h-4 w-4 mr-2" />
-              Replay
+              {t("sensory.auditory.replay")}
             </Button>
           </div>
 
           <div className="space-y-4">
             <label className="text-sm font-medium block text-center">
-              Type the 3 digits you heard
+              {uiText("Type the 3 digits you heard", "请输入你听到的 3 个数字")}
             </label>
             <Input
               type="text"
@@ -474,7 +506,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
               className="w-full"
               size="lg"
             >
-              Submit Answer
+              {uiText("Submit Answer", "提交答案")}
             </Button>
           </div>
 
@@ -487,7 +519,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
               ></div>
             </div>
             <p className="text-center text-xs text-muted-foreground">
-              {results.length} of {trials.length} completed
+              {results.length} / {trials.length} {uiText("completed", "已完成")}
             </p>
           </div>
         </CardContent>
@@ -501,12 +533,12 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle>Hearing Screening Complete</CardTitle>
+        <CardTitle>{t("sensory.auditory.complete_title")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="text-center space-y-4">
           <CheckCircle2 className="h-16 w-16 mx-auto text-green-600" />
-          <p className="text-lg font-semibold">Your hearing screening is complete!</p>
+          <p className="text-lg font-semibold">{t("sensory.auditory.complete_message")}</p>
         </div>
 
         {/* Key metrics */}
@@ -517,19 +549,27 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
             <p className="text-xs text-muted-foreground">SNR</p>
           </div>
           <div className="bg-muted px-3 py-3 rounded-lg text-center">
-            <p className="text-xs text-muted-foreground">Classification</p>
+            <p className="text-xs text-muted-foreground">{uiText("Classification", "分类")}</p>
             <p className={`text-lg font-bold capitalize ${
               audiogramData?.classification === "normal" ? "text-green-600" :
               audiogramData?.classification === "impaired" ? "text-yellow-600" : "text-red-600"
-            }`}>{audiogramData?.classification ?? "N/A"}</p>
+            }`}>
+              {audiogramData?.classification === "normal"
+                ? uiText("normal", "正常")
+                : audiogramData?.classification === "impaired"
+                  ? uiText("impaired", "受损")
+                  : audiogramData?.classification === "dysfunction"
+                    ? uiText("dysfunction", "功能异常")
+                    : "N/A"}
+            </p>
           </div>
           <div className="bg-muted px-3 py-3 rounded-lg text-center">
-            <p className="text-xs text-muted-foreground">Correct</p>
+            <p className="text-xs text-muted-foreground">{uiText("Correct", "正确")}</p>
             <p className="text-xl font-bold">{correctCount}/{results.length}</p>
-            <p className="text-xs text-muted-foreground">responses</p>
+            <p className="text-xs text-muted-foreground">{uiText("responses", "题")}</p>
           </div>
           <div className="bg-muted px-3 py-3 rounded-lg text-center">
-            <p className="text-xs text-muted-foreground">Ambient Noise</p>
+            <p className="text-xs text-muted-foreground">{uiText("Ambient Noise", "环境噪音")}</p>
             <p className="text-xl font-bold">{noiseCheckResult?.noiseLevel ?? "N/A"}</p>
             <p className="text-xs text-muted-foreground">dBA</p>
           </div>
@@ -538,7 +578,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
         {/* Score bar */}
         <div className="space-y-1">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Hearing Score</span>
+            <span className="text-muted-foreground">{uiText("Hearing Score", "听力评分")}</span>
             <span className="font-semibold">{finalScore}%</span>
           </div>
           <div className="w-full bg-muted rounded-full h-3">
@@ -560,7 +600,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
 
         <div className="flex justify-center pt-4">
           <Button onClick={() => onComplete(finalScore)} size="lg">
-            Continue
+            {t("common.continue")}
           </Button>
         </div>
       </CardContent>

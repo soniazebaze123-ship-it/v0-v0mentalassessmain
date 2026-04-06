@@ -6,6 +6,12 @@ export interface DigitTrial {
   noiseLevel: number // dB SNR (signal-to-noise ratio)
 }
 
+export interface DigitSpeechOptions {
+  language: "en" | "zh" | "yue" | "fr"
+  langCode?: string
+  voice?: SpeechSynthesisVoice | null
+}
+
 export interface AudiogramData {
   leftEar: { frequency: number; threshold: number }[]
   rightEar: { frequency: number; threshold: number }[]
@@ -168,7 +174,18 @@ function playNoise(
 }
 
 // Speak digits using Web Speech API
-function speakDigits(digits: number[], volume: number): Promise<void> {
+function toSpokenDigits(digits: number[], language: DigitSpeechOptions["language"]): string {
+  const mapping: Record<DigitSpeechOptions["language"], string[]> = {
+    en: ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"],
+    zh: ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"],
+    yue: ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"],
+    fr: ["zero", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf"],
+  }
+
+  return digits.map((digit) => mapping[language][digit] ?? String(digit)).join(language === "fr" ? " ... " : " ... ")
+}
+
+function speakDigits(digits: number[], volume: number, options: DigitSpeechOptions): Promise<void> {
   return new Promise((resolve) => {
     if (!("speechSynthesis" in window)) {
       resolve()
@@ -178,11 +195,17 @@ function speakDigits(digits: number[], volume: number): Promise<void> {
     // Cancel any ongoing speech
     window.speechSynthesis.cancel()
 
-    const text = digits.join("... ")
+    const text = toSpokenDigits(digits, options.language)
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.rate = 0.7 // Slower for clarity
     utterance.pitch = 1.0
     utterance.volume = Math.max(0.1, Math.min(1.0, volume))
+    utterance.lang = options.langCode || "en-US"
+
+    if (options.voice) {
+      utterance.voice = options.voice
+      utterance.lang = options.voice.lang || utterance.lang
+    }
 
     utterance.onend = () => resolve()
     utterance.onerror = () => resolve()
@@ -202,6 +225,7 @@ export async function playDigitTripletWithNoise(
   digits: number[],
   snr: number,
   audioContext: AudioContext,
+  options: DigitSpeechOptions,
 ): Promise<void> {
   const totalDuration = 4000 // 4 seconds
 
@@ -215,7 +239,7 @@ export async function playDigitTripletWithNoise(
   // At SNR -12 (easy): speech is loud relative to noise
   // At SNR +6 (hard): speech is quiet relative to noise
   const speechVolume = Math.max(0.3, Math.min(1.0, 0.8 - snr * 0.03))
-  await speakDigits(digits, speechVolume)
+  await speakDigits(digits, speechVolume, options)
 
   // Let noise continue briefly after speech
   await new Promise((r) => setTimeout(r, 500))
