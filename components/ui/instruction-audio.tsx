@@ -6,21 +6,26 @@ import { Volume2, VolumeX } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 
 interface InstructionAudioProps {
-  instructionKey: string
+  instructionKey?: string
+  text?: string
   className?: string
 }
 
-export function InstructionAudio({ instructionKey, className }: InstructionAudioProps) {
-  const { t, getSpeechSettings, getBestVoice, language } = useLanguage()
+export function InstructionAudio({ instructionKey, text, className }: InstructionAudioProps) {
+  const { t, localizeText, getSpeechSettings, getBestVoice, language } = useLanguage()
   const [isPlaying, setIsPlaying] = useState(false)
   const [enhancedInstruction, setEnhancedInstruction] = useState<string | null>(null)
+
+  const baseInstruction = instructionKey ? t(instructionKey) : text ? localizeText(text) : ""
 
   const resolveInstructionText = async () => {
     if (enhancedInstruction) {
       return enhancedInstruction
     }
 
-    const baseInstruction = t(instructionKey)
+    if (!baseInstruction) {
+      return ""
+    }
 
     if (language === "en") {
       return baseInstruction
@@ -112,10 +117,10 @@ export function InstructionAudio({ instructionKey, className }: InstructionAudio
 
   useEffect(() => {
     setEnhancedInstruction(null)
-  }, [instructionKey, language])
+  }, [instructionKey, language, text])
 
   return (
-    <Button onClick={playInstruction} disabled={isPlaying} variant="outline" size="sm" className={className}>
+    <Button onClick={playInstruction} disabled={isPlaying || !baseInstruction} variant="outline" size="sm" className={className}>
       {isPlaying ? (
         <>
           <VolumeX className="w-4 h-4 mr-2" />

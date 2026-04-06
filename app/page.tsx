@@ -380,13 +380,14 @@ function AppContent() {
     const steps = assessmentType === "MOCA" ? mocaSteps : mmseSteps
     const CurrentComponent = steps[currentStep].component
     const props = steps[currentStep].props
+    const assessmentTitle = assessmentType === "MOCA" ? t("moca.title") : t("mmse.title")
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
         <div className="max-w-4xl mx-auto mb-4">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-2xl font-bold">
-              {assessmentType} {t("common.assessment")} - {t("common.step")} {currentStep + 1} {t("common.of")}{" "}
+              {assessmentTitle} - {t("common.step")} {currentStep + 1} {t("common.of")} {" "}
               {steps.length}
             </h1>
             <div className="text-sm text-gray-600">

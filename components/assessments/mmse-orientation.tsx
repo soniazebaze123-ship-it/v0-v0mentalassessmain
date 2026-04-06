@@ -97,7 +97,7 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
       </CardHeader>
       <CardContent className="space-y-8 pt-6">
         <div className="space-y-4">
-          <h3 className="text-lg font-bold text-blue-800 border-b pb-2">Time Questions (5 points)</h3>
+          <h3 className="text-lg font-bold text-blue-800 border-b pb-2">{t("mmse.orientation.time_questions")}</h3>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="year" className="text-base">
@@ -165,7 +165,7 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-lg font-bold text-blue-800 border-b pb-2">Place Questions (3 points)</h3>
+          <h3 className="text-lg font-bold text-blue-800 border-b pb-2">{t("mmse.orientation.place_questions")}</h3>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="country" className="text-base">

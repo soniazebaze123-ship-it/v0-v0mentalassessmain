@@ -62,11 +62,12 @@ export function Dashboard({
   })
   const [loading, setLoading] = useState(true)
   const [hasAnyAssessments, setHasAnyAssessments] = useState(false)
-  const { t, language, setLanguage } = useLanguage()
+  const { t, language, setLanguage, localizeText } = useLanguage()
   const { user, logout, progress } = useUser()
   const displayName = user?.name?.trim() || "-"
   const displayId = user?.id || "-"
   const displayPhone = user?.phone_number || "-"
+  const uiText = (englishText: string, chineseText: string) => localizeText(englishText, { zh: chineseText })
 
   useEffect(() => {
     if (user) {
@@ -483,11 +484,9 @@ export function Dashboard({
                 </div>
                 {status.tcm.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
               </div>
-              <CardTitle className="text-lg mt-4 font-semibold">{language === "zh" ? "中医体质辨识" : "TCM Constitution"}</CardTitle>
+              <CardTitle className="text-lg mt-4 font-semibold">{uiText("TCM Constitution", "中医体质辨识")}</CardTitle>
               <CardDescription className="text-sm">
-                {language === "zh" 
-                  ? "根据中医理论评估您的体质类型" 
-                  : "Assess your body constitution based on TCM principles"}
+                {uiText("Assess your body constitution based on TCM principles", "根据中医理论评估您的体质类型")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -536,13 +535,13 @@ export function Dashboard({
               <div className="space-y-4">
                 <div className="flex items-center text-sm text-slate-600">
                   <Clock className="w-4 h-4 mr-1.5" />
-                  <span>EEG, blood biomarkers, and sensory fusion preview</span>
+                  <span>{localizeText("EEG, blood biomarkers, and sensory fusion preview")}</span>
                 </div>
                 <Button
                   asChild
                   className="w-full bg-gradient-to-r from-slate-700 to-cyan-600 hover:from-slate-800 hover:to-cyan-700 text-white shadow-md rounded-xl font-medium"
                 >
-                  <Link href="/multimodal">Open Multimodal Module</Link>
+                  <Link href="/multimodal">{localizeText("Open Multimodal Module")}</Link>
                 </Button>
               </div>
             </CardContent>
@@ -561,8 +560,8 @@ export function Dashboard({
                 </div>
                 {status.upload.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
               </div>
-              <CardTitle className="text-lg mt-4 font-semibold">{language === "zh" ? "中医图像上传" : "TCM Image Upload"}</CardTitle>
-              <CardDescription className="text-sm">{language === "zh" ? "上传舌象、面部等中医诊断图像" : "Upload tongue, face images for TCM diagnosis"}</CardDescription>
+              <CardTitle className="text-lg mt-4 font-semibold">{uiText("TCM Image Upload", "中医图像上传")}</CardTitle>
+              <CardDescription className="text-sm">{uiText("Upload tongue, face images for TCM diagnosis", "上传舌象、面部等中医诊断图像")}</CardDescription>
               <InstructionAudio instructionKey="upload.instruction" className="mt-2" />
             </CardHeader>
             <CardContent>

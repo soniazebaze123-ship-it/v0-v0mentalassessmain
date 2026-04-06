@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useEffect, useMemo, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 
 type Language = "en" | "zh" | "yue" | "fr"
 
@@ -18,6 +18,7 @@ interface LanguageContextType {
   language: Language
   setLanguage: (lang: Language) => void
   t: (key: string, options?: Record<string, any>) => string
+  localizeText: (englishText: string, overrides?: Partial<Record<Language, string>>) => string
   getLanguageName: (lang: Language) => string
   getSpeechLanguage: (lang: Language) => string
   getSpeechSettings: (lang?: Language) => SpeechSettings
@@ -134,6 +135,8 @@ const englishTranslations: TranslationMap = {
 "mmse.title": "Mini-Mental State Examination",
 "mmse.orientation": "Orientation",
 "mmse.orientation.instruction": "Please answer the following questions about time and place.",
+"mmse.orientation.time_questions": "Time Questions (5 points)",
+"mmse.orientation.place_questions": "Place Questions (3 points)",
 "mmse.registration": "Registration & Recall",
 "mmse.attention": "Attention & Calculation",
 "mmse.naming": "Naming Objects",
@@ -500,6 +503,9 @@ const zhOverrides: TranslationMap = {
 
   "mmse.title": "简易精神状态检查",
   "mmse.orientation": "定向力",
+  "mmse.orientation.instruction": "请回答以下关于时间和地点的问题。",
+  "mmse.orientation.time_questions": "时间问题（5分）",
+  "mmse.orientation.place_questions": "地点问题（3分）",
   "mmse.registration": "记忆登记与回忆",
   "mmse.attention": "注意力与计算",
   "mmse.naming": "物体命名",
@@ -507,6 +513,15 @@ const zhOverrides: TranslationMap = {
   "mmse.repetition": "复述",
   "mmse.writing": "书写",
   "mmse.copying": "图形复制",
+
+  "question.date": "今天是几号？",
+  "question.month": "现在是几月？",
+  "question.year": "现在是哪一年？",
+  "question.day": "今天是星期几？",
+  "question.country": "我们现在在哪个国家？",
+  "question.season": "现在是什么季节？",
+  "question.president": "现任国家主席是谁？",
+  "question.sea": "请说出一个海的名称：",
 
   "question.animal_label": "动物 {index}：",
   "question.object_label": "物体 {index}：",
@@ -556,6 +571,10 @@ const zhOverrides: TranslationMap = {
   "theme.system": "系统",
 
   "common.loading": "加载中...",
+  "common.assessment": "评估",
+  "common.step": "第",
+  "common.of": "共",
+  "common.progress": "进度",
   "common.login": "登录",
   "common.logout": "退出登录",
   "common.resume": "继续",
@@ -656,6 +675,9 @@ const yueOverrides: TranslationMap = {
 
   "mmse.title": "簡易精神狀態檢查",
   "mmse.orientation": "定向力",
+  "mmse.orientation.instruction": "請回答以下關於時間同地點嘅問題。",
+  "mmse.orientation.time_questions": "時間問題（5分）",
+  "mmse.orientation.place_questions": "地點問題（3分）",
   "mmse.registration": "記憶登記同回憶",
   "mmse.attention": "注意力同計算",
   "mmse.naming": "物件命名",
@@ -663,6 +685,15 @@ const yueOverrides: TranslationMap = {
   "mmse.repetition": "重複",
   "mmse.writing": "書寫",
   "mmse.copying": "圖形抄寫",
+
+  "question.date": "今日係幾號？",
+  "question.month": "而家係幾月？",
+  "question.year": "而家係邊一年？",
+  "question.day": "今日係星期幾？",
+  "question.country": "我哋而家喺邊個國家？",
+  "question.season": "而家係咩季節？",
+  "question.president": "現任國家主席係邊個？",
+  "question.sea": "講出一個海嘅名稱：",
 
   "question.animal_label": "動物 {index}：",
   "question.object_label": "物件 {index}：",
@@ -712,6 +743,10 @@ const yueOverrides: TranslationMap = {
   "theme.system": "系統",
 
   "common.loading": "載入中...",
+  "common.assessment": "評估",
+  "common.step": "第",
+  "common.of": "共",
+  "common.progress": "進度",
   "common.login": "登入",
   "common.logout": "登出",
   "common.resume": "繼續",
@@ -897,6 +932,12 @@ const translations: Record<Language, TranslationMap> = {
   fr: { ...englishTranslations, ...frOverrides },
 }
 
+const translationOverrides: Partial<Record<Language, TranslationMap>> = {
+  zh: zhOverrides,
+  yue: yueOverrides,
+  fr: frOverrides,
+}
+
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
 function interpolate(text: string, options?: Record<string, any>) {
@@ -913,9 +954,19 @@ function safelyReadStoredLanguage(): Language {
   return "en"
 }
 
+function scheduleAfterRender(task: () => void) {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  window.setTimeout(task, 0)
+}
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>("en")
   const [voicesReady, setVoicesReady] = useState(false)
+  const [runtimeTranslations, setRuntimeTranslations] = useState<Partial<Record<Language, Record<string, string>>>>({})
+  const pendingTranslationsRef = useRef(new Set<string>())
 
   useEffect(() => {
     setLanguageState(safelyReadStoredLanguage())
@@ -942,6 +993,57 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         window.speechSynthesis.onvoiceschanged = null
       }
     }
+  }, [])
+
+  const requestRuntimeTranslation = useCallback((lang: Language, sourceText: string, cacheKey: string) => {
+    if (lang === "en" || !sourceText.trim() || typeof window === "undefined") {
+      return
+    }
+
+    const pendingKey = `${lang}:${cacheKey}`
+    if (pendingTranslationsRef.current.has(pendingKey)) {
+      return
+    }
+
+    pendingTranslationsRef.current.add(pendingKey)
+
+    void fetch("/api/translate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        text: sourceText,
+        targetLanguage: lang,
+      }),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          return null
+        }
+
+        const payload = await response.json()
+        return typeof payload.translatedText === "string" ? payload.translatedText.trim() : null
+      })
+      .then((translatedText) => {
+        if (!translatedText || translatedText === sourceText) {
+          return
+        }
+
+        setRuntimeTranslations((previous) => ({
+          ...previous,
+          [lang]: {
+            ...(previous[lang] ?? {}),
+            [cacheKey]: translatedText,
+          },
+        }))
+      })
+      .catch(() => {
+        // Ignore runtime localization failures and fall back to the source text.
+      })
+      .finally(() => {
+        pendingTranslationsRef.current.delete(pendingKey)
+      })
   }, [])
 
   const getLanguageName = (lang: Language) => {
@@ -1013,12 +1115,41 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     return voices[0] || null
   }
 
+  const localizeText = useCallback(
+    (englishText: string, overrides?: Partial<Record<Language, string>>) => {
+      const directOverride = overrides?.[language]
+      if (directOverride) {
+        return directOverride
+      }
+
+      if (language === "en") {
+        return englishText
+      }
+
+      const cacheKey = `text:${englishText}`
+      const cachedText = runtimeTranslations[language]?.[cacheKey]
+
+      if (cachedText) {
+        return cachedText
+      }
+
+      scheduleAfterRender(() => requestRuntimeTranslation(language, englishText, cacheKey))
+      return englishText
+    },
+    [language, requestRuntimeTranslation, runtimeTranslations],
+  )
+
   const t = useMemo(
     () => (key: string, options?: Record<string, any>) => {
-      const current = translations[language]?.[key]
+      const overrideValue = translationOverrides[language]?.[key]
       const fallback = translations.en[key]
+      const runtimeValue = runtimeTranslations[language]?.[`key:${key}`]
 
-      const value = current ?? fallback ?? key
+      if (language !== "en" && overrideValue === undefined && runtimeValue === undefined && typeof fallback === "string") {
+        scheduleAfterRender(() => requestRuntimeTranslation(language, fallback, `key:${key}`))
+      }
+
+      const value = overrideValue ?? runtimeValue ?? fallback ?? key
 
       if (Array.isArray(value)) {
         return value.join(", ")
@@ -1026,7 +1157,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
       return interpolate(String(value), options)
     },
-    [language],
+    [language, requestRuntimeTranslation, runtimeTranslations],
   )
 
   const setLanguage = (lang: Language) => {
@@ -1039,6 +1170,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         language,
         setLanguage,
         t,
+        localizeText,
         getLanguageName,
         getSpeechLanguage,
         getSpeechSettings,
