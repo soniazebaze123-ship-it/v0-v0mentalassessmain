@@ -19,7 +19,7 @@ export function getLanguageNames() {
 export function getQwenConfig() {
   const apiKey = process.env.QWEN_API_KEY ?? process.env.DASHSCOPE_API_KEY
   const model = process.env.QWEN_MODEL ?? "qwen-plus"
-  const baseUrl = process.env.QWEN_BASE_URL ?? "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+  const baseUrl = process.env.QWEN_BASE_URL ?? "https://dashscope.aliyuncs.com/api/v1"
   const apiKeySource = process.env.QWEN_API_KEY ? "QWEN_API_KEY" : process.env.DASHSCOPE_API_KEY ? "DASHSCOPE_API_KEY" : null
 
   return {
@@ -37,7 +37,7 @@ export async function requestQwenChatCompletion(messages: ChatMessage[], tempera
     return { ok: false as const, error: "Missing Qwen API key." }
   }
 
-  const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+  const response = await fetch(`${baseUrl.replace(/\/$/, "")}/services/aigc/text-generation/generation`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -45,8 +45,9 @@ export async function requestQwenChatCompletion(messages: ChatMessage[], tempera
     },
     body: JSON.stringify({
       model,
-      messages,
-      temperature,
+      input: {
+        messages,
+      },
     }),
     cache: "no-store",
   })
