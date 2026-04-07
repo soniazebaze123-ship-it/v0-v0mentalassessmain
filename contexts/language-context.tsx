@@ -533,6 +533,8 @@ const zhOverrides: TranslationMap = {
   "memory.preparing_recall": "正在准备回忆阶段...",
   "memory.recall_instruction": "请按任意顺序输入你刚才看到的 {count} 个词语。",
   "memory.submit_recall": "提交回忆",
+  "common.submit": "提交",
+  "common.skip_task": "跳过任务",
   "audio.played_success": "✓ 语音已播放。现在请在下方输入你听到的内容。",
 
   "question.date": "今天是几号？",
@@ -729,6 +731,8 @@ const yueOverrides: TranslationMap = {
   "memory.preparing_recall": "準備進入回憶階段...",
   "memory.recall_instruction": "請以任何次序輸入你頭先見到嘅 {count} 個詞語。",
   "memory.submit_recall": "提交回憶",
+  "common.submit": "提交",
+  "common.skip_task": "略過任務",
   "audio.played_success": "✓ 語音已播放。依家請喺下面輸入你聽到嘅內容。",
 
   "question.date": "今日係幾號？",
@@ -925,6 +929,8 @@ const frOverrides: TranslationMap = {
   "memory.preparing_recall": "Préparation de la phase de rappel...",
   "memory.recall_instruction": "Veuillez saisir les {count} mots que vous venez de voir, dans n’importe quel ordre.",
   "memory.submit_recall": "Soumettre le rappel",
+  "common.submit": "Soumettre",
+  "common.skip_task": "Ignorer la tâche",
   "audio.played_success": "✓ Audio lu. Saisissez maintenant ce que vous avez entendu ci-dessous.",
   "question.angles": "Combien d’angles cette figure a-t-elle ?",
   "question.subtract_series": "Soustraction en série",

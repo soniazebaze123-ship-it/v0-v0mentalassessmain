@@ -236,13 +236,17 @@ interface TCMConstitutionProps {
     recommendations: string[]
   }) => void
   onBack: () => void
-  language?: "en" | "zh"
 }
 
-export function TCMConstitution({ onComplete, onBack, language = "en" }: TCMConstitutionProps) {
-  const { localizeText } = useLanguage()
+export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
+  const { language, localizeText } = useLanguage()
   const { user } = useUser()
-  const uiText = (englishText: string, chineseText: string) => localizeText(englishText, { zh: chineseText })
+  const uiText = (englishText: string, chineseText: string, cantoneseText?: string, frenchText?: string) =>
+    localizeText(englishText, {
+      zh: chineseText,
+      yue: cantoneseText ?? chineseText,
+      fr: frenchText,
+    })
   const [phase, setPhase] = useState<"intro" | "image_upload" | "questions" | "results">("intro")
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [responses, setResponses] = useState<Record<string, number>>({})
@@ -685,7 +689,12 @@ export function TCMConstitution({ onComplete, onBack, language = "en" }: TCMCons
         <CardHeader>
           <div className="flex items-center justify-between mb-2">
             <Badge variant="outline">
-              {language === "zh" ? `问题 ${currentQuestion + 1} / ${TCM_QUESTIONS.length}` : localizeText(`Question ${currentQuestion + 1} of ${TCM_QUESTIONS.length}`)}
+              {uiText(
+                `Question ${currentQuestion + 1} of ${TCM_QUESTIONS.length}`,
+                `问题 ${currentQuestion + 1} / ${TCM_QUESTIONS.length}`,
+                `問題 ${currentQuestion + 1} / ${TCM_QUESTIONS.length}`,
+                `Question ${currentQuestion + 1} sur ${TCM_QUESTIONS.length}`,
+              )}
             </Badge>
             <Button variant="ghost" size="sm" onClick={onBack}>
               {uiText("Exit", "退出")}
@@ -696,7 +705,7 @@ export function TCMConstitution({ onComplete, onBack, language = "en" }: TCMCons
         <CardContent className="space-y-6">
           <div className="text-center py-4">
             <h3 className="text-xl font-medium">
-              {language === "zh" ? question.textZh : localizeText(question.text)}
+              {localizeText(question.text, { zh: question.textZh, yue: question.textZh })}
             </h3>
           </div>
 
@@ -717,7 +726,7 @@ export function TCMConstitution({ onComplete, onBack, language = "en" }: TCMCons
               >
                 <RadioGroupItem value={option.value.toString()} id={`option-${option.value}`} />
                 <Label htmlFor={`option-${option.value}`} className="flex-1 cursor-pointer text-base">
-                  {language === "zh" ? option.labelZh : localizeText(option.label)}
+                  {localizeText(option.label, { zh: option.labelZh, yue: option.labelZh })}
                 </Label>
                 <span className="text-sm text-muted-foreground">{option.value}</span>
               </div>
@@ -778,7 +787,7 @@ export function TCMConstitution({ onComplete, onBack, language = "en" }: TCMCons
                 <div>
                   <Badge className="mb-1">{uiText("Primary Constitution", "主要体质")}</Badge>
                   <h3 className="text-lg font-semibold">
-                    {language === "zh" ? primaryInfo.nameZh : localizeText(primaryInfo.name)}
+                    {localizeText(primaryInfo.name, { zh: primaryInfo.nameZh, yue: primaryInfo.nameZh })}
                   </h3>
                 </div>
               </div>
@@ -797,7 +806,7 @@ export function TCMConstitution({ onComplete, onBack, language = "en" }: TCMCons
                 <div>
                   <Badge variant="outline" className="mb-1">{uiText("Secondary Constitution", "次要体质")}</Badge>
                   <h3 className="text-base font-medium">
-                    {language === "zh" ? secondaryInfo.nameZh : localizeText(secondaryInfo.name)}
+                    {localizeText(secondaryInfo.name, { zh: secondaryInfo.nameZh, yue: secondaryInfo.nameZh })}
                   </h3>
                 </div>
               </div>
@@ -814,7 +823,7 @@ export function TCMConstitution({ onComplete, onBack, language = "en" }: TCMCons
                   key={constitution.type}
                   className="flex items-center justify-between p-2 bg-muted rounded text-sm"
                 >
-                  <span className="truncate">{language === "zh" ? constitution.nameZh : localizeText(constitution.name.split(" (")[0])}</span>
+                  <span className="truncate">{localizeText(constitution.name.split(" (")[0], { zh: constitution.nameZh, yue: constitution.nameZh })}</span>
                   <span className="font-medium ml-2">{results.constitutionScores[constitution.type]}%</span>
                 </div>
               ))}
