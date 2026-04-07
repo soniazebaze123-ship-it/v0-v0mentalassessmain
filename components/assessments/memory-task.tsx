@@ -16,6 +16,21 @@ interface MemoryTaskProps {
   assessmentType: "MOCA" | "MMSE"
 }
 
+const memoryWordSets = {
+  MOCA: {
+    en: ["Face", "Velvet", "Church", "Daisy", "Red"],
+    zh: ["面孔", "天鹅绒", "教堂", "雏菊", "红色"],
+    yue: ["面", "天鵝絨", "教堂", "雛菊", "紅色"],
+    fr: ["Visage", "Velours", "Église", "Marguerite", "Rouge"],
+  },
+  MMSE: {
+    en: ["Apple", "Table", "Penny"],
+    zh: ["苹果", "桌子", "硬币"],
+    yue: ["蘋果", "枱", "硬幣"],
+    fr: ["Pomme", "Table", "Pièce"],
+  },
+} as const
+
 function normalizeWords(words: string[] | string) {
   if (Array.isArray(words)) {
     return words.map((word) => word.trim()).filter(Boolean)
@@ -55,10 +70,9 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
   const [phase, setPhase] = useState<"countdown" | "presentation" | "recall">("countdown")
   const [countdown, setCountdown] = useState(10)
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
-  const localizedWordSource = assessmentType === "MOCA" ? t("memory.moca.words") : t("memory.mmse.words")
   const fallbackWords = normalizeWords(words)
-  const translatedWords = normalizeWords(localizedWordSource)
-  const memoryWords = translatedWords.length === fallbackWords.length ? translatedWords : fallbackWords
+  const explicitWords = [...memoryWordSets[assessmentType][language]]
+  const memoryWords = explicitWords.length === fallbackWords.length ? explicitWords : fallbackWords
   const splitIndex = Math.ceil(memoryWords.length / 2)
   const segmentedWords = [memoryWords.slice(0, splitIndex), memoryWords.slice(splitIndex)].filter((segment) => segment.length > 0)
   const [recallAnswers, setRecallAnswers] = useState<string[]>(new Array(memoryWords.length).fill(""))
