@@ -529,6 +529,8 @@ const zhOverrides: TranslationMap = {
   "mmse.copying.instruction": "请观察下方图形，并照样画出来。",
 
   "memory.get_ready": "做好准备，词语将在 {countdown} 秒后出现...",
+  "memory.moca.words": ["面孔", "天鹅绒", "教堂", "雏菊", "红色"],
+  "memory.mmse.words": ["苹果", "桌子", "硬币"],
   "memory.word_of": "第 {current} 个词，共 {total} 个",
   "memory.preparing_recall": "正在准备回忆阶段...",
   "memory.recall_instruction": "请按任意顺序输入你刚才看到的 {count} 个词语。",
@@ -561,6 +563,7 @@ const zhOverrides: TranslationMap = {
   "common.camel": "骆驼",
   "common.house": "房子",
   "common.bag": "包",
+  "common.word": "词语",
 
   "results.title": "{assessmentType} 评估结果",
   "results.score_percentage": "{percentage}% 得分",
@@ -727,6 +730,8 @@ const yueOverrides: TranslationMap = {
   "mmse.copying.instruction": "請觀察下面嘅圖形，然後照住畫出嚟。",
 
   "memory.get_ready": "準備好，詞語會喺 {countdown} 秒後出現...",
+  "memory.moca.words": ["面", "天鵝絨", "教堂", "雛菊", "紅色"],
+  "memory.mmse.words": ["蘋果", "枱", "硬幣"],
   "memory.word_of": "第 {current} 個詞，共 {total} 個",
   "memory.preparing_recall": "準備進入回憶階段...",
   "memory.recall_instruction": "請以任何次序輸入你頭先見到嘅 {count} 個詞語。",
@@ -759,6 +764,7 @@ const yueOverrides: TranslationMap = {
   "common.camel": "駱駝",
   "common.house": "屋",
   "common.bag": "袋",
+  "common.word": "詞語",
 
   "results.title": "{assessmentType} 評估結果",
   "results.score_percentage": "{percentage}% 得分",
@@ -925,6 +931,8 @@ const frOverrides: TranslationMap = {
   "mmse.copying.instruction": "Regardez la figure ci-dessous et recopiez-la.",
 
   "memory.get_ready": "Préparez-vous. Les mots apparaîtront dans {countdown} secondes...",
+  "memory.moca.words": ["Visage", "Velours", "Église", "Marguerite", "Rouge"],
+  "memory.mmse.words": ["Pomme", "Table", "Pièce"],
   "memory.word_of": "Mot {current} sur {total}",
   "memory.preparing_recall": "Préparation de la phase de rappel...",
   "memory.recall_instruction": "Veuillez saisir les {count} mots que vous venez de voir, dans n’importe quel ordre.",
@@ -948,6 +956,7 @@ const frOverrides: TranslationMap = {
   "common.camel": "chameau",
   "common.house": "maison",
   "common.bag": "sac",
+  "common.word": "Mot",
 
   "results.title": "Résultats de l'évaluation {assessmentType}",
   "results.score_percentage": "Score de {percentage}%",

@@ -56,11 +56,18 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
   const [countdown, setCountdown] = useState(10)
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
   const localizedWordSource = assessmentType === "MOCA" ? t("memory.moca.words") : t("memory.mmse.words")
-  const memoryWords = normalizeWords(language === "en" ? words : localizedWordSource)
+  const fallbackWords = normalizeWords(words)
+  const translatedWords = normalizeWords(localizedWordSource)
+  const memoryWords = translatedWords.length === fallbackWords.length ? translatedWords : fallbackWords
   const splitIndex = Math.ceil(memoryWords.length / 2)
   const segmentedWords = [memoryWords.slice(0, splitIndex), memoryWords.slice(splitIndex)].filter((segment) => segment.length > 0)
   const [recallAnswers, setRecallAnswers] = useState<string[]>(new Array(memoryWords.length).fill(""))
-  const uiText = (englishText: string, chineseText: string) => localizeText(englishText, { zh: chineseText })
+  const uiText = (englishText: string, chineseText: string, cantoneseText?: string, frenchText?: string) =>
+    localizeText(englishText, {
+      zh: chineseText,
+      yue: cantoneseText ?? chineseText,
+      fr: frenchText,
+    })
 
   useEffect(() => {
     setRecallAnswers(new Array(memoryWords.length).fill(""))
@@ -144,7 +151,12 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
           {currentWordIndex < memoryWords.length ? (
             <>
               <div className="rounded-full bg-blue-50 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
-                {uiText(`Segment ${currentWordIndex < splitIndex ? 1 : 2}`, `第 ${currentWordIndex < splitIndex ? 1 : 2} 段`)}
+                {uiText(
+                  `Segment ${currentWordIndex < splitIndex ? 1 : 2}`,
+                  `第 ${currentWordIndex < splitIndex ? 1 : 2} 段`,
+                  `第 ${currentWordIndex < splitIndex ? 1 : 2} 段`,
+                  `Segment ${currentWordIndex < splitIndex ? 1 : 2}`,
+                )}
               </div>
               <div className="text-6xl sm:text-7xl md:text-9xl font-black text-blue-800 py-12 animate-in fade-in zoom-in duration-300">
                 {memoryWords[currentWordIndex]}
@@ -177,6 +189,8 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
           {uiText(
             "Two-step evaluation: recall the first segment, then the second. Answers can be entered in any order within each segment.",
             "分两步回忆：先回忆第一段，再回忆第二段。每一段中的答案可以按任意顺序填写。",
+            "分兩步回憶：先回憶第一段，再回憶第二段。每一段入面嘅答案都可以任意次序填寫。",
+            "Évaluation en deux étapes : rappelez d’abord le premier segment, puis le second. Les réponses peuvent être saisies dans n’importe quel ordre à l’intérieur de chaque segment.",
           )}
         </div>
 
@@ -186,11 +200,15 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
           return (
             <div key={segmentIndex} className="space-y-3 rounded-xl border p-4">
               <div>
-                <h3 className="text-base font-semibold text-slate-900">{uiText(`Segment ${segmentIndex + 1}`, `第 ${segmentIndex + 1} 段`)}</h3>
+                <h3 className="text-base font-semibold text-slate-900">
+                  {uiText(`Segment ${segmentIndex + 1}`, `第 ${segmentIndex + 1} 段`, `第 ${segmentIndex + 1} 段`, `Segment ${segmentIndex + 1}`)}
+                </h3>
                 <p className="text-xs text-muted-foreground">
                   {uiText(
                     `Recall ${segment.length} item${segment.length > 1 ? "s" : ""} from this segment.`,
                     `请回忆这一段中的 ${segment.length} 个词语。`,
+                    `請回憶呢一段入面嘅 ${segment.length} 個詞語。`,
+                    `Rappelez ${segment.length} élément${segment.length > 1 ? "s" : ""} de ce segment.`,
                   )}
                 </p>
               </div>
