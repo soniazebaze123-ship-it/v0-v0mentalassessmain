@@ -81,7 +81,7 @@ export default function TestDashboardPage() {
 
     // Test 5: Storage Bucket Access
     try {
-      const { data, error } = await supabase.storage.getBucket("user-uploads")
+      const { data, error } = await supabase.storage.getBucket("user-files")
 
       if (error) throw error
       updateTest(4, "success", "Storage bucket accessible", data)
