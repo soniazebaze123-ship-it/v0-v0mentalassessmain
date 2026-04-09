@@ -129,7 +129,7 @@ export function Login({ onRegister, onAdminLogin }: LoginProps) {
                 onChange={(event) => setRememberPhone(event.target.checked)}
                 disabled={loading}
               />
-              <span>Remember phone number on this device</span>
+              <span>{t("login.remember_phone")}</span>
             </label>
 
             <Button

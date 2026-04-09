@@ -9,9 +9,44 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useUser } from "@/contexts/user-context"
 import { useLanguage } from "@/contexts/language-context"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { cn } from "@/lib/utils"
 
 interface RegistrationProps {
   onBackToLogin: () => void
+}
+
+function getDateInputLocale(language: "en" | "zh" | "yue" | "fr") {
+  switch (language) {
+    case "zh":
+      return "zh-CN"
+    case "yue":
+      return "zh-HK"
+    case "fr":
+      return "fr-FR"
+    default:
+      return "en-US"
+  }
+}
+
+function formatDateForDisplay(value: string, language: "en" | "zh" | "yue" | "fr") {
+  const [year, month, day] = value.split("-").map(Number)
+
+  if (!year || !month || !day) {
+    return value
+  }
+
+  if (language === "zh" || language === "yue") {
+    return `${year}年${month}月${day}日`
+  }
+
+  const paddedMonth = String(month).padStart(2, "0")
+  const paddedDay = String(day).padStart(2, "0")
+
+  if (language === "fr") {
+    return `${paddedDay}/${paddedMonth}/${year}`
+  }
+
+  return `${paddedMonth}/${paddedDay}/${year}`
 }
 
 export function Registration({ onBackToLogin }: RegistrationProps) {
@@ -25,6 +60,7 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const maxBirthDate = new Date().toISOString().split("T")[0]
 
   const handleRegister = async (event?: React.FormEvent<HTMLFormElement>) => {
     event?.preventDefault()
@@ -126,16 +162,31 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
 
             <div className="space-y-2">
               <Label htmlFor="dob">{t("register.date_of_birth")}</Label>
-              <AssessmentInput
-                id="dob"
-                name="bday"
-                type="date"
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
-                disabled={loading}
-                max={new Date().toISOString().split("T")[0]}
-                autoComplete="bday"
-              />
+              <div className="relative">
+                <div
+                  aria-hidden="true"
+                  className={cn(
+                    "flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
+                    !dateOfBirth && "text-muted-foreground",
+                    loading && "cursor-not-allowed opacity-50",
+                  )}
+                >
+                  {dateOfBirth ? formatDateForDisplay(dateOfBirth, language) : t("register.date_of_birth.placeholder")}
+                </div>
+                <AssessmentInput
+                  id="dob"
+                  name="bday"
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  disabled={loading}
+                  max={maxBirthDate}
+                  autoComplete="bday"
+                  lang={getDateInputLocale(language)}
+                  aria-label={t("register.date_of_birth")}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
