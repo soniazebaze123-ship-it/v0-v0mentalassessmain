@@ -9,26 +9,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useUser } from "@/contexts/user-context"
 import { useLanguage } from "@/contexts/language-context"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
-import { cn } from "@/lib/utils"
 
 interface RegistrationProps {
   onBackToLogin: () => void
 }
 
-function getDateInputLocale(language: "en" | "zh" | "yue" | "fr") {
+type SupportedLanguage = "en" | "zh" | "yue" | "fr"
+
+const DATE_OPTION_COUNT = 120
+
+function getDateFieldOrder(language: SupportedLanguage) {
   switch (language) {
     case "zh":
-      return "zh-CN"
     case "yue":
-      return "zh-HK"
+      return ["year", "month", "day"] as const
     case "fr":
-      return "fr-FR"
+      return ["day", "month", "year"] as const
     default:
-      return "en-US"
+      return ["month", "day", "year"] as const
   }
 }
 
-function formatDateForDisplay(value: string, language: "en" | "zh" | "yue" | "fr") {
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month, 0).getDate()
+}
+
+function formatDateForDisplay(value: string, language: SupportedLanguage) {
   const [year, month, day] = value.split("-").map(Number)
 
   if (!year || !month || !day) {
@@ -49,18 +55,79 @@ function formatDateForDisplay(value: string, language: "en" | "zh" | "yue" | "fr
   return `${paddedMonth}/${paddedDay}/${year}`
 }
 
+function getMonthOptionLabel(month: number, language: SupportedLanguage, t: (key: string) => string) {
+  if (language === "zh" || language === "yue") {
+    return `${month}月`
+  }
+
+  return t(`common.month_${month}`)
+}
+
+function getDayOptionLabel(day: number, language: SupportedLanguage) {
+  if (language === "zh" || language === "yue") {
+    return `${day}日`
+  }
+
+  return String(day)
+}
+
+function getYearOptionLabel(year: string, language: SupportedLanguage) {
+  if (language === "zh" || language === "yue") {
+    return `${year}年`
+  }
+
+  return year
+}
+
 export function Registration({ onBackToLogin }: RegistrationProps) {
   const { t, language, setLanguage } = useLanguage()
   const { register } = useUser()
   const [name, setName] = useState("")
   const [phoneNumber, setPhoneNumber] = useState("")
-  const [dateOfBirth, setDateOfBirth] = useState("")
+  const [birthYear, setBirthYear] = useState("")
+  const [birthMonth, setBirthMonth] = useState("")
+  const [birthDay, setBirthDay] = useState("")
   const [gender, setGender] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const maxBirthDate = new Date().toISOString().split("T")[0]
+  const currentYear = new Date().getFullYear()
+  const yearOptions = Array.from({ length: DATE_OPTION_COUNT }, (_, index) => String(currentYear - index))
+  const monthOptions = Array.from({ length: 12 }, (_, index) => index + 1)
+  const dayOptions = Array.from(
+    { length: birthYear && birthMonth ? getDaysInMonth(Number(birthYear), Number(birthMonth)) : 31 },
+    (_, index) => index + 1,
+  )
+  const dateOfBirth = birthYear && birthMonth && birthDay
+    ? `${birthYear}-${String(Number(birthMonth)).padStart(2, "0")}-${String(Number(birthDay)).padStart(2, "0")}`
+    : ""
+
+  const handleBirthYearChange = (value: string) => {
+    setBirthYear(value)
+
+    if (birthMonth && birthDay) {
+      const maxDays = getDaysInMonth(Number(value), Number(birthMonth))
+      if (Number(birthDay) > maxDays) {
+        setBirthDay(String(maxDays))
+      }
+    }
+  }
+
+  const handleBirthMonthChange = (value: string) => {
+    setBirthMonth(value)
+
+    if (birthYear && birthDay) {
+      const maxDays = getDaysInMonth(Number(birthYear), Number(value))
+      if (Number(birthDay) > maxDays) {
+        setBirthDay(String(maxDays))
+      }
+    }
+  }
+
+  const handleBirthDayChange = (value: string) => {
+    setBirthDay(value)
+  }
 
   const handleRegister = async (event?: React.FormEvent<HTMLFormElement>) => {
     event?.preventDefault()
@@ -162,31 +229,64 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
 
             <div className="space-y-2">
               <Label htmlFor="dob">{t("register.date_of_birth")}</Label>
-              <div className="relative">
-                <div
-                  aria-hidden="true"
-                  className={cn(
-                    "flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
-                    !dateOfBirth && "text-muted-foreground",
-                    loading && "cursor-not-allowed opacity-50",
-                  )}
-                >
-                  {dateOfBirth ? formatDateForDisplay(dateOfBirth, language) : t("register.date_of_birth.placeholder")}
-                </div>
-                <AssessmentInput
-                  id="dob"
-                  name="bday"
-                  type="date"
-                  value={dateOfBirth}
-                  onChange={(e) => setDateOfBirth(e.target.value)}
-                  disabled={loading}
-                  max={maxBirthDate}
-                  autoComplete="bday"
-                  lang={getDateInputLocale(language)}
-                  aria-label={t("register.date_of_birth")}
-                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                />
+              <div className="grid grid-cols-3 gap-2" id="dob">
+                {getDateFieldOrder(language).map((field) => {
+                  if (field === "year") {
+                    return (
+                      <Select key={field} value={birthYear} onValueChange={handleBirthYearChange} disabled={loading}>
+                        <SelectTrigger aria-label={t("register.date_of_birth.year")}>
+                          <SelectValue placeholder={t("register.date_of_birth.year")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {yearOptions.map((year) => (
+                            <SelectItem key={year} value={year}>
+                              {getYearOptionLabel(year, language)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )
+                  }
+
+                  if (field === "month") {
+                    return (
+                      <Select key={field} value={birthMonth} onValueChange={handleBirthMonthChange} disabled={loading}>
+                        <SelectTrigger aria-label={t("register.date_of_birth.month")}>
+                          <SelectValue placeholder={t("register.date_of_birth.month")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {monthOptions.map((month) => (
+                            <SelectItem key={month} value={String(month)}>
+                              {getMonthOptionLabel(month, language, t)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )
+                  }
+
+                  return (
+                    <Select key={field} value={birthDay} onValueChange={handleBirthDayChange} disabled={loading}>
+                      <SelectTrigger aria-label={t("register.date_of_birth.day")}>
+                        <SelectValue placeholder={t("register.date_of_birth.day")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dayOptions.map((day) => (
+                          <SelectItem key={day} value={String(day)}>
+                            {getDayOptionLabel(day, language)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )
+                })}
               </div>
+              <input type="hidden" name="bday" value={dateOfBirth} />
+              {dateOfBirth ? (
+                <p className="text-sm text-muted-foreground">{formatDateForDisplay(dateOfBirth, language)}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">{t("register.date_of_birth.placeholder")}</p>
+              )}
             </div>
 
             <div className="space-y-2">
