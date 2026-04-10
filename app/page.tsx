@@ -1,7 +1,7 @@
 "use client"
 
 // MentalAssess - Cognitive Assessment Platform
-import { useState, useEffect } from "react"
+import { useEffect, useEffectEvent, useState } from "react"
 import { useUser } from "@/contexts/user-context"
 import { Registration } from "@/components/registration"
 import { Dashboard } from "@/components/dashboard"
@@ -54,8 +54,14 @@ function isSameCalendarDay(value?: string | null) {
   return date.toDateString() === new Date().toDateString()
 }
 
+type CompletedAssessment = {
+  totalScore: number
+  sectionScores: Record<string, number>
+  completedAt: string
+}
+
 function AppContent() {
-  const { user, loading, progress, saveProgress, clearProgress } = useUser()
+  const { user, loading, saveProgress, clearProgress } = useUser()
   const { t } = useLanguage()
   const [currentView, setCurrentView] = useState<
     | "login"
@@ -75,7 +81,7 @@ function AppContent() {
   const [currentStep, setCurrentStep] = useState(0)
   const [scores, setScores] = useState<number[]>([])
   const [assessmentType, setAssessmentType] = useState<"MOCA" | "MMSE">("MOCA")
-  const [completedAssessments, setCompletedAssessments] = useState<Record<string, any>>({})
+  const [completedAssessments, setCompletedAssessments] = useState<Record<string, CompletedAssessment>>({})
 
   const mocaSteps = [
     { component: InteractiveClock, props: { targetTime: { hour: 2, minute: 10 } } },
@@ -101,24 +107,7 @@ function AppContent() {
   ]
 
   // Load completed assessments on mount
-  useEffect(() => {
-    if (user) {
-      loadCompletedAssessments()
-    }
-  }, [user])
-
-  // Initialize view based on user and loading state
-  useEffect(() => {
-    if (!loading) {
-      if (user) {
-        setCurrentView("dashboard")
-      } else {
-        setCurrentView("login")
-      }
-    }
-  }, [user, loading])
-
-  const loadCompletedAssessments = async () => {
+  const loadCompletedAssessments = useEffectEvent(async () => {
     if (!user) return
 
     const supabase = createClient()
@@ -126,7 +115,7 @@ function AppContent() {
     try {
       const { data: assessments } = await supabase.from("assessments").select("*").eq("user_id", user.id)
 
-      const completed: Record<string, any> = {}
+      const completed: Record<string, CompletedAssessment> = {}
 
       if (assessments) {
         assessments.forEach((assessment) => {
@@ -148,7 +137,24 @@ function AppContent() {
         console.error("Error loading completed assessments:", error)
       }
     }
-  }
+  })
+
+  useEffect(() => {
+    if (user) {
+      void loadCompletedAssessments()
+    }
+  }, [user, loadCompletedAssessments])
+
+  // Initialize view based on user and loading state
+  useEffect(() => {
+    if (!loading) {
+      if (user) {
+        setCurrentView("dashboard")
+      } else {
+        setCurrentView("login")
+      }
+    }
+  }, [user, loading])
 
   const handleStartAssessment = (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm") => {
     if (type === "visual" || type === "auditory" || type === "olfactory" || type === "tcm") {
@@ -294,7 +300,7 @@ function AppContent() {
     setCurrentView("dashboard")
     setCurrentStep(0)
     setScores([])
-    loadCompletedAssessments()
+    void loadCompletedAssessments()
   }
 
   if (loading) {

@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef, useEffect } from "react"
+import { useEffect, useEffectEvent, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/language-context"
@@ -51,7 +51,7 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
     setIsDragging(hand)
   }
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handleMouseMove = useEffectEvent((e: MouseEvent) => {
     if (!isDragging || !clockRef.current) return
 
     const rect = clockRef.current.getBoundingClientRect()
@@ -67,9 +67,9 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
       const snappedAngle = snapToIncrement(angle, 6) // 6 degrees per minute
       setMinuteAngle(snappedAngle)
     }
-  }
+  })
 
-  const handleTouchMove = (e: TouchEvent) => {
+  const handleTouchMove = useEffectEvent((e: TouchEvent) => {
     if (!isDragging || !clockRef.current) return
 
     const rect = clockRef.current.getBoundingClientRect()
@@ -86,15 +86,15 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
       const snappedAngle = snapToIncrement(angle, 6)
       setMinuteAngle(snappedAngle)
     }
-  }
+  })
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useEffectEvent(() => {
     setIsDragging(null)
-  }
+  })
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = useEffectEvent(() => {
     setIsDragging(null)
-  }
+  })
 
   // Update useEffect to include touch events
   useEffect(() => {
@@ -110,7 +110,7 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
         document.removeEventListener("touchend", handleTouchEnd)
       }
     }
-  }, [isDragging])
+  }, [handleMouseMove, handleMouseUp, handleTouchEnd, handleTouchMove, isDragging])
 
   const getCurrentTime = () => {
     // Convert angles to time
@@ -148,8 +148,6 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
       onComplete(0)
     }
   }
-
-  const currentTime = getCurrentTime()
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
