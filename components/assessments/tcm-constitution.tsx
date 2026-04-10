@@ -683,6 +683,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
   if (phase === "questions") {
     const question = TCM_QUESTIONS[currentQuestion]
     const currentResponse = responses[question.id]
+    const questionText = localizeText(question.text, { zh: question.textZh, yue: question.textZh })
 
     return (
       <Card className="w-full max-w-2xl mx-auto">
@@ -703,10 +704,27 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
           <Progress value={progress} className="h-2" />
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="text-center py-4">
-            <h3 className="text-xl font-medium">
-              {localizeText(question.text, { zh: question.textZh, yue: question.textZh })}
+          <div className="py-4 space-y-4">
+            <h3 className="text-center text-xl font-medium">
+              {questionText}
             </h3>
+
+            <div className="rounded-xl border bg-muted/30 p-4 text-center shadow-sm">
+              <p className="mb-3 text-sm text-muted-foreground">
+                {uiText(
+                  "Audio will read this question aloud. If it does not start automatically, tap the button below.",
+                  "系统会朗读此题目。如果没有自动播放，请点击下方按钮。",
+                  "系統會朗讀呢條問題。如果冇自動播放，請按下面個按鈕。",
+                  "L'audio lira cette question à voix haute. S'il ne démarre pas automatiquement, touchez le bouton ci-dessous.",
+                )}
+              </p>
+              <InstructionAudio
+                text={question.text}
+                textOverrides={{ zh: question.textZh, yue: question.textZh }}
+                autoPlay
+                className="h-11 w-full justify-center text-base sm:w-auto sm:min-w-56"
+              />
+            </div>
           </div>
 
           <RadioGroup

@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
+import { Headphones, Languages, Repeat2, Shapes } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AssessmentInput } from "@/components/ui/assessment-input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Volume2, VolumeX } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
 
@@ -16,7 +16,7 @@ interface LanguageAbstractionProps {
 }
 
 export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionProps) {
-  const { t, language, getSpeechLanguage } = useLanguage()
+  const { t, language, getSpeechLanguage, localizeText } = useLanguage()
   const [phase, setPhase] = useState<"repetition" | "similarity">("repetition")
   const [repetitionAnswer, setRepetitionAnswer] = useState("")
   const [similarityAnswer, setSimilarityAnswer] = useState("")
@@ -137,32 +137,58 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
 
   if (phase === "repetition") {
     return (
-      <Card className="w-full max-w-2xl mx-auto">
-        <CardHeader>
+      <Card className="mx-auto w-full max-w-3xl overflow-hidden border border-fuchsia-100/80 shadow-[0_24px_70px_rgba(217,70,239,0.12)]">
+        <CardHeader className="bg-[radial-gradient(circle_at_top_left,_rgba(232,121,249,0.18),_transparent_32%),linear-gradient(135deg,_rgba(253,244,255,0.98),_rgba(255,255,255,0.98),_rgba(250,245,255,0.96))] pb-6">
+          <div className="mb-3 flex items-center gap-2 text-fuchsia-700">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-fuchsia-100 shadow-sm">
+              <Languages className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fuchsia-600/80">
+                {localizeText("Premium language task", {
+                  zh: "高级语言任务",
+                  yue: "高級語言任務",
+                  fr: "Tâche de langage premium",
+                })}
+              </p>
+              <CardTitle className="text-fuchsia-950">
+                {t("moca.language")} - {t("mmse.repetition")}
+              </CardTitle>
+            </div>
+          </div>
           <CardTitle className="flex items-center justify-between flex-wrap gap-4">
-            <span>
-              {t("moca.language")} - {t("mmse.repetition")}
+            <span className="text-base font-medium text-slate-600">
+              {localizeText("Listen carefully and repeat the sentence as accurately as possible.", {
+                zh: "请认真听，并尽可能准确地复述这句话。",
+                yue: "請留心聽，然後盡量準確噉重複呢句說話。",
+                fr: "Écoutez attentivement et répétez la phrase aussi fidèlement que possible.",
+              })}
             </span>
             <InstructionAudio instructionKey="moca.language.instruction" />
           </CardTitle>
           <p className="text-sm text-muted-foreground">{t("mmse.repetition.instruction")}</p>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="text-center space-y-4">
+        <CardContent className="space-y-6 pt-6">
+          <div className="rounded-[26px] border border-fuchsia-100 bg-[linear-gradient(135deg,rgba(253,244,255,1),rgba(255,255,255,1))] p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-fuchsia-700">
+              <Headphones className="h-4 w-4" />
+              {localizeText("Audio cue", { zh: "音频提示", yue: "音頻提示", fr: "Indice audio" })}
+            </div>
+            <div className="text-center space-y-4">
             <Button
               onClick={playAudio}
               disabled={isPlaying}
-              className="w-full max-w-xs touch-manipulation min-h-[44px] bg-transparent"
+              className="w-full max-w-xs touch-manipulation min-h-[48px] rounded-2xl bg-white"
               variant="outline"
             >
               {isPlaying ? (
                 <>
-                  <VolumeX className="w-4 h-4 mr-2" />
+                  <Repeat2 className="w-4 h-4 mr-2" />
                   {t("audio.playing")}
                 </>
               ) : (
                 <>
-                  <Volume2 className="w-4 h-4 mr-2" />
+                  <Headphones className="w-4 h-4 mr-2" />
                   {t("audio.play")}
                 </>
               )}
@@ -172,9 +198,10 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
               <p className="text-sm text-green-600 dark:text-green-400">✓ {t("audio.played_success")}</p>
             )}
           </div>
+          </div>
 
-          <div className="space-y-4">
-            <Label htmlFor="repetition" className="text-base font-medium">
+          <div className="space-y-4 rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
+            <Label htmlFor="repetition" className="text-base font-medium text-slate-900">
               {t("question.type_sentence")}
             </Label>
             <AssessmentInput
@@ -182,9 +209,19 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
               value={repetitionAnswer}
               onChange={(e) => setRepetitionAnswer(e.target.value)}
               placeholder=""
-              className="w-full text-base min-h-[44px] touch-manipulation"
+              className="min-h-[48px] w-full text-base touch-manipulation"
               disabled={!hasPlayedAudio}
             />
+            <div className="rounded-2xl border border-fuchsia-100 bg-fuchsia-50/80 p-4 text-sm text-fuchsia-900">
+              {localizeText(
+                "The answer field unlocks after audio playback so the spoken prompt is heard first.",
+                {
+                  zh: "音频播放后输入框才会启用，以确保先听到语音提示。",
+                  yue: "音頻播放之後輸入欄先會啟用，確保先聽到語音提示。",
+                  fr: "Le champ de réponse s’active après la lecture audio afin que l’instruction soit d’abord entendue.",
+                },
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row justify-center gap-4">
@@ -209,40 +246,70 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
   }
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
+    <Card className="mx-auto w-full max-w-3xl overflow-hidden border border-violet-100/80 shadow-[0_24px_70px_rgba(139,92,246,0.12)]">
+      <CardHeader className="bg-[radial-gradient(circle_at_top_left,_rgba(167,139,250,0.18),_transparent_32%),linear-gradient(135deg,_rgba(245,243,255,0.98),_rgba(255,255,255,0.98),_rgba(243,232,255,0.96))] pb-6">
+        <div className="mb-3 flex items-center gap-2 text-violet-700">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-100 shadow-sm">
+            <Shapes className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-600/80">
+              {localizeText("Abstraction step", {
+                zh: "抽象理解步骤",
+                yue: "抽象理解步驟",
+                fr: "Étape d’abstraction",
+              })}
+            </p>
+            <CardTitle className="text-violet-950">
+              {t("moca.language")} - {t("question.similarity")}
+            </CardTitle>
+          </div>
+        </div>
         <CardTitle className="flex items-center justify-between flex-wrap gap-4">
-          <span>
-            {t("moca.language")} - {t("question.similarity")}
+          <span className="text-base font-medium text-slate-600">
+            {localizeText("Choose the option that best matches the relationship in the prompt.", {
+              zh: "请选择最符合题目关系的一项。",
+              yue: "請揀最符合題目關係嘅選項。",
+              fr: "Choisissez l’option qui correspond le mieux à la relation demandée.",
+            })}
           </span>
           <InstructionAudio instructionKey="question.similarity" />
         </CardTitle>
-        <p className="text-sm text-muted-foreground">{t("mmse.attention.instruction")}</p>
+        <p className="text-sm text-muted-foreground">
+          {localizeText(
+            "This second step checks verbal abstraction after the repetition task.",
+            {
+              zh: "这一部分在复述任务后评估语言抽象能力。",
+              yue: "呢一部分會喺重複任務之後評估語言抽象能力。",
+              fr: "Cette seconde étape évalue l’abstraction verbale après la tâche de répétition.",
+            },
+          )}
+        </p>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">{t("question.similarity")}</h3>
+      <CardContent className="space-y-6 pt-6">
+        <div className="space-y-4 rounded-[26px] border border-violet-100 bg-white p-5 shadow-sm">
+          <h3 className="text-lg font-medium text-slate-900">{t("question.similarity")}</h3>
 
           <RadioGroup value={similarityAnswer} onValueChange={setSimilarityAnswer} className="space-y-3">
-            <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent/50 touch-manipulation min-h-[44px]">
+            <div className="flex min-h-[48px] items-center space-x-3 rounded-2xl border border-violet-100 p-4 hover:bg-violet-50/60 touch-manipulation">
               <RadioGroupItem value="A" id="option-a" className="touch-manipulation" />
               <Label htmlFor="option-a" className="text-base cursor-pointer flex-1">
                 (A) {t("common.walk")}
               </Label>
             </div>
-            <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent/50 touch-manipulation min-h-[44px]">
+            <div className="flex min-h-[48px] items-center space-x-3 rounded-2xl border border-violet-100 p-4 hover:bg-violet-50/60 touch-manipulation">
               <RadioGroupItem value="B" id="option-b" className="touch-manipulation" />
               <Label htmlFor="option-b" className="text-base cursor-pointer flex-1">
                 (B) {t("common.run")}
               </Label>
             </div>
-            <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent/50 touch-manipulation min-h-[44px]">
+            <div className="flex min-h-[48px] items-center space-x-3 rounded-2xl border border-violet-100 p-4 hover:bg-violet-50/60 touch-manipulation">
               <RadioGroupItem value="C" id="option-c" className="touch-manipulation" />
               <Label htmlFor="option-c" className="text-base cursor-pointer flex-1">
                 (C) {t("common.wheel")}
               </Label>
             </div>
-            <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent/50 touch-manipulation min-h-[44px]">
+            <div className="flex min-h-[48px] items-center space-x-3 rounded-2xl border border-violet-100 p-4 hover:bg-violet-50/60 touch-manipulation">
               <RadioGroupItem value="D" id="option-d" className="touch-manipulation" />
               <Label htmlFor="option-d" className="text-base cursor-pointer flex-1">
                 (D) {t("common.jump")}

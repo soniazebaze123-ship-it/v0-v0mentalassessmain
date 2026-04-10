@@ -3,6 +3,134 @@
 
 ---
 
+## STATUS UPDATE - April 6, 2026
+
+This handoff now covers two tracks:
+
+1. The original production data-model and clinical persistence upgrade described below.
+2. The current multilingual stabilization work that was completed after the original handoff was written.
+
+The app has already been updated to improve multilingual UI behavior, password auth, Qwen translation integration, and hearing-screen localization. The remaining work is not a rebuild. It is a focused stabilization pass.
+
+### What Was Fixed Recently
+- Added a shared Qwen translation helper and a translation health endpoint at `/api/translate/health`.
+- Fixed registration/login for legacy phone-number users who existed without `password_hash`.
+- Added browser-friendly login and registration autofill behavior.
+- Expanded translation coverage for MMSE, MoCA, TCM, visual screening, multimodal landing/status screens, and hearing screening.
+- Updated spoken hearing digits to use language-aware words and the selected voice when available.
+
+### Verified Production State
+- Live app URL: `https://v0-v0mentalassessmain.vercel.app`
+- Production is reachable.
+- `/api/translate/health` is deployed in production.
+- Current production response still reports Qwen as not configured:
+
+```json
+{
+   "ok": false,
+   "provider": "qwen",
+   "configured": false,
+   "apiKeySource": null,
+   "model": "qwen-plus",
+   "baseUrl": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+}
+```
+
+This means runtime translation fallback is still disabled in production until the Vercel environment variables are correctly present on the deployed project.
+
+### Highest-Priority Remaining Issues
+
+#### 1. Multimodal components still have major hardcoded English coverage
+Top files to refactor:
+- `components/multimodal/multimodal-dashboard.tsx`
+- `components/multimodal/multimodal-report-card.tsx`
+- `components/multimodal/multimodal-clinical-guidance.tsx`
+- `components/multimodal/eeg-erp-panel.tsx`
+- `components/multimodal/sensory-intelligence-panel.tsx`
+- `components/multimodal/blood-biomarker-panel.tsx`
+
+These components currently contain visible English-only patient or clinician-facing labels such as:
+- `Saving...`
+- `Multimodal Cognitive Report`
+- `Clinical Interpretation & Guidance`
+- `Blood Biomarkers`
+- `Sensory Intelligence`
+
+#### 2. Some components still use a two-language shortcut that breaks Cantonese and French
+Pattern to remove:
+
+```ts
+language === "zh" ? chineseText : localizeText(englishText)
+```
+
+Known files where this still appears:
+- `components/assessments/tcm-constitution.tsx`
+- `components/assessments/memory-task.tsx`
+
+This pattern works only for Chinese vs English and leaves Cantonese/French users dependent on fallback behavior.
+
+#### 3. Browser speech is still not reliable enough to be the only multilingual audio strategy
+Current behavior is improved, but browser voices remain device-dependent. If no matching local voice exists, spoken output may still degrade or become unavailable.
+
+### Immediate Developer Checklist
+- Fix Vercel production env so `/api/translate/health` returns `configured: true`.
+- Add explicit multimodal translation keys in `contexts/language-context.tsx` for `en`, `zh`, `yue`, and `fr`.
+- Refactor all multimodal panels to use `useLanguage()` and `t()` instead of raw English strings.
+- Remove all `language === "zh"` shortcuts from patient-facing flows.
+- Run a repo-wide audit for hardcoded English in `app/`, `components/`, and any UI-facing `lib/` utilities.
+- Add manual QA coverage for all four languages across text and speech.
+
+### Recommended Architecture Going Forward
+
+#### Text localization
+- Use explicit dictionary keys for all core assessment copy, labels, prompts, validation messages, and risk text.
+- Treat runtime AI translation as a temporary fallback only for low-risk text.
+- Do not rely on runtime translation for clinical instructions, scoring text, consent text, or patient guidance.
+
+#### Speech/audio
+- Keep browser speech synthesis only as a non-guaranteed fallback.
+- For production multilingual assessment instructions, move to one of these two stable approaches:
+   - pre-recorded language-specific audio assets for fixed instructions
+   - server-side TTS generation with cached audio files per language and prompt key
+- Clinical instruction audio should be deterministic and QA-approved, not generated ad hoc in-browser.
+
+#### AI usage
+- Yes, this can still become an AI app.
+- The correct architecture is to keep AI outside the scoring truth path.
+- Use AI for:
+   - translation fallback for non-critical content
+   - narrative report drafting
+   - summarizing multimodal findings for clinicians
+   - anomaly detection suggestions
+   - clinical decision support draft text that is reviewed before use
+- Do not use AI as the sole source of truth for:
+   - MMSE/MoCA score calculation
+   - risk thresholds
+   - patient safety instructions
+   - multilingual consent or required clinical instructions
+
+### Recommended Next Sprint
+
+#### Sprint A: Stabilize multilingual UX
+- Production Qwen env verification
+- Multimodal i18n refactor
+- Remove remaining two-language shortcuts
+- Full four-language manual QA pass
+
+#### Sprint B: Make speech production-safe
+- Inventory every spoken instruction
+- Decide between recorded audio vs server TTS
+- Add cached audio lookup by language + instruction key
+- Fall back to text-only if audio is unavailable
+
+#### Sprint C: Add AI in the right layer
+- Keep deterministic scoring and storage
+- Add AI-generated summaries after results are saved
+- Log model version and prompt version for traceability
+- Keep a human-review path for clinical-facing narrative output
+
+---
+
 ## 📌 YOU HAVE RECEIVED 6 IMPLEMENTATION FILES
 
 ### 1. **scripts/05-upgrade-schema-phase1.sql** ← RUN THIS FIRST

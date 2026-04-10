@@ -20,9 +20,10 @@ import {
 } from "@/lib/auditory-screening-utils"
 import { Headphones, Volume2, VolumeX, AlertCircle, CheckCircle2, Mic } from "lucide-react"
 import { AudiogramChart } from "@/components/audiogram-chart"
-import { TestProgress } from "@/components/ui/test-progress"
-import { ScoreGauge, getScoreRiskLevel } from "@/components/ui/score-gauge"
-import { RiskBadge } from "@/components/ui/risk-badge"
+
+type WindowWithWebkitAudioContext = Window & {
+  webkitAudioContext?: typeof AudioContext
+}
 
 interface AuditoryScreeningProps {
   onComplete: (score: number) => void
@@ -57,9 +58,14 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
   const audioContextRef = useRef<AudioContext | null>(null)
   const speechSettings = getSpeechSettings(language)
   const preferredVoice = getBestVoice(language)
+  const premiumShell =
+    "mx-auto w-full max-w-4xl overflow-hidden border border-white/70 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.14),_transparent_28%),linear-gradient(135deg,_rgba(255,255,255,0.97),_rgba(248,250,252,0.98),_rgba(239,246,255,0.94))] shadow-[0_28px_90px_rgba(15,23,42,0.10)]"
+  const premiumHeader = "border-b border-white/70 bg-white/85 pb-6"
+  const primaryButton =
+    "h-12 rounded-full bg-gradient-to-r from-sky-600 via-blue-500 to-cyan-500 px-6 text-white shadow-lg shadow-sky-500/20 hover:from-sky-700 hover:via-blue-600 hover:to-cyan-600"
 
   useEffect(() => {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+    const AudioContextClass = window.AudioContext || (window as WindowWithWebkitAudioContext).webkitAudioContext
     if (AudioContextClass) {
       audioContextRef.current = new AudioContextClass()
     }
@@ -239,23 +245,24 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
   // Setup Phase
   if (phase === "setup") {
     return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader>
+      <Card className={premiumShell}>
+        <CardHeader className={premiumHeader}>
           <CardTitle className="flex items-center gap-2">
             <Headphones className="h-6 w-6" />
             {t("sensory.auditory.title")}
+            {enhanced && <Badge className="rounded-full bg-sky-600 text-white">{uiText("Enhanced", "增强模式")}</Badge>}
           </CardTitle>
           <p className="text-sm text-muted-foreground">{t("sensory.auditory.description")}</p>
           <InstructionAudio instructionKey="sensory.auditory.instruction" className="mt-2" />
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 bg-white/75 p-6 sm:p-8">
           {/* Headphone Recommendation */}
-          <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
+          <div className="rounded-[28px] border border-amber-200 bg-amber-50/80 p-5 shadow-sm">
             <div className="flex items-start gap-3">
               <Headphones className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-amber-800 dark:text-amber-200">{uiText("Headphones Strongly Recommended", "强烈建议使用耳机")}</p>
-                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                <p className="font-semibold text-amber-800">{uiText("Headphones Strongly Recommended", "强烈建议使用耳机")}</p>
+                <p className="mt-1 text-sm text-amber-700">
                   {uiText(
                     "For accurate hearing assessment results, please use headphones or earbuds. This eliminates background interference and ensures precise measurement.",
                     "为了获得更准确的听力评估结果，请使用耳机或耳塞。这可以减少背景干扰并提高测量准确性。",
@@ -266,12 +273,12 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
           </div>
 
           {/* Quiet Environment Reminder */}
-          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+          <div className="rounded-[28px] border border-sky-200 bg-sky-50/80 p-5 shadow-sm">
             <div className="flex items-start gap-3">
               <VolumeX className="h-6 w-6 text-blue-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-blue-800 dark:text-blue-200">{uiText("Find a Quiet Environment", "请寻找安静环境")}</p>
-                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                <p className="font-semibold text-blue-800">{uiText("Find a Quiet Environment", "请寻找安静环境")}</p>
+                <p className="mt-1 text-sm text-blue-700">
                   {uiText(
                     "Move to a quiet room away from traffic, conversations, or appliances. Background noise can significantly affect your test results.",
                     "请移动到远离交通、交谈或电器噪音的安静房间。背景噪音会显著影响测试结果。",
@@ -282,8 +289,8 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
           </div>
 
           {/* Test Requirements */}
-          <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-lg space-y-4">
-            <h3 className="font-semibold">{uiText("Test Checklist", "测试清单")}</h3>
+          <div className="rounded-[28px] border border-slate-200/70 bg-white/90 p-6 shadow-sm">
+            <h3 className="font-semibold text-slate-900">{uiText("Test Checklist", "测试清单")}</h3>
             <ul className="space-y-3 text-sm">
               <li className="flex items-center gap-2">
                 {hasHeadphones ? (
@@ -305,7 +312,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
                   {uiText("Speech synthesis", "语音合成")}: {speechSupported ? uiText("Supported", "支持") : uiText("Not supported", "不支持")}
                 </span>
               </li>
-              <li className="flex items-start gap-2 pt-2 border-t">
+              <li className="flex items-start gap-2 border-t pt-2">
                 <Volume2 className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-medium">{uiText("How this test works:", "测试方式：")}</p>
@@ -320,11 +327,11 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
             </ul>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-4">
-            <Button variant="outline" onClick={handleSkip} className="w-full sm:w-auto bg-transparent">
+          <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center sm:justify-center">
+            <Button variant="outline" onClick={handleSkip} className="h-12 w-full rounded-full border-slate-300 bg-white text-slate-700 hover:bg-slate-50 sm:w-auto">
               {uiText("Skip Test", "跳过测试")}
             </Button>
-            <Button onClick={() => { setPhase("noise-check"); handleNoiseCheck() }} className="w-full sm:w-auto">
+            <Button onClick={() => { setPhase("noise-check"); void handleNoiseCheck() }} className={primaryButton + " w-full sm:w-auto"}>
               {uiText("Continue to Noise Check", "继续进行噪音检测")}
             </Button>
           </div>
@@ -336,16 +343,16 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
   // Noise Check Phase
   if (phase === "noise-check") {
     return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader>
+      <Card className={premiumShell}>
+        <CardHeader className={premiumHeader}>
           <CardTitle className="flex items-center gap-2">
             <Mic className="h-6 w-6" />
             {uiText("Checking Ambient Noise", "正在检测环境噪音")}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 bg-white/75 p-6 sm:p-8">
           {noiseCheckResult ? (
-            <div className={`p-6 rounded-lg ${noiseCheckResult.acceptable ? "bg-green-50" : "bg-red-50"}`}>
+            <div className={`rounded-[28px] border p-6 shadow-sm ${noiseCheckResult.acceptable ? "border-emerald-200 bg-emerald-50/80" : "border-rose-200 bg-rose-50/80"}`}>
               <div className="flex items-center gap-3 mb-4">
                 {noiseCheckResult.acceptable ? (
                   <CheckCircle2 className="h-8 w-8 text-green-600" />
@@ -354,7 +361,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
                 )}
                 <div>
                   <p className="font-semibold">{uiText("Ambient Noise Level", "环境噪音等级")}: {noiseCheckResult.noiseLevel} dBA</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-slate-600">
                     {noiseCheckResult.acceptable
                       ? uiText("Ambient noise level acceptable for testing", "环境噪音水平适合测试")
                       : uiText(`Ambient noise too high (${noiseCheckResult.noiseLevel} dBA). Please find a quieter location.`, `环境噪音过高（${noiseCheckResult.noiseLevel} dBA），请寻找更安静的位置。`)}
@@ -363,17 +370,17 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
               </div>
               {!noiseCheckResult.acceptable && (
                 <div className="flex gap-3">
-                  <Button onClick={handleNoiseCheck} variant="outline" className="bg-transparent">
+                  <Button onClick={() => void handleNoiseCheck()} variant="outline" className="rounded-full bg-white">
                     {uiText("Check Again", "重新检测")}
                   </Button>
-                  <Button onClick={() => setPhase("calibration")} variant="secondary">
+                  <Button onClick={() => setPhase("calibration")} variant="secondary" className="rounded-full">
                     {uiText("Continue Anyway", "仍然继续")}
                   </Button>
                 </div>
               )}
             </div>
           ) : (
-            <div className="text-center py-12">
+            <div className="rounded-[28px] border border-sky-100 bg-sky-50/70 py-12 text-center shadow-sm">
               <Mic className="h-16 w-16 mx-auto mb-4 animate-pulse text-blue-600" />
               <p>{uiText("Measuring ambient noise level...", "正在测量环境噪音水平...")}</p>
               <p className="text-sm text-muted-foreground mt-2">{uiText("Please remain quiet", "请保持安静")}</p>
@@ -387,17 +394,17 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
   // Calibration Phase
   if (phase === "calibration") {
     return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader>
+      <Card className={premiumShell}>
+        <CardHeader className={premiumHeader}>
           <CardTitle className="flex items-center gap-2">
             <Volume2 className="h-6 w-6" />
             {uiText("Volume Calibration", "音量校准")}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="bg-yellow-50 dark:bg-yellow-950 p-6 rounded-lg space-y-2">
+        <CardContent className="space-y-6 bg-white/75 p-6 sm:p-8">
+          <div className="rounded-[28px] border border-amber-200 bg-amber-50/80 p-6 shadow-sm">
             <p className="font-semibold">{uiText("Adjust your device volume", "请调整设备音量")}</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-600">
               {uiText(
                 'Click "Play Test Sound" below. You should hear "1, 2, 3" spoken clearly. Adjust your device volume until you can hear comfortably.',
                 '点击下方“播放测试声音”。您应该能清楚听到“一、二、三”。请调整设备音量直到听感舒适。',
@@ -405,7 +412,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="rounded-[28px] border border-slate-200/70 bg-white/90 p-6 shadow-sm">
             <div className="flex items-center gap-4">
               <VolumeX className="h-5 w-5 shrink-0" />
               <input
@@ -413,7 +420,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
                 min="30"
                 max="100"
                 value={volumeLevel}
-                onChange={(e) => setVolumeLevel(Number.parseInt(e.target.value))}
+                onChange={(e) => setVolumeLevel(Number.parseInt(e.target.value, 10))}
                 className="flex-1"
               />
               <Volume2 className="h-5 w-5 shrink-0" />
@@ -424,7 +431,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
               onClick={handlePlayCalibrationTone}
               disabled={isPlaying}
               variant="outline"
-              className="w-full bg-transparent"
+              className="mt-4 h-12 w-full rounded-full bg-white"
             >
               <Volume2 className="h-4 w-4 mr-2" />
               {isPlaying ? uiText("Playing...", "播放中...") : uiText("Play Test Sound", "播放测试声音")}
@@ -432,7 +439,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
           </div>
 
           <div className="flex justify-center pt-4">
-            <Button onClick={handleStartTest} size="lg">
+            <Button onClick={handleStartTest} size="lg" className={primaryButton}>
               {t("sensory.auditory.start_test")}
             </Button>
           </div>
@@ -447,8 +454,8 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
     const correctSoFar = results.filter((r) => r.correct).length
 
     return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader>
+      <Card className={premiumShell}>
+        <CardHeader className={premiumHeader}>
           <CardTitle className="flex items-center justify-between">
             <span>{t("sensory.auditory.trial")} {currentTrialIndex + 1} / {trials.length}</span>
             <div className="flex items-center gap-2">
@@ -457,8 +464,8 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-8">
-          <div className="flex flex-col items-center justify-center min-h-[180px] space-y-6">
+        <CardContent className="space-y-8 bg-white/75 p-6 sm:p-8">
+          <div className="flex min-h-[220px] flex-col items-center justify-center space-y-6 rounded-[28px] border border-slate-200/70 bg-white/90 p-6 shadow-sm">
             {isPlaying ? (
               <div className="flex flex-col items-center gap-3">
                 <div className="relative">
@@ -485,7 +492,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
             </Button>
           </div>
 
-          <div className="space-y-4">
+          <div className="rounded-[28px] border border-slate-200/70 bg-white/90 p-6 shadow-sm">
             <label className="text-sm font-medium block text-center">
               {uiText("Type the 3 digits you heard", "请输入你听到的 3 个数字")}
             </label>
@@ -503,7 +510,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
             <Button
               onClick={handleSubmitResponse}
               disabled={userResponse.length !== 3 || isPlaying}
-              className="w-full"
+              className={primaryButton + " mt-4 w-full"}
               size="lg"
             >
               {uiText("Submit Answer", "提交答案")}
@@ -511,10 +518,10 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
           </div>
 
           {/* Progress bar */}
-          <div className="space-y-1">
-            <div className="w-full bg-muted rounded-full h-2">
+          <div className="space-y-1 rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
+            <div className="h-2 w-full rounded-full bg-muted">
               <div
-                className="bg-primary rounded-full h-2 transition-all"
+                className="h-2 rounded-full bg-sky-500 transition-all"
                 style={{ width: `${(results.length / trials.length) * 100}%` }}
               ></div>
             </div>
@@ -531,11 +538,11 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
   const correctCount = results.filter((r) => r.correct).length
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
+    <Card className={premiumShell}>
+      <CardHeader className={premiumHeader}>
         <CardTitle>{t("sensory.auditory.complete_title")}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 bg-white/75 p-6 sm:p-8">
         <div className="text-center space-y-4">
           <CheckCircle2 className="h-16 w-16 mx-auto text-green-600" />
           <p className="text-lg font-semibold">{t("sensory.auditory.complete_message")}</p>
@@ -543,12 +550,12 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
 
         {/* Key metrics */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-muted px-3 py-3 rounded-lg text-center">
+          <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
             <p className="text-xs text-muted-foreground">SRT</p>
             <p className="text-xl font-bold">{audiogramData?.srt ?? 0} dB</p>
             <p className="text-xs text-muted-foreground">SNR</p>
           </div>
-          <div className="bg-muted px-3 py-3 rounded-lg text-center">
+          <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
             <p className="text-xs text-muted-foreground">{uiText("Classification", "分类")}</p>
             <p className={`text-lg font-bold capitalize ${
               audiogramData?.classification === "normal" ? "text-green-600" :
@@ -563,12 +570,12 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
                     : "N/A"}
             </p>
           </div>
-          <div className="bg-muted px-3 py-3 rounded-lg text-center">
+          <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
             <p className="text-xs text-muted-foreground">{uiText("Correct", "正确")}</p>
             <p className="text-xl font-bold">{correctCount}/{results.length}</p>
             <p className="text-xs text-muted-foreground">{uiText("responses", "题")}</p>
           </div>
-          <div className="bg-muted px-3 py-3 rounded-lg text-center">
+          <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
             <p className="text-xs text-muted-foreground">{uiText("Ambient Noise", "环境噪音")}</p>
             <p className="text-xl font-bold">{noiseCheckResult?.noiseLevel ?? "N/A"}</p>
             <p className="text-xs text-muted-foreground">dBA</p>
@@ -576,7 +583,7 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
         </div>
 
         {/* Score bar */}
-        <div className="space-y-1">
+        <div className="space-y-1 rounded-[28px] border border-slate-200/70 bg-white/90 p-5 shadow-sm">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">{uiText("Hearing Score", "听力评分")}</span>
             <span className="font-semibold">{finalScore}%</span>
@@ -593,13 +600,13 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
 
         {/* Audiogram chart */}
         {audiogramData && (
-          <div className="mt-4">
+          <div className="mt-4 rounded-[28px] border border-slate-200/70 bg-white/90 p-4 shadow-sm">
             <AudiogramChart data={audiogramData} />
           </div>
         )}
 
         <div className="flex justify-center pt-4">
-          <Button onClick={() => onComplete(finalScore)} size="lg">
+          <Button onClick={() => onComplete(finalScore)} size="lg" className={primaryButton}>
             {t("common.continue")}
           </Button>
         </div>

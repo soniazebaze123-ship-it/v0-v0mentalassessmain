@@ -1,13 +1,11 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 import Image from "next/image"
-import { useLanguage } from "@/contexts/language-context"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
+import { useLanguage } from "@/contexts/language-context"
 
 interface CopyingDesignProps {
   onComplete: (score: number) => void
@@ -15,12 +13,112 @@ interface CopyingDesignProps {
 }
 
 export function CopyingDesign({ onComplete, onSkip }: CopyingDesignProps) {
-  const { t } = useLanguage()
-  const [answer, setAnswer] = useState("")
+  const { t, localizeText } = useLanguage()
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const isDrawingRef = useRef(false)
+  const lastPointRef = useRef<{ x: number; y: number } | null>(null)
+  const [hasDrawn, setHasDrawn] = useState(false)
 
-  const checkAnswer = () => {
-    const score = answer === "B" ? 3 : 0
-    onComplete(score)
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) {
+      return
+    }
+
+    const context = canvas.getContext("2d")
+    if (!context) {
+      return
+    }
+
+    context.lineCap = "round"
+    context.lineJoin = "round"
+    context.lineWidth = 3
+    context.strokeStyle = "#111827"
+  }, [])
+
+  const getPoint = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) {
+      return null
+    }
+
+    const rect = canvas.getBoundingClientRect()
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    }
+  }
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    const point = getPoint(event)
+
+    if (!canvas || !point) {
+      return
+    }
+
+    const context = canvas.getContext("2d")
+    if (!context) {
+      return
+    }
+
+    canvas.setPointerCapture(event.pointerId)
+    isDrawingRef.current = true
+    lastPointRef.current = point
+    context.beginPath()
+    context.moveTo(point.x, point.y)
+    context.lineTo(point.x, point.y)
+    context.stroke()
+    setHasDrawn(true)
+  }
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawingRef.current) {
+      return
+    }
+
+    const canvas = canvasRef.current
+    const point = getPoint(event)
+
+    if (!canvas || !point) {
+      return
+    }
+
+    const context = canvas.getContext("2d")
+    if (!context) {
+      return
+    }
+
+    const lastPoint = lastPointRef.current ?? point
+    context.beginPath()
+    context.moveTo(lastPoint.x, lastPoint.y)
+    context.lineTo(point.x, point.y)
+    context.stroke()
+    lastPointRef.current = point
+  }
+
+  const stopDrawing = () => {
+    isDrawingRef.current = false
+    lastPointRef.current = null
+  }
+
+  const clearDrawing = () => {
+    const canvas = canvasRef.current
+    if (!canvas) {
+      return
+    }
+
+    const context = canvas.getContext("2d")
+    if (!context) {
+      return
+    }
+
+    context.clearRect(0, 0, canvas.width, canvas.height)
+    setHasDrawn(false)
+  }
+
+  const handleSubmit = () => {
+    onComplete(hasDrawn ? 1 : 0)
   }
 
   const handleSkip = () => {
@@ -39,40 +137,44 @@ export function CopyingDesign({ onComplete, onSkip }: CopyingDesignProps) {
         <InstructionAudio instructionKey="mmse.copying.instruction" className="mt-2" />
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex justify-center">
-          <div className="relative w-64 h-64 bg-gray-100 rounded-lg overflow-hidden">
-            <Image src="/images/pentagon.png" alt="Pentagon shape" fill className="object-contain" />
-          </div>
-        </div>
-
         <div className="space-y-4">
-          <h3 className="text-lg font-medium text-center">{t("question.angles")}</h3>
+          <div className="flex justify-center">
+            <div className="relative h-64 w-64 overflow-hidden rounded-lg border bg-gray-100">
+              <Image src="/images/pentagon.png" alt="Reference shape" fill className="object-contain" />
+            </div>
+          </div>
 
-          <RadioGroup value={answer} onValueChange={setAnswer}>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="A" id="option-a" />
-              <Label htmlFor="option-a">(A) 5</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="B" id="option-b" />
-              <Label htmlFor="option-b">(B) 6</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="C" id="option-c" />
-              <Label htmlFor="option-c">(C) 7</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="D" id="option-d" />
-              <Label htmlFor="option-d">(D) 8</Label>
-            </div>
-          </RadioGroup>
+          <p className="text-center text-sm text-muted-foreground">
+            {localizeText("Draw the same shape in the box below.", {
+              zh: "请在下方方框内画出相同的图形。",
+              yue: "請喺下面方框內畫出相同嘅圖形。",
+              fr: "Dessinez la même figure dans la zone ci-dessous.",
+            })}
+          </p>
+
+          <div className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-3 shadow-sm">
+            <canvas
+              ref={canvasRef}
+              width={720}
+              height={360}
+              className="h-64 w-full touch-none rounded-lg bg-slate-50"
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={stopDrawing}
+              onPointerCancel={stopDrawing}
+              onPointerLeave={stopDrawing}
+            />
+          </div>
         </div>
 
         <div className="flex justify-center space-x-4">
           <Button variant="outline" onClick={handleSkip}>
             {t("common.skip_task")}
           </Button>
-          <Button onClick={checkAnswer} disabled={answer === ""} className="w-full max-w-xs">
+          <Button variant="outline" onClick={clearDrawing}>
+            {t("common.reset")}
+          </Button>
+          <Button onClick={handleSubmit} disabled={!hasDrawn} className="w-full max-w-xs">
             {t("common.submit")}
           </Button>
         </div>

@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/language-context"
@@ -23,17 +24,6 @@ const ANIMAL_POOL = [
   { image: "/images/camel.png", labelKey: "common.camel" },
 ]
 
-function shuffleArray<T>(items: T[]) {
-  const next = [...items]
-
-  for (let index = next.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1))
-    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
-  }
-
-  return next
-}
-
 function buildAnimalQuestions(): AnimalQuestion[] {
   return ANIMAL_POOL.map((animal, index) => {
     const distractor = ANIMAL_POOL[(index + 1) % ANIMAL_POOL.length]
@@ -41,21 +31,15 @@ function buildAnimalQuestions(): AnimalQuestion[] {
     return {
       image: animal.image,
       answerKey: animal.labelKey,
-      optionKeys: shuffleArray([animal.labelKey, distractor.labelKey]),
+      optionKeys: index % 2 === 0 ? [animal.labelKey, distractor.labelKey] : [distractor.labelKey, animal.labelKey],
     }
   })
 }
 
 export function AnimalNaming({ onComplete, onSkip }: AnimalNamingProps) {
   const { t } = useLanguage()
-  const [questions, setQuestions] = useState<AnimalQuestion[]>([])
-  const [selectedAnswers, setSelectedAnswers] = useState<string[]>([])
-
-  useEffect(() => {
-    const initialQuestions = buildAnimalQuestions()
-    setQuestions(initialQuestions)
-    setSelectedAnswers(Array(initialQuestions.length).fill(""))
-  }, [])
+  const [questions] = useState<AnimalQuestion[]>(buildAnimalQuestions)
+  const [selectedAnswers, setSelectedAnswers] = useState<string[]>(Array(buildAnimalQuestions().length).fill(""))
 
   const handleAnswerSelect = (index: number, optionKey: string) => {
     setSelectedAnswers((previous) => previous.map((value, valueIndex) => (valueIndex === index ? optionKey : value)))
@@ -89,8 +73,8 @@ export function AnimalNaming({ onComplete, onSkip }: AnimalNamingProps) {
         <div className="grid md:grid-cols-3 gap-6">
           {questions.map((question, index) => (
             <div key={question.image} className="space-y-4 rounded-xl border bg-background p-4">
-              <div className="h-48 w-full overflow-hidden rounded-lg bg-gray-100">
-                <img src={question.image} alt={t(question.answerKey)} className="h-full w-full object-contain bg-white p-2" />
+              <div className="relative h-48 w-full overflow-hidden rounded-lg bg-gray-100">
+                <Image src={question.image} alt={t(question.answerKey)} fill className="object-contain bg-white p-2" priority />
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">{t("question.tap_correct_name")}</p>

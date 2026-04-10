@@ -233,12 +233,12 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
           <div
             className={`absolute bg-gray-800 rounded-full cursor-grab touch-target ${
               isDragging === "hour" ? "bg-blue-600" : ""
-            } ${isMobile ? "w-1" : "w-2"}`}
+            } ${isMobile ? "w-0.5" : "w-2"}`}
             style={{
-              height: isMobile ? "58px" : "80px",
-              left: isMobile ? "calc(50% - 2px)" : "calc(50% - 4px)",
-              top: isMobile ? "calc(50% - 58px)" : "calc(50% - 80px)",
-              transformOrigin: isMobile ? "50% 58px" : "50% 80px",
+              height: isMobile ? "48px" : "80px",
+              left: isMobile ? "calc(50% - 1px)" : "calc(50% - 4px)",
+              top: isMobile ? "calc(50% - 48px)" : "calc(50% - 80px)",
+              transformOrigin: isMobile ? "50% 48px" : "50% 80px",
               transform: `rotate(${hourAngle}deg)`,
             }}
             onMouseDown={handleMouseDown("hour")}
@@ -251,10 +251,10 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
               isDragging === "minute" ? "bg-blue-600" : ""
             } ${isMobile ? "w-0.5" : "w-1"}`}
             style={{
-              height: isMobile ? "78px" : "110px",
+              height: isMobile ? "66px" : "110px",
               left: isMobile ? "calc(50% - 1px)" : "calc(50% - 2px)",
-              top: isMobile ? "calc(50% - 78px)" : "calc(50% - 110px)",
-              transformOrigin: isMobile ? "50% 78px" : "50% 110px",
+              top: isMobile ? "calc(50% - 66px)" : "calc(50% - 110px)",
+              transformOrigin: isMobile ? "50% 66px" : "50% 110px",
               transform: `rotate(${minuteAngle}deg)`,
             }}
             onMouseDown={handleMouseDown("minute")}
@@ -263,10 +263,10 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
 
           {/* Center dot */}
           <div
-            className="absolute w-4 h-4 bg-gray-800 rounded-full"
+            className={`absolute bg-gray-800 rounded-full ${isMobile ? "w-3 h-3" : "w-4 h-4"}`}
             style={{
-              left: "calc(50% - 8px)",
-              top: "calc(50% - 8px)",
+              left: isMobile ? "calc(50% - 6px)" : "calc(50% - 8px)",
+              top: isMobile ? "calc(50% - 6px)" : "calc(50% - 8px)",
             }}
           />
         </div>

@@ -34,7 +34,7 @@ interface TrailMakingTaskProps {
 }
 
 const CIRCLE_DATA = ["1", "A", "2", "B", "3", "C", "4", "D"]
-const CIRCLE_RADIUS = 30
+const TOUCH_TARGET_RADIUS = 42
 const MIN_DISTANCE = 100 // Minimum distance between circle centers
 const PADDING = 50 // Padding from container edges
 
@@ -140,7 +140,9 @@ export function TrailMakingTask({ onComplete, onSkip }: TrailMakingTaskProps) {
 
   const findCircleAtPosition = useCallback(
     (position: Position) => {
-      return circles.find((circle) => distanceBetweenPoints(position, { x: circle.x, y: circle.y }) <= CIRCLE_RADIUS)
+      return circles.find(
+        (circle) => distanceBetweenPoints(position, { x: circle.x, y: circle.y }) <= TOUCH_TARGET_RADIUS,
+      )
     },
     [circles],
   )
@@ -160,48 +162,62 @@ export function TrailMakingTask({ onComplete, onSkip }: TrailMakingTaskProps) {
     [connections],
   )
 
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => {
-      e.preventDefault() // Prevent scrolling and other default behaviors
-      e.stopPropagation()
-
-      if (isConnecting && dragLine && containerRef.current) {
-        const touch = e.touches[0]
-        const newEnd = getRelativeTouchPosition(touch)
-
-        if (!newEnd) {
-          return
-        }
-
-        setDragLine((prev) => (prev ? { ...prev, end: newEnd } : null))
+  const handleDocumentTouchMove = useCallback(
+    (e: TouchEvent) => {
+      if (!isConnecting) {
+        return
       }
+
+      e.preventDefault()
+      const touch = e.touches[0]
+      const newEnd = touch ? getRelativeTouchPosition(touch) : null
+
+      if (!newEnd) {
+        return
+      }
+
+      setDragLine((prev) => (prev ? { ...prev, end: newEnd } : null))
     },
-    [dragLine, getRelativeTouchPosition, isConnecting],
+    [getRelativeTouchPosition, isConnecting],
   )
 
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+  const handleDocumentTouchEnd = useCallback(
+    (e: TouchEvent) => {
+      if (isConnecting && connectingFrom) {
+        const touch = e.changedTouches[0]
+        const releasePosition = touch ? getRelativeTouchPosition(touch) : null
+        const targetCircle = releasePosition ? findCircleAtPosition(releasePosition) : null
 
-    if (isConnecting && connectingFrom) {
-      const touch = e.changedTouches[0]
-      const releasePosition = touch ? getRelativeTouchPosition(touch) : null
-      const targetCircle = releasePosition ? findCircleAtPosition(releasePosition) : null
-
-      if (
-        targetCircle &&
-        connectingFrom !== targetCircle.id &&
-        !hasIncomingConnection(targetCircle.id) &&
-        !connectionExists(connectingFrom, targetCircle.id)
-      ) {
-        setConnections((prev) => [...prev, { from: connectingFrom, to: targetCircle.id }])
+        if (
+          targetCircle &&
+          connectingFrom !== targetCircle.id &&
+          !hasIncomingConnection(targetCircle.id) &&
+          !connectionExists(connectingFrom, targetCircle.id)
+        ) {
+          setConnections((prev) => [...prev, { from: connectingFrom, to: targetCircle.id }])
+        }
       }
+
+      setIsConnecting(false)
+      setConnectingFrom(null)
+      setDragLine(null)
+    },
+    [connectingFrom, connectionExists, findCircleAtPosition, getRelativeTouchPosition, hasIncomingConnection, isConnecting],
+  )
+
+  useEffect(() => {
+    if (!isConnecting) {
+      return
     }
 
-    setIsConnecting(false)
-    setConnectingFrom(null)
-    setDragLine(null)
-  }, [connectingFrom, connectionExists, findCircleAtPosition, getRelativeTouchPosition, hasIncomingConnection, isConnecting])
+    document.addEventListener("touchmove", handleDocumentTouchMove, { passive: false })
+    document.addEventListener("touchend", handleDocumentTouchEnd, { passive: false })
+
+    return () => {
+      document.removeEventListener("touchmove", handleDocumentTouchMove)
+      document.removeEventListener("touchend", handleDocumentTouchEnd)
+    }
+  }, [handleDocumentTouchEnd, handleDocumentTouchMove, isConnecting])
 
   const handleCircleMouseDown = useCallback(
     (circleId: string, position: Position, e: React.MouseEvent) => {
@@ -333,8 +349,6 @@ export function TrailMakingTask({ onComplete, onSkip }: TrailMakingTaskProps) {
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
           style={{
             cursor: isConnecting ? "crosshair" : "default",
             touchAction: "none", // Prevent default touch behaviors

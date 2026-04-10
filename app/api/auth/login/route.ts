@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { getPhoneLookupCandidates } from "@/lib/auth/phone"
 import { verifyPassword } from "@/lib/auth/password"
 
 export async function POST(request: Request) {
@@ -7,6 +8,7 @@ export async function POST(request: Request) {
     const body = await request.json()
     const phoneNumber = typeof body.phoneNumber === "string" ? body.phoneNumber.trim() : ""
     const password = typeof body.password === "string" ? body.password : ""
+    const phoneLookupCandidates = getPhoneLookupCandidates(phoneNumber)
 
     if (phoneNumber.length < 6 || password.length < 8) {
       return NextResponse.json({ error: "Phone number and password are required." }, { status: 400 })
@@ -16,7 +18,7 @@ export async function POST(request: Request) {
     const { data, error } = await supabase
       .from("users")
       .select("id, email, phone_number, name, date_of_birth, gender, password_hash")
-      .eq("phone_number", phoneNumber)
+      .in("phone_number", phoneLookupCandidates)
       .limit(1)
 
     if (error) {

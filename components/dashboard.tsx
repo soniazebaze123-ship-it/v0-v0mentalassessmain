@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { useLanguage } from "@/contexts/language-context"
 import { useUser } from "@/contexts/user-context"
 import { supabase } from "@/lib/supabase"
-import { Brain, Upload, CheckCircle, Clock, LogOut, Eye, Ear, Flower2, TrendingUp, Leaf, Activity } from "lucide-react"
+import { Brain, Upload, CheckCircle, Clock, LogOut, Eye, Ear, Flower2, TrendingUp, Leaf, Activity, Sparkles, ShieldCheck } from "lucide-react"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 
@@ -68,6 +68,9 @@ export function Dashboard({
   const displayId = user?.id || "-"
   const displayPhone = user?.phone_number || "-"
   const uiText = (englishText: string, chineseText: string) => localizeText(englishText, { zh: chineseText })
+  const premiumCardBase =
+    "group relative overflow-hidden rounded-[28px] border border-white/70 bg-white/80 shadow-[0_20px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_28px_90px_rgba(15,23,42,0.12)]"
+  const completedCardSurface = "ring-1 ring-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,0.98),rgba(255,255,255,0.98),rgba(220,252,231,0.92))]"
 
   useEffect(() => {
     if (user) {
@@ -81,14 +84,10 @@ export function Dashboard({
     try {
       console.log("[v0] Dashboard: Loading assessment status for user:", user.id)
 
-      // Load assessment results
       const { data: assessments } = await supabase.from("assessments").select("*").eq("user_id", user.id)
-
       console.log("[v0] Dashboard: Found assessments:", assessments)
 
       const { data: sensoryAssessments } = await supabase.from("sensory_assessments").select("*").eq("user_id", user.id)
-
-      // Load uploaded files
       const { data: files } = await supabase.from("uploaded_files").select("*").eq("user_id", user.id)
 
       const newStatus: AssessmentStatus = {
@@ -236,98 +235,92 @@ export function Dashboard({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-teal-50 to-indigo-100 p-4">
+    <div className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.14),_transparent_24%),linear-gradient(135deg,_#f7fbff_0%,_#eefaf7_45%,_#f4f7ff_100%)] p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-center mb-8 gap-4">
-          <div className="text-center lg:text-left">
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">{t("dashboard.title")}</h1>
-            <div className="mt-2 flex flex-col gap-1 text-xs text-gray-600 lg:text-sm">
-              <p>
-                {t("dashboard.name")}: <span className="font-medium text-gray-800">{displayName}</span>
-              </p>
-              <p>
-                {t("dashboard.id")}: <span className="font-mono text-gray-800">{displayId}</span>
-              </p>
-              <p>
-                {t("dashboard.phone")}: <span className="font-medium text-gray-800">{displayPhone}</span>
-              </p>
+        <div className="mb-8 overflow-hidden rounded-[32px] border border-white/80 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.14),_transparent_24%),linear-gradient(135deg,_rgba(255,255,255,0.94),_rgba(247,250,255,0.96))] shadow-[0_24px_90px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+          <div className="px-6 py-6 md:px-8 md:py-8">
+            <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+              <div className="max-w-3xl">
+                <div className="mb-3 inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-sm">
+                  <Sparkles className="mr-2 h-3.5 w-3.5" />
+                  {uiText("Premium Cognitive Suite", "高级认知评估套件")}
+                </div>
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">{t("dashboard.title")}</h1>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 md:text-base">
+                  {localizeText(
+                    "A clinical-grade screening workspace with guided assessments, multimodal intelligence, and more refined patient interactions.",
+                    {
+                      zh: "一个具备临床质感的筛查工作台，结合引导式评估、多模态智能与更精致的患者交互体验。",
+                      yue: "一個具備臨床質感嘅篩查工作台，結合引導式評估、多模態智能同更精緻嘅病人互動體驗。",
+                      fr: "Un espace de dépistage à l’allure clinique, combinant évaluations guidées, intelligence multimodale et interactions patient plus raffinées.",
+                    },
+                  )}
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[420px]">
+                <div className="rounded-2xl border border-white/80 bg-white/75 p-4 shadow-sm backdrop-blur">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t("dashboard.name")}</p>
+                  <p className="mt-2 text-lg font-semibold text-slate-900">{displayName}</p>
+                </div>
+                <div className="rounded-2xl border border-white/80 bg-white/75 p-4 shadow-sm backdrop-blur sm:col-span-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t("dashboard.id")}</p>
+                  <p className="mt-2 truncate font-mono text-sm text-slate-900 md:text-base">{displayId}</p>
+                  <p className="mt-1 text-sm text-slate-600">{displayPhone}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-4 border-t border-white/70 pt-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant={language === "en" ? "default" : "outline"} size="sm" onClick={() => setLanguage("en")} className={`touch-target rounded-xl ${language === "en" ? "bg-slate-900 text-white hover:bg-slate-800" : "border-white bg-white/80 hover:bg-white"}`}>English</Button>
+                <Button variant={language === "zh" ? "default" : "outline"} size="sm" onClick={() => setLanguage("zh")} className={`touch-target rounded-xl ${language === "zh" ? "bg-slate-900 text-white hover:bg-slate-800" : "border-white bg-white/80 hover:bg-white"}`}>中文</Button>
+                <Button variant={language === "yue" ? "default" : "outline"} size="sm" onClick={() => setLanguage("yue")} className={`touch-target rounded-xl ${language === "yue" ? "bg-slate-900 text-white hover:bg-slate-800" : "border-white bg-white/80 hover:bg-white"}`}>廣東話</Button>
+                <Button variant={language === "fr" ? "default" : "outline"} size="sm" onClick={() => setLanguage("fr")} className={`touch-target rounded-xl ${language === "fr" ? "bg-slate-900 text-white hover:bg-slate-800" : "border-white bg-white/80 hover:bg-white"}`}>Français</Button>
+                <ThemeToggle />
+              </div>
+              <Button variant="outline" onClick={handleLogout} className="touch-target rounded-xl border-red-200 bg-white/80 text-red-700 hover:bg-red-50">
+                <LogOut className="w-4 h-4 mr-2" />
+                {t("common.logout")}
+              </Button>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button
-              variant={language === "en" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setLanguage("en")}
-              className="touch-target"
-            >
-              English
-            </Button>
-            <Button
-              variant={language === "zh" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setLanguage("zh")}
-              className="touch-target"
-            >
-              中文
-            </Button>
-            <Button
-              variant={language === "yue" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setLanguage("yue")}
-              className="touch-target"
-            >
-              廣東話
-            </Button>
-            <Button
-              variant={language === "fr" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setLanguage("fr")}
-              className="touch-target"
-            >
-              Français
-            </Button>
-            <ThemeToggle />
-          </div>
-          <Button
-            variant="outline"
-            onClick={handleLogout}
-            className="touch-target bg-transparent border-red-200 hover:bg-red-50 text-red-700"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            {t("common.logout")}
-          </Button>
         </div>
 
-        {/* Risk Profile Card (if assessments completed) */}
         {hasAnyAssessments && onViewRiskProfile && (
-          <Card className="mb-6 border-2 border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50">
+          <Card className={`mb-7 ${premiumCardBase} border-purple-200/70 bg-[radial-gradient(circle_at_top_right,_rgba(168,85,247,0.16),_transparent_32%),linear-gradient(135deg,_rgba(250,245,255,0.98),_rgba(255,255,255,0.96),_rgba(253,242,248,0.96))]`}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-6 w-6 text-purple-600" />
-                {t("risk.profile_title")}
-              </CardTitle>
-              <CardDescription>View your comprehensive dementia risk assessment</CardDescription>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <Badge className="mb-3 rounded-full bg-purple-100 text-purple-800 shadow-sm hover:bg-purple-100">
+                    <ShieldCheck className="mr-2 h-3.5 w-3.5" />
+                    {uiText("Insight Layer", "洞察层")}
+                  </Badge>
+                  <CardTitle className="flex items-center gap-2 text-slate-900">
+                    <TrendingUp className="h-6 w-6 text-purple-600" />
+                    {t("risk.profile_title")}
+                  </CardTitle>
+                </div>
+                <div className="hidden rounded-2xl border border-white/80 bg-white/70 px-4 py-3 text-right shadow-sm md:block">
+                  <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{uiText("Status", "状态")}</p>
+                  <p className="mt-1 text-sm font-semibold text-purple-700">{uiText("Ready to review", "可查看")}</p>
+                </div>
+              </div>
+              <CardDescription className="max-w-2xl text-sm text-slate-600">View your comprehensive dementia risk assessment</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={onViewRiskProfile} className="w-full bg-purple-600 hover:bg-purple-700" size="lg">
+              <Button onClick={onViewRiskProfile} className="w-full rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 shadow-md hover:from-purple-700 hover:to-fuchsia-700" size="lg">
                 {t("risk.view_profile")}
               </Button>
             </CardContent>
           </Card>
         )}
 
-        {/* Assessment Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {/* MoCA Assessment */}
-          <Card
-            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.moca.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-blue-50 via-white to-sky-50 hover:from-blue-100 hover:to-sky-100"}`}
-          >
+          <Card className={`${premiumCardBase} ${status.moca.completed ? completedCardSurface : "bg-[linear-gradient(135deg,rgba(239,246,255,0.98),rgba(255,255,255,0.98),rgba(224,242,254,0.92))]"}`}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div
-                  className={`p-3 rounded-2xl shadow-sm ${status.moca.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-blue-500 to-sky-500 text-white"}`}
-                >
+                <div className={`p-3 rounded-2xl shadow-sm ${status.moca.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-blue-500 to-sky-500 text-white"}`}>
                   <Brain className="w-7 h-7" />
                 </div>
                 {status.moca.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
@@ -344,20 +337,8 @@ export function Dashboard({
                     <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="outline"
-                      className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-emerald-200"
-                      onClick={() => handleAssessmentAction("moca")}
-                    >
-                      {t("common.view_results")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300"
-                      onClick={() => handleRetake("moca")}
-                    >
-                      {t("common.retake")}
-                    </Button>
+                    <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-emerald-200" onClick={() => handleAssessmentAction("moca")}>{t("common.view_results")}</Button>
+                    <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300" onClick={() => handleRetake("moca")}>{t("common.retake")}</Button>
                   </div>
                 </div>
               ) : (
@@ -368,42 +349,21 @@ export function Dashboard({
                   </div>
                   {progress.MOCA ? (
                     <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        className="w-full bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-md rounded-xl font-medium"
-                        onClick={() => handleAssessmentAction("moca")}
-                      >
-                        {t("common.resume")}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-blue-300"
-                        onClick={() => handleResetSession("moca")}
-                      >
-                        Start New Session
-                      </Button>
+                      <Button className="w-full bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-md rounded-xl font-medium" onClick={() => handleAssessmentAction("moca")}>{t("common.resume")}</Button>
+                      <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-blue-300" onClick={() => handleResetSession("moca")}>Start New Session</Button>
                     </div>
                   ) : (
-                    <Button
-                      className="w-full bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-md rounded-xl font-medium"
-                      onClick={() => handleAssessmentAction("moca")}
-                    >
-                      {t("common.start")}
-                    </Button>
+                    <Button className="w-full bg-gradient-to-r from-blue-500 to-sky-500 hover:from-blue-600 hover:to-sky-600 text-white shadow-md rounded-xl font-medium" onClick={() => handleAssessmentAction("moca")}>{t("common.start")}</Button>
                   )}
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* MMSE Assessment */}
-          <Card
-            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.mmse.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-teal-50 via-white to-cyan-50 hover:from-teal-100 hover:to-cyan-100"}`}
-          >
+          <Card className={`${premiumCardBase} ${status.mmse.completed ? completedCardSurface : "bg-[linear-gradient(135deg,rgba(240,253,250,0.98),rgba(255,255,255,0.98),rgba(236,254,255,0.92))]"}`}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div
-                  className={`p-3 rounded-2xl shadow-sm ${status.mmse.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-teal-500 to-cyan-500 text-white"}`}
-                >
+                <div className={`p-3 rounded-2xl shadow-sm ${status.mmse.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-teal-500 to-cyan-500 text-white"}`}>
                   <Brain className="w-7 h-7" />
                 </div>
                 {status.mmse.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
@@ -420,20 +380,8 @@ export function Dashboard({
                     <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="outline"
-                      className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-emerald-200"
-                      onClick={() => handleAssessmentAction("mmse")}
-                    >
-                      {t("common.view_results")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300"
-                      onClick={() => handleRetake("mmse")}
-                    >
-                      {t("common.retake")}
-                    </Button>
+                    <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-emerald-200" onClick={() => handleAssessmentAction("mmse")}>{t("common.view_results")}</Button>
+                    <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300" onClick={() => handleRetake("mmse")}>{t("common.retake")}</Button>
                   </div>
                 </div>
               ) : (
@@ -444,50 +392,27 @@ export function Dashboard({
                   </div>
                   {progress.MMSE ? (
                     <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-md rounded-xl font-medium"
-                        onClick={() => handleAssessmentAction("mmse")}
-                      >
-                        {t("common.resume")}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-teal-300"
-                        onClick={() => handleResetSession("mmse")}
-                      >
-                        Start New Session
-                      </Button>
+                      <Button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-md rounded-xl font-medium" onClick={() => handleAssessmentAction("mmse")}>{t("common.resume")}</Button>
+                      <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-teal-300" onClick={() => handleResetSession("mmse")}>Start New Session</Button>
                     </div>
                   ) : (
-                    <Button
-                      className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-md rounded-xl font-medium"
-                      onClick={() => handleAssessmentAction("mmse")}
-                    >
-                      {t("common.start")}
-                    </Button>
+                    <Button className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-md rounded-xl font-medium" onClick={() => handleAssessmentAction("mmse")}>{t("common.start")}</Button>
                   )}
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* TCM Constitution Assessment */}
-          <Card
-            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.tcm.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-green-50 via-white to-emerald-50 hover:from-green-100 hover:to-emerald-100"}`}
-          >
+          <Card className={`${premiumCardBase} ${status.tcm.completed ? completedCardSurface : "bg-[linear-gradient(135deg,rgba(240,253,244,0.98),rgba(255,255,255,0.98),rgba(236,253,245,0.92))]"}`}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div
-                  className={`p-3 rounded-2xl shadow-sm ${status.tcm.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-green-500 to-emerald-500 text-white"}`}
-                >
+                <div className={`p-3 rounded-2xl shadow-sm ${status.tcm.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-green-500 to-emerald-500 text-white"}`}>
                   <Leaf className="w-7 h-7" />
                 </div>
                 {status.tcm.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
               </div>
               <CardTitle className="text-lg mt-4 font-semibold">{uiText("TCM Constitution", "中医体质辨识")}</CardTitle>
-              <CardDescription className="text-sm">
-                {uiText("Assess your body constitution based on TCM principles", "根据中医理论评估您的体质类型")}
-              </CardDescription>
+              <CardDescription className="text-sm">{uiText("Assess your body constitution based on TCM principles", "根据中医理论评估您的体质类型")}</CardDescription>
             </CardHeader>
             <CardContent>
               {status.tcm.completed ? (
@@ -496,13 +421,7 @@ export function Dashboard({
                     <p className="text-3xl font-bold text-emerald-600">{status.tcm.score}%</p>
                     <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300"
-                    onClick={() => handleRetake("tcm")}
-                  >
-                    {t("common.retake")}
-                  </Button>
+                  <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300" onClick={() => handleRetake("tcm")}>{t("common.retake")}</Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -510,18 +429,13 @@ export function Dashboard({
                     <Clock className="w-4 h-4 mr-1.5" />
                     <span>{t("dashboard.pending")}</span>
                   </div>
-                  <Button
-                    className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-md rounded-xl font-medium"
-                    onClick={() => onStartAssessment("tcm")}
-                  >
-                    {t("common.start")}
-                  </Button>
+                  <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("tcm")}>{t("common.start")}</Button>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <Card className="transition-all duration-300 border-0 shadow-lg hover:shadow-xl bg-gradient-to-br from-slate-50 via-white to-cyan-50 hover:from-slate-100 hover:to-cyan-100">
+          <Card className={`${premiumCardBase} bg-[linear-gradient(135deg,rgba(248,250,252,0.98),rgba(255,255,255,0.98),rgba(236,254,255,0.92))]`}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="p-3 rounded-2xl shadow-sm bg-gradient-to-br from-slate-700 to-cyan-600 text-white">
@@ -537,25 +451,17 @@ export function Dashboard({
                   <Clock className="w-4 h-4 mr-1.5" />
                   <span>{localizeText("EEG, blood biomarkers, and sensory fusion preview")}</span>
                 </div>
-                <Button
-                  asChild
-                  className="w-full bg-gradient-to-r from-slate-700 to-cyan-600 hover:from-slate-800 hover:to-cyan-700 text-white shadow-md rounded-xl font-medium"
-                >
+                <Button asChild className="w-full bg-gradient-to-r from-slate-700 to-cyan-600 hover:from-slate-800 hover:to-cyan-700 text-white shadow-md rounded-xl font-medium">
                   <Link href="/multimodal">{localizeText("Open Multimodal Module")}</Link>
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          {/* TCM Image Upload */}
-          <Card
-            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.upload.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-violet-50 via-white to-purple-50 hover:from-violet-100 hover:to-purple-100"}`}
-          >
+          <Card className={`${premiumCardBase} ${status.upload.completed ? completedCardSurface : "bg-[linear-gradient(135deg,rgba(245,243,255,0.98),rgba(255,255,255,0.98),rgba(250,245,255,0.92))]"}`}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div
-                  className={`p-3 rounded-2xl shadow-sm ${status.upload.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-violet-500 to-purple-500 text-white"}`}
-                >
+                <div className={`p-3 rounded-2xl shadow-sm ${status.upload.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-violet-500 to-purple-500 text-white"}`}>
                   <Upload className="w-7 h-7" />
                 </div>
                 {status.upload.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
@@ -568,18 +474,10 @@ export function Dashboard({
               {status.upload.completed ? (
                 <div className="space-y-3">
                   <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 text-center">
-                    <p className="text-lg font-semibold text-emerald-600">
-                      {t("dashboard.files_uploaded", { count: status.upload.fileCount })}
-                    </p>
+                    <p className="text-lg font-semibold text-emerald-600">{t("dashboard.files_uploaded", { count: status.upload.fileCount })}</p>
                     <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-emerald-200"
-                    onClick={() => onStartAssessment("upload")}
-                  >
-                    {t("dashboard.manage_files")}
-                  </Button>
+                  <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-emerald-200" onClick={() => onStartAssessment("upload")}>{t("dashboard.manage_files")}</Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -587,26 +485,16 @@ export function Dashboard({
                     <Clock className="w-4 h-4 mr-1.5" />
                     <span>{t("dashboard.pending")}</span>
                   </div>
-                  <Button 
-                    className="w-full bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white shadow-md rounded-xl font-medium"
-                    onClick={() => onStartAssessment("upload")}
-                  >
-                    {t("dashboard.upload_files")}
-                  </Button>
+                  <Button className="w-full bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("upload")}>{t("dashboard.upload_files")}</Button>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Visual Screening */}
-          <Card
-            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.visual.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-indigo-50 via-white to-blue-50 hover:from-indigo-100 hover:to-blue-100"}`}
-          >
+          <Card className={`${premiumCardBase} ${status.visual.completed ? completedCardSurface : "bg-[linear-gradient(135deg,rgba(238,242,255,0.98),rgba(255,255,255,0.98),rgba(239,246,255,0.92))]"}`}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div
-                  className={`p-3 rounded-2xl shadow-sm ${status.visual.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-indigo-500 to-blue-500 text-white"}`}
-                >
+                <div className={`p-3 rounded-2xl shadow-sm ${status.visual.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-indigo-500 to-blue-500 text-white"}`}>
                   <Eye className="w-7 h-7" />
                 </div>
                 {status.visual.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
@@ -621,13 +509,7 @@ export function Dashboard({
                     <p className="text-3xl font-bold text-emerald-600">{status.visual.score}%</p>
                     <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300"
-                    onClick={() => handleRetake("visual")}
-                  >
-                    {t("common.retake")}
-                  </Button>
+                  <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300" onClick={() => handleRetake("visual")}>{t("common.retake")}</Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -635,26 +517,16 @@ export function Dashboard({
                     <Clock className="w-4 h-4 mr-1.5" />
                     <span>{t("dashboard.pending")}</span>
                   </div>
-                  <Button
-                    className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white shadow-md rounded-xl font-medium"
-                    onClick={() => onStartAssessment("visual")}
-                  >
-                    {t("common.start")}
-                  </Button>
+                  <Button className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("visual")}>{t("common.start")}</Button>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Auditory Screening */}
-          <Card
-            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.auditory.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-rose-50 via-white to-pink-50 hover:from-rose-100 hover:to-pink-100"}`}
-          >
+          <Card className={`${premiumCardBase} ${status.auditory.completed ? completedCardSurface : "bg-[linear-gradient(135deg,rgba(255,241,242,0.98),rgba(255,255,255,0.98),rgba(253,242,248,0.92))]"}`}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div
-                  className={`p-3 rounded-2xl shadow-sm ${status.auditory.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-rose-500 to-pink-500 text-white"}`}
-                >
+                <div className={`p-3 rounded-2xl shadow-sm ${status.auditory.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-rose-500 to-pink-500 text-white"}`}>
                   <Ear className="w-7 h-7" />
                 </div>
                 {status.auditory.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
@@ -669,13 +541,7 @@ export function Dashboard({
                     <p className="text-3xl font-bold text-emerald-600">{status.auditory.score}%</p>
                     <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300"
-                    onClick={() => handleRetake("auditory")}
-                  >
-                    {t("common.retake")}
-                  </Button>
+                  <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300" onClick={() => handleRetake("auditory")}>{t("common.retake")}</Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -683,26 +549,16 @@ export function Dashboard({
                     <Clock className="w-4 h-4 mr-1.5" />
                     <span>{t("dashboard.pending")}</span>
                   </div>
-                  <Button
-                    className="w-full bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white shadow-md rounded-xl font-medium"
-                    onClick={() => onStartAssessment("auditory")}
-                  >
-                    {t("common.start")}
-                  </Button>
+                  <Button className="w-full bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("auditory")}>{t("common.start")}</Button>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Olfactory Screening */}
-          <Card
-            className={`transition-all duration-300 border-0 shadow-lg hover:shadow-xl ${status.olfactory.completed ? "bg-gradient-to-br from-emerald-50 to-green-100 ring-2 ring-emerald-400" : "bg-gradient-to-br from-amber-50 via-white to-orange-50 hover:from-amber-100 hover:to-orange-100"}`}
-          >
+          <Card className={`${premiumCardBase} ${status.olfactory.completed ? completedCardSurface : "bg-[linear-gradient(135deg,rgba(255,251,235,0.98),rgba(255,255,255,0.98),rgba(255,247,237,0.92))]"}`}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div
-                  className={`p-3 rounded-2xl shadow-sm ${status.olfactory.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-amber-500 to-orange-500 text-white"}`}
-                >
+                <div className={`p-3 rounded-2xl shadow-sm ${status.olfactory.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-amber-500 to-orange-500 text-white"}`}>
                   <Flower2 className="w-7 h-7" />
                 </div>
                 {status.olfactory.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
@@ -717,13 +573,7 @@ export function Dashboard({
                     <p className="text-3xl font-bold text-emerald-600">{status.olfactory.score}%</p>
                     <p className="text-xs text-emerald-700 mt-1">{t("dashboard.completed")}</p>
                   </div>
-                  <Button
-                    variant="outline"
-                    className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300"
-                    onClick={() => handleRetake("olfactory")}
-                  >
-                    {t("common.retake")}
-                  </Button>
+                  <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300" onClick={() => handleRetake("olfactory")}>{t("common.retake")}</Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -731,12 +581,7 @@ export function Dashboard({
                     <Clock className="w-4 h-4 mr-1.5" />
                     <span>{t("dashboard.pending")}</span>
                   </div>
-                  <Button
-                    className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md rounded-xl font-medium"
-                    onClick={() => onStartAssessment("olfactory")}
-                  >
-                    {t("common.start")}
-                  </Button>
+                  <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("olfactory")}>{t("common.start")}</Button>
                 </div>
               )}
             </CardContent>

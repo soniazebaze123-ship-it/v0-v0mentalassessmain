@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AssessmentInput } from "@/components/ui/assessment-input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { useLanguage } from "@/contexts/language-context"
@@ -14,7 +13,7 @@ interface MMSEOrientationProps {
 }
 
 export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
-  const { t } = useLanguage()
+  const { t, localizeText } = useLanguage()
   const [answers, setAnswers] = useState({
     year: "",
     season: "",
@@ -25,6 +24,52 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
     president: "",
     sea: "",
   })
+
+  const currentYear = new Date().getFullYear()
+  const dayOptions = [
+    { value: "sunday", label: t("common.day_sunday") },
+    { value: "monday", label: t("common.day_monday") },
+    { value: "tuesday", label: t("common.day_tuesday") },
+    { value: "wednesday", label: t("common.day_wednesday") },
+    { value: "thursday", label: t("common.day_thursday") },
+    { value: "friday", label: t("common.day_friday") },
+    { value: "saturday", label: t("common.day_saturday") },
+  ]
+  const seasonOptions = [
+    { value: "spring", label: t("common.spring") },
+    { value: "summer", label: t("common.summer") },
+    { value: "autumn", label: t("common.autumn") },
+    { value: "winter", label: t("common.winter") },
+  ]
+  const countryOptions = [
+    { value: "china", label: t("common.china") },
+    { value: "japan", label: localizeText("Japan", { zh: "日本", yue: "日本", fr: "Japon" }) },
+    { value: "france", label: localizeText("France", { zh: "法国", yue: "法國", fr: "France" }) },
+    { value: "usa", label: localizeText("United States", { zh: "美国", yue: "美國", fr: "États-Unis" }) },
+  ]
+  const presidentOptions = [
+    { value: "xi", label: t("common.president_name") },
+    { value: "trump", label: localizeText("Donald Trump", { zh: "唐纳德·特朗普", yue: "當勞·特朗普", fr: "Donald Trump" }) },
+    { value: "macron", label: localizeText("Emmanuel Macron", { zh: "埃马纽埃尔·马克龙", yue: "馬克龍", fr: "Emmanuel Macron" }) },
+    { value: "kishida", label: localizeText("Fumio Kishida", { zh: "岸田文雄", yue: "岸田文雄", fr: "Fumio Kishida" }) },
+  ]
+  const seaOptions = [
+    {
+      value: "south_china_sea",
+      label: localizeText("South China Sea", { zh: "南海", yue: "南海", fr: "Mer de Chine méridionale" }),
+    },
+    {
+      value: "pacific_ocean",
+      label: localizeText("Pacific Ocean", { zh: "太平洋", yue: "太平洋", fr: "Océan Pacifique" }),
+    },
+    {
+      value: "atlantic_ocean",
+      label: localizeText("Atlantic Ocean", { zh: "大西洋", yue: "大西洋", fr: "Océan Atlantique" }),
+    },
+  ]
+
+  const selectClassName =
+    "h-11 w-full rounded-md border border-input bg-background px-3 text-base shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
 
   const handleAnswerChange = (field: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [field]: value }))
@@ -38,41 +83,27 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
     return t("common.winter")
   }
 
-  const getDayName = (dayNumber: number) => {
-    const days = [
-      t("common.day_sunday"),
-      t("common.day_monday"),
-      t("common.day_tuesday"),
-      t("common.day_wednesday"),
-      t("common.day_thursday"),
-      t("common.day_friday"),
-      t("common.day_saturday"),
-    ]
-    return days[dayNumber]
-  }
-
   const checkAnswers = () => {
     const now = new Date()
     const currentDate = now.getDate()
     const currentMonth = now.getMonth() + 1
-    const currentYear = now.getFullYear()
-    const currentDay = getDayName(now.getDay())
-    const currentSeason = getCurrentSeason()
+    const actualYear = now.getFullYear()
+    const currentDay = dayOptions[now.getDay()]?.value
+    const currentSeason = seasonOptions.find((option) => option.label === getCurrentSeason())?.value
 
     let score = 0
 
     // Time questions (5 points)
-    if (Number.parseInt(answers.year) === currentYear) score += 1
-    if (answers.season.toLowerCase().trim() === currentSeason.toLowerCase()) score += 1
+    if (Number.parseInt(answers.year) === actualYear) score += 1
+    if (answers.season === currentSeason) score += 1
     if (Number.parseInt(answers.date) === currentDate) score += 1
-    if (answers.day.toLowerCase().trim() === currentDay.toLowerCase()) score += 1
+    if (answers.day === currentDay) score += 1
     if (Number.parseInt(answers.month) === currentMonth) score += 1
 
     // Place questions (3 points)
-    if (answers.country.toLowerCase().trim() === t("common.china").toLowerCase()) score += 1
-    if (answers.president.toLowerCase().trim() === t("common.president_name").toLowerCase()) score += 2 // Assuming 2 points for president
-    // The "sea" question is not scored in typical MMSE orientation, but I'll include a check for completeness if it were.
-    // For now, it's just a text input.
+    if (answers.country === "china") score += 1
+    if (answers.president === "xi") score += 1
+    if (answers.sea === "south_china_sea") score += 1
 
     onComplete(score)
   }
@@ -85,8 +116,7 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
     }
   }
 
-  const isFormComplete =
-    answers.year !== "" && answers.month !== "" && answers.day !== "" && answers.date !== "" && answers.country !== ""
+  const isFormComplete = Object.values(answers).every((value) => value !== "")
 
   return (
     <Card className="w-full max-w-3xl mx-auto border-t-4 border-blue-500 shadow-lg">
@@ -106,13 +136,14 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                 </Label>
                 <InstructionAudio text={t("question.year")} />
               </div>
-              <AssessmentInput
-                id="year"
-                type="number"
-                value={answers.year}
-                onChange={(e) => handleAnswerChange("year", e.target.value)}
-                placeholder=""
-              />
+              <select id="year" className={selectClassName} value={answers.year} onChange={(e) => handleAnswerChange("year", e.target.value)}>
+                <option value="">{localizeText("Select year", { zh: "请选择年份", yue: "請選擇年份", fr: "Sélectionnez l’année" })}</option>
+                {[currentYear - 1, currentYear, currentYear + 1].map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">
@@ -122,12 +153,19 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                 </Label>
                 <InstructionAudio text={t("question.season")} />
               </div>
-              <AssessmentInput
-                id="season"
-                value={answers.season}
-                onChange={(e) => handleAnswerChange("season", e.target.value)}
-                placeholder=""
-              />
+              <div className="grid grid-cols-2 gap-2">
+                {seasonOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={answers.season === option.value ? "default" : "outline"}
+                    className="h-11 justify-center text-sm"
+                    onClick={() => handleAnswerChange("season", option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -137,13 +175,14 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                 </Label>
                 <InstructionAudio text={t("question.date")} />
               </div>
-              <AssessmentInput
-                id="date"
-                type="number"
-                value={answers.date}
-                onChange={(e) => handleAnswerChange("date", e.target.value)}
-                placeholder=""
-              />
+              <select id="date" className={selectClassName} value={answers.date} onChange={(e) => handleAnswerChange("date", e.target.value)}>
+                <option value="">{localizeText("Select date", { zh: "请选择日期", yue: "請選擇日期", fr: "Sélectionnez la date" })}</option>
+                {Array.from({ length: 31 }, (_, index) => index + 1).map((date) => (
+                  <option key={date} value={date}>
+                    {date}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">
@@ -153,12 +192,19 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                 </Label>
                 <InstructionAudio text={t("question.day")} />
               </div>
-              <AssessmentInput
-                id="day"
-                value={answers.day}
-                onChange={(e) => handleAnswerChange("day", e.target.value)}
-                placeholder=""
-              />
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {dayOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={answers.day === option.value ? "default" : "outline"}
+                    className="h-11 justify-center text-sm"
+                    onClick={() => handleAnswerChange("day", option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -168,13 +214,14 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                 </Label>
                 <InstructionAudio text={t("question.month")} />
               </div>
-              <AssessmentInput
-                id="month"
-                type="number"
-                value={answers.month}
-                onChange={(e) => handleAnswerChange("month", e.target.value)}
-                placeholder=""
-              />
+              <select id="month" className={selectClassName} value={answers.month} onChange={(e) => handleAnswerChange("month", e.target.value)}>
+                <option value="">{localizeText("Select month", { zh: "请选择月份", yue: "請選擇月份", fr: "Sélectionnez le mois" })}</option>
+                {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => (
+                  <option key={month} value={month}>
+                    {t(`common.month_${month}`)}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -189,12 +236,19 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                 </Label>
                 <InstructionAudio text={t("question.country")} />
               </div>
-              <AssessmentInput
-                id="country"
-                value={answers.country}
-                onChange={(e) => handleAnswerChange("country", e.target.value)}
-                placeholder=""
-              />
+              <div className="grid grid-cols-2 gap-2">
+                {countryOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={answers.country === option.value ? "default" : "outline"}
+                    className="h-11 justify-center text-sm"
+                    onClick={() => handleAnswerChange("country", option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -204,27 +258,41 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                 </Label>
                 <InstructionAudio text={t("question.president")} />
               </div>
-              <AssessmentInput
-                id="president"
-                value={answers.president}
-                onChange={(e) => handleAnswerChange("president", e.target.value)}
-                placeholder=""
-              />
+              <div className="grid gap-2">
+                {presidentOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={answers.president === option.value ? "default" : "outline"}
+                    className="h-11 justify-start text-sm"
+                    onClick={() => handleAnswerChange("president", option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <div className="flex items-center justify-between gap-3">
                 <Label htmlFor="sea" className="text-base">
                   {t("question.sea")}
                 </Label>
                 <InstructionAudio text={t("question.sea")} />
               </div>
-              <AssessmentInput
-                id="sea"
-                value={answers.sea}
-                onChange={(e) => handleAnswerChange("sea", e.target.value)}
-                placeholder=""
-              />
+              <div className="grid gap-2 sm:grid-cols-3">
+                {seaOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={answers.sea === option.value ? "default" : "outline"}
+                    className="h-11 justify-center text-sm"
+                    onClick={() => handleAnswerChange("sea", option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

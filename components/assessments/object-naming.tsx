@@ -1,6 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import Image from "next/image"
+import { BadgeCheck, PackageSearch } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/language-context"
@@ -26,42 +28,24 @@ const ITEM_POOL = [
   { image: "/images/egg.svg", labelKey: "common.egg" },
 ]
 
-function shuffleArray<T>(items: T[]) {
-  const next = [...items]
-
-  for (let index = next.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1))
-    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
-  }
-
-  return next
-}
-
 function buildObjectQuestions(): ObjectQuestion[] {
-  const selectedItems = shuffleArray(ITEM_POOL).slice(0, 3)
-
-  return selectedItems.map((item) => {
-    const distractorPool = ITEM_POOL.filter((candidate) => candidate.labelKey !== item.labelKey)
-    const distractor = distractorPool[Math.floor(Math.random() * distractorPool.length)]
+  return ITEM_POOL.slice(0, 3).map((item, index) => {
+    const distractor = ITEM_POOL[(index + 3) % ITEM_POOL.length]
 
     return {
       image: item.image,
       answerKey: item.labelKey,
-      optionKeys: shuffleArray([item.labelKey, distractor.labelKey]),
+      optionKeys: index % 2 === 0 ? [item.labelKey, distractor.labelKey] : [distractor.labelKey, item.labelKey],
     }
   })
 }
 
-export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
-  const { t } = useLanguage()
-  const [questions, setQuestions] = useState<ObjectQuestion[]>([])
-  const [selectedAnswers, setSelectedAnswers] = useState<string[]>([])
+const DEFAULT_OBJECT_QUESTIONS = buildObjectQuestions()
 
-  useEffect(() => {
-    const initialQuestions = buildObjectQuestions()
-    setQuestions(initialQuestions)
-    setSelectedAnswers(Array(initialQuestions.length).fill(""))
-  }, [])
+export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
+  const { t, localizeText } = useLanguage()
+  const [questions] = useState<ObjectQuestion[]>(DEFAULT_OBJECT_QUESTIONS)
+  const [selectedAnswers, setSelectedAnswers] = useState<string[]>(Array(DEFAULT_OBJECT_QUESTIONS.length).fill(""))
 
   const handleAnswerSelect = (index: number, optionKey: string) => {
     setSelectedAnswers((previous) => previous.map((value, valueIndex) => (valueIndex === index ? optionKey : value)))
@@ -85,18 +69,48 @@ export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
   }
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>{t("mmse.naming")}</CardTitle>
-        <p className="text-sm text-muted-foreground">{t("mmse.naming.instruction")}</p>
+    <Card className="mx-auto w-full max-w-5xl overflow-hidden border border-cyan-100/80 shadow-[0_24px_70px_rgba(6,182,212,0.12)]">
+      <CardHeader className="bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.16),_transparent_30%),linear-gradient(135deg,_rgba(236,254,255,0.98),_rgba(255,255,255,0.98),_rgba(240,249,255,0.96))] pb-6">
+        <div className="mb-3 flex items-center gap-2 text-cyan-700">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-100 shadow-sm">
+            <PackageSearch className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600/80">
+              {localizeText("Premium recognition task", {
+                zh: "高级识别任务",
+                yue: "高級識別任務",
+                fr: "Tâche de reconnaissance premium",
+              })}
+            </p>
+            <CardTitle className="text-cyan-950">{t("mmse.naming")}</CardTitle>
+          </div>
+        </div>
+        <p className="max-w-2xl text-sm text-slate-600">{t("mmse.naming.instruction")}</p>
         <InstructionAudio instructionKey="mmse.naming.instruction" className="mt-2" />
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      <CardContent className="pt-6">
+        <div className="mb-6 rounded-[24px] border border-cyan-100 bg-cyan-50/70 p-4 text-sm text-cyan-900 shadow-sm">
+          {localizeText(
+            "Each card shows a common item. Tap the correct name to complete the recognition set.",
+            {
+              zh: "每张卡片都会显示一种常见物品。点击正确名称即可完成识别任务。",
+              yue: "每張卡都會顯示一種常見物品。按正確名稱就可以完成識別任務。",
+              fr: "Chaque carte présente un objet courant. Touchez le bon nom pour compléter la série de reconnaissance.",
+            },
+          )}
+        </div>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {questions.map((question, index) => (
-            <div key={`${question.image}-${index}`} className="space-y-4 rounded-xl border bg-background p-4">
-              <div className="h-48 w-full overflow-hidden rounded-lg bg-gray-100">
-                <img src={question.image} alt={t(question.answerKey)} className="h-full w-full object-contain bg-white p-2" />
+            <div key={`${question.image}-${index}`} className="space-y-4 rounded-[26px] border border-cyan-100 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                  {localizeText("Prompt", { zh: "题目", yue: "題目", fr: "Invite" })} {index + 1}
+                </div>
+                {selectedAnswers[index] === question.answerKey && <BadgeCheck className="h-5 w-5 text-emerald-500" />}
+              </div>
+              <div className="relative h-52 w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
+                <Image src={question.image} alt={t(question.answerKey)} fill className="object-contain bg-white p-4" priority />
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">{t("question.tap_correct_name")}</p>
@@ -106,7 +120,7 @@ export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
                       key={optionKey}
                       type="button"
                       variant={selectedAnswers[index] === optionKey ? "default" : "outline"}
-                      className="w-full justify-center"
+                      className="w-full justify-center rounded-xl"
                       onClick={() => handleAnswerSelect(index, optionKey)}
                     >
                       {t(optionKey)}

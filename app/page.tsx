@@ -38,6 +38,7 @@ import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
 
 import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/contexts/language-context"
+import { Sparkles } from "lucide-react"
 
 function isSameCalendarDay(value?: string | null) {
   if (!value) {
@@ -381,27 +382,71 @@ function AppContent() {
     const CurrentComponent = steps[currentStep].component
     const props = steps[currentStep].props
     const assessmentTitle = assessmentType === "MOCA" ? t("moca.title") : t("mmse.title")
+    const progressPercent = ((currentStep + 1) / steps.length) * 100
+    const shellTheme =
+      assessmentType === "MOCA"
+        ? {
+            page: "from-[#eefaf5] via-[#f7fffb] to-[#dff6ee]",
+            accent: "from-emerald-500 via-teal-500 to-cyan-500",
+            ring: "ring-emerald-100",
+            badge: "bg-emerald-100 text-emerald-800",
+            panel: "from-white/95 to-emerald-50/90",
+            eyebrow: "Cognitive Navigation",
+          }
+        : {
+            page: "from-blue-50 via-slate-50 to-indigo-100",
+            accent: "from-blue-500 via-sky-500 to-indigo-500",
+            ring: "ring-blue-100",
+            badge: "bg-blue-100 text-blue-800",
+            panel: "from-white/95 to-blue-50/90",
+            eyebrow: "Clinical Orientation",
+          }
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <div className="max-w-4xl mx-auto mb-4">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold">
-              {assessmentTitle} - {t("common.step")} {currentStep + 1} {t("common.of")} {" "}
-              {steps.length}
-            </h1>
-            <div className="text-sm text-gray-600">
-              {t("common.progress")}: {currentStep + 1}/{steps.length}
+      <div className={`min-h-screen bg-gradient-to-br ${shellTheme.page} p-4 md:p-6`}>
+        <div className="mx-auto max-w-5xl">
+          <div className={`mb-6 overflow-hidden rounded-[28px] border border-white/70 bg-gradient-to-br ${shellTheme.panel} shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur ring-1 ${shellTheme.ring}`}>
+            <div className="relative px-6 py-6 md:px-8 md:py-7">
+              <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${shellTheme.accent}`} />
+              <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold tracking-[0.18em] uppercase ${shellTheme.badge}`}>
+                      <Sparkles className="mr-2 h-3.5 w-3.5" />
+                      {shellTheme.eyebrow}
+                    </span>
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-4xl">
+                      {assessmentTitle}
+                    </h1>
+                    <p className="mt-2 text-sm text-slate-600 md:text-base">
+                      {t("common.step")} {currentStep + 1} {t("common.of")} {steps.length}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="min-w-44 rounded-2xl border border-white/80 bg-white/80 px-4 py-3 shadow-sm backdrop-blur">
+                  <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-slate-500">
+                    <span>{t("common.progress")}</span>
+                    <span>{currentStep + 1}/{steps.length}</span>
+                  </div>
+                  <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-200/80">
+                    <div
+                      className={`h-full rounded-full bg-gradient-to-r ${shellTheme.accent} transition-all duration-500`}
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-right text-xs font-medium text-slate-500">
+                    {Math.round(progressPercent)}%
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
-            />
-          </div>
+
+          <CurrentComponent onComplete={handleStepComplete} onSkip={handleSkipTask} {...props} />
         </div>
-        <CurrentComponent onComplete={handleStepComplete} onSkip={handleSkipTask} {...props} />
       </div>
     )
   }

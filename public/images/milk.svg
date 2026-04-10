@@ -1,11 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title desc">
-  <title>Milk carton</title>
-  <desc>A carton of milk.</desc>
-  <rect width="200" height="200" rx="24" fill="#e8f3ff"/>
-  <path d="M72 46h56l12 20v88H60V66z" fill="#ffffff" stroke="#6aa3d9" stroke-width="4"/>
-  <path d="M72 46l16 20h52l-12-20z" fill="#cfe4fa"/>
-  <path d="M88 46l16 20" stroke="#6aa3d9" stroke-width="4"/>
-  <rect x="78" y="86" width="44" height="40" rx="10" fill="#91c4ef"/>
-  <path d="M90 108c8-18 22-18 28 0" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
-  <text x="100" y="142" font-family="Arial, sans-serif" font-size="16" text-anchor="middle" fill="#4c79a8">MILK</text>
+  <title>Milk bottle</title>
+  <desc>A realistic glass bottle of milk on a soft studio background.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f4f8ff"/>
+      <stop offset="100%" stop-color="#dcecff"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.96"/>
+      <stop offset="100%" stop-color="#eaf4ff" stop-opacity="0.86"/>
+    </linearGradient>
+    <linearGradient id="cap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8fbfff"/>
+      <stop offset="100%" stop-color="#4a86d4"/>
+    </linearGradient>
+    <radialGradient id="shadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a8bfdc" stop-opacity="0.34"/>
+      <stop offset="100%" stop-color="#a8bfdc" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="200" height="200" rx="24" fill="url(#bg)"/>
+  <ellipse cx="100" cy="162" rx="48" ry="14" fill="url(#shadow)"/>
+  <path d="M86 42h28l7 11v17h-42V53z" fill="#d4e7ff"/>
+  <rect x="84" y="36" width="32" height="14" rx="4" fill="url(#cap)"/>
+  <path d="M74 68h52l8 20v56c0 12-10 22-22 22H88c-12 0-22-10-22-22V88z" fill="url(#glass)" stroke="#9dbce0" stroke-width="3"/>
+  <path d="M82 76h36l7 15v48c0 9-7 16-16 16H91c-9 0-16-7-16-16V91z" fill="#ffffff" opacity="0.88"/>
+  <path d="M74 68h52l-10 18H84z" fill="#f7fbff" stroke="#9dbce0" stroke-width="2"/>
+  <path d="M89 74c6 5 18 5 24 0" fill="none" stroke="#cadcf2" stroke-width="2" stroke-linecap="round"/>
+  <path d="M87 88c8-10 18-10 26 0" fill="none" stroke="#a9c9ee" stroke-width="4" stroke-linecap="round"/>
+  <path d="M88 52h6v102h-6z" fill="#ffffff" opacity="0.35"/>
+  <path d="M102 52h3v94h-3z" fill="#ffffff" opacity="0.2"/>
 </svg>

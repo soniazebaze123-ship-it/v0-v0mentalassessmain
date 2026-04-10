@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useEffect, useEffectEvent, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useUser } from "@/contexts/user-context"
@@ -16,9 +16,6 @@ import {
 import { Flower2, Check, X, Timer, AlertCircle } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { TestProgress } from "@/components/ui/test-progress"
-import { ScoreGauge, getScoreRiskLevel } from "@/components/ui/score-gauge"
-import { RiskBadge } from "@/components/ui/risk-badge"
 
 interface OlfactoryScreeningProps {
   onComplete: (score: number) => void
@@ -42,8 +39,14 @@ const SMELL_ICONS: Record<string, string> = {
 }
 
 export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: OlfactoryScreeningProps) {
-  const { t } = useLanguage()
+  const { t, localizeText } = useLanguage()
   const { user } = useUser()
+  const uiText = (englishText: string, chineseText: string, cantoneseText?: string, frenchText?: string) =>
+    localizeText(englishText, {
+      zh: chineseText,
+      yue: cantoneseText ?? chineseText,
+      fr: frenchText,
+    })
 
   const [testStarted, setTestStarted] = useState(false)
   const [testComplete, setTestComplete] = useState(false)
@@ -61,17 +64,39 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
   })
 
   const currentTrial = trials[currentTrialIndex]
+  const premiumShell =
+    "mx-auto w-full max-w-4xl overflow-hidden border border-white/70 bg-[radial-gradient(circle_at_top_left,_rgba(249,168,212,0.16),_transparent_28%),linear-gradient(135deg,_rgba(255,255,255,0.97),_rgba(255,251,235,0.98),_rgba(255,247,237,0.94))] shadow-[0_28px_90px_rgba(15,23,42,0.10)]"
+  const premiumHeader = "border-b border-white/70 bg-white/85 pb-6"
+  const primaryButton =
+    "h-12 rounded-full bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 px-6 text-white shadow-lg shadow-rose-500/20 hover:from-rose-600 hover:via-orange-600 hover:to-amber-600"
   
   // Timer state (30 seconds per question)
   const [timeRemaining, setTimeRemaining] = useState(30)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   
+  const handleTimeUp = useEffectEvent(() => {
+    setLastAnswerCorrect(false)
+    setShowFeedback(true)
+
+    const newResults = [...results, { correct: false }]
+    setResults(newResults)
+
+    setTimeout(() => {
+      setShowFeedback(false)
+      if (currentTrialIndex < trials.length - 1) {
+        setCurrentTrialIndex(currentTrialIndex + 1)
+      } else {
+        void finishTest(newResults)
+      }
+    }, 1500)
+  })
+
   // Start timer when test starts or question changes
   useEffect(() => {
     if (testStarted && !testComplete && !showFeedback) {
       setTimeRemaining(30)
       timerRef.current = setInterval(() => {
-        setTimeRemaining(prev => {
+        setTimeRemaining((prev) => {
           if (prev <= 1) {
             // Time's up - auto-submit as incorrect
             if (timerRef.current) clearInterval(timerRef.current)
@@ -86,24 +111,7 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [testStarted, currentTrialIndex, showFeedback])
-  
-  const handleTimeUp = () => {
-    setLastAnswerCorrect(false)
-    setShowFeedback(true)
-    
-    const newResults = [...results, { correct: false }]
-    setResults(newResults)
-    
-    setTimeout(() => {
-      setShowFeedback(false)
-      if (currentTrialIndex < trials.length - 1) {
-        setCurrentTrialIndex(currentTrialIndex + 1)
-      } else {
-        finishTest(newResults)
-      }
-    }, 1500)
-  }
+  }, [currentTrialIndex, handleTimeUp, showFeedback, testComplete, testStarted])
 
   const handleStart = () => {
     setTestStarted(true)
@@ -178,8 +186,8 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
 
   if (!testStarted) {
     return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader>
+      <Card className={premiumShell}>
+        <CardHeader className={premiumHeader}>
           <CardTitle className="flex items-center gap-2">
             <Flower2 className="h-6 w-6" />
             {t("sensory.olfactory.title")}
@@ -187,26 +195,42 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
           <p className="text-sm text-muted-foreground">{t("sensory.olfactory.description")}</p>
           <InstructionAudio instructionKey="sensory.olfactory.instruction" className="mt-2" />
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="bg-blue-50 dark:bg-blue-950 p-6 rounded-lg space-y-4">
-            <h3 className="font-semibold">{t("sensory.olfactory.setup_title")}</h3>
-            <ul className="space-y-2 text-sm">
-              <li>• {t("sensory.olfactory.setup_1")}</li>
-              <li>• {t("sensory.olfactory.setup_2")}</li>
-              <li>• {t("sensory.olfactory.setup_3")}</li>
-              <li>• {t("sensory.olfactory.setup_4")}</li>
-            </ul>
+        <CardContent className="space-y-6 bg-white/75 p-6 sm:p-8">
+          <div className="grid gap-4 sm:grid-cols-[1.3fr_0.9fr]">
+            <div className="rounded-[28px] border border-rose-100 bg-gradient-to-br from-rose-50 via-orange-50 to-white p-6 shadow-sm">
+              <h3 className="font-semibold text-slate-900">{t("sensory.olfactory.setup_title")}</h3>
+              <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-600">
+                <li>• {t("sensory.olfactory.setup_1")}</li>
+                <li>• {t("sensory.olfactory.setup_2")}</li>
+                <li>• {t("sensory.olfactory.setup_3")}</li>
+                <li>• {t("sensory.olfactory.setup_4")}</li>
+              </ul>
+            </div>
+
+            <div className="rounded-[28px] border border-slate-200/70 bg-slate-950 p-5 text-white shadow-sm">
+              <div className="flex items-center gap-2">
+                <Badge className="rounded-full border-0 bg-white/15 px-3 py-1 text-white">
+                  {uiText("Smell ID", "气味识别", "氣味識別", "Identification")}
+                </Badge>
+                {enhanced && (
+                  <Badge className="rounded-full border-0 bg-rose-500 px-3 py-1 text-white">
+                    {uiText("Enhanced", "增强模式", "增強模式", "Amélioré")}
+                  </Badge>
+                )}
+              </div>
+              <p className="mt-4 text-sm leading-6 text-slate-200">{uiText("Choose the label that best matches the smell item shown on each card. You have 30 seconds per round.", "请选择最符合每张卡片气味项目的标签。每轮有30秒。", "請選擇最符合每張卡片氣味項目嘅標籤。每輪有30秒。", "Choisissez l’étiquette qui correspond le mieux à l’odeur affichée. Vous avez 30 secondes par tour.")}</p>
+            </div>
           </div>
 
-          <div className="bg-yellow-50 dark:bg-yellow-950 p-4 rounded-lg">
-            <p className="text-sm">{t("sensory.olfactory.note")}</p>
+          <div className="rounded-[28px] border border-amber-200 bg-amber-50/80 p-4 shadow-sm">
+            <p className="text-sm text-amber-800">{t("sensory.olfactory.note")}</p>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-4">
-            <Button variant="outline" onClick={handleSkip} className="w-full sm:w-auto bg-transparent">
+          <div className="flex flex-col items-center justify-center gap-4 pt-4 sm:flex-row">
+            <Button variant="outline" onClick={handleSkip} className="h-12 w-full rounded-full border-slate-300 bg-white text-slate-700 hover:bg-slate-50 sm:w-auto">
               {t("common.skip_task")}
             </Button>
-            <Button onClick={handleStart} className="w-full sm:w-auto">
+            <Button onClick={handleStart} className={primaryButton + " w-full sm:w-auto"}>
               {t("sensory.olfactory.start_test")}
             </Button>
           </div>
@@ -217,14 +241,16 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
 
   if (testComplete) {
     return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader>
+      <Card className={premiumShell}>
+        <CardHeader className={premiumHeader}>
           <CardTitle>{t("sensory.olfactory.complete_title")}</CardTitle>
         </CardHeader>
-        <CardContent className="text-center space-y-4">
-          <div className="text-6xl">✓</div>
-          <p className="text-lg">{t("sensory.olfactory.complete_message")}</p>
-          <Button onClick={() => onComplete(0)} className="mt-4">
+        <CardContent className="space-y-6 bg-white/75 p-6 text-center sm:p-8">
+          <div className="rounded-[28px] border border-emerald-100 bg-emerald-50/80 p-8 shadow-sm">
+            <div className="text-6xl">✓</div>
+            <p className="mt-4 text-lg">{t("sensory.olfactory.complete_message")}</p>
+          </div>
+          <Button onClick={() => onComplete(0)} className={primaryButton + " mt-4"}>
             {t("common.continue")}
           </Button>
         </CardContent>
@@ -233,8 +259,8 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
   }
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader className="pb-2">
+    <Card className={premiumShell}>
+      <CardHeader className={premiumHeader}>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>
@@ -260,11 +286,11 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
           />
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 bg-white/75 p-6 sm:p-8">
         {showFeedback && (
           <div
-            className={`p-4 rounded-lg flex items-center justify-center gap-2 ${
-              lastAnswerCorrect ? "bg-green-100 dark:bg-green-900" : "bg-red-100 dark:bg-red-900"
+            className={`flex items-center justify-center gap-2 rounded-[22px] p-4 ${
+              lastAnswerCorrect ? "bg-green-100" : "bg-red-100"
             }`}
           >
             {lastAnswerCorrect ? <Check className="h-6 w-6 text-green-600" /> : <X className="h-6 w-6 text-red-600" />}
@@ -276,10 +302,12 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
 
         {/* Time warning */}
         {timeRemaining <= 10 && !showFeedback && (
-          <div className="flex items-center justify-center gap-2 text-red-600 animate-pulse">
+          <div className="flex animate-pulse items-center justify-center gap-2 rounded-2xl bg-red-50 p-3 text-red-600">
             <AlertCircle className="h-4 w-4" />
             <span className="text-sm font-medium">
-              {timeRemaining <= 5 ? "Hurry! Time almost up!" : "Running low on time!"}
+              {timeRemaining <= 5
+                ? uiText("Hurry! Time almost up!", "请快一点，时间快到了！", "請快啲，時間就快到！", "Dépêchez-vous, le temps est presque écoulé !")
+                : uiText("Running low on time!", "剩余时间不多了！", "剩返唔多時間！", "Il reste peu de temps !")}
             </span>
           </div>
         )}
@@ -290,9 +318,9 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
               key={option.id}
               onClick={() => handleSelectOption(option)}
               disabled={showFeedback}
-              className="flex flex-col items-center gap-4 p-6 rounded-lg border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-4 rounded-[28px] border-2 border-slate-200 bg-white p-6 transition-colors hover:border-rose-400 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <div className="relative w-32 h-32 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-lg flex items-center justify-center">
+              <div className="relative flex h-32 w-32 items-center justify-center rounded-[24px] bg-gradient-to-br from-rose-50 via-orange-50 to-amber-50">
                 <span className="text-7xl">{SMELL_ICONS[option.id] || "🌸"}</span>
               </div>
               <span className="font-medium text-lg">{t(`sensory.olfactory.smell.${option.id}`)}</span>

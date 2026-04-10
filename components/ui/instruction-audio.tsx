@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Volume2, VolumeX } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
@@ -8,17 +8,19 @@ import { useLanguage } from "@/contexts/language-context"
 interface InstructionAudioProps {
   instructionKey?: string
   text?: string
+  textOverrides?: Partial<Record<"en" | "zh" | "yue" | "fr", string>>
+  autoPlay?: boolean
   className?: string
 }
 
-export function InstructionAudio({ instructionKey, text, className }: InstructionAudioProps) {
+export function InstructionAudio({ instructionKey, text, textOverrides, autoPlay = false, className }: InstructionAudioProps) {
   const { t, localizeText, getSpeechSettings, getBestVoice, language } = useLanguage()
   const [isPlaying, setIsPlaying] = useState(false)
   const [enhancedInstruction, setEnhancedInstruction] = useState<string | null>(null)
 
-  const baseInstruction = instructionKey ? t(instructionKey) : text ? localizeText(text) : ""
+  const baseInstruction = instructionKey ? t(instructionKey) : text ? localizeText(text, textOverrides) : ""
 
-  const resolveInstructionText = async () => {
+  const resolveInstructionText = useCallback(async () => {
     if (enhancedInstruction) {
       return enhancedInstruction
     }
@@ -57,11 +59,13 @@ export function InstructionAudio({ instructionKey, text, className }: Instructio
     }
 
     return baseInstruction
-  }
+  }, [baseInstruction, enhancedInstruction, language])
 
-  const playInstruction = async () => {
+  const playInstruction = useCallback(async (showAlerts = true) => {
     if (!("speechSynthesis" in window)) {
-      alert(t("audio.not_supported"))
+      if (showAlerts) {
+        alert(t("audio.not_supported"))
+      }
       return
     }
 
@@ -87,7 +91,9 @@ export function InstructionAudio({ instructionKey, text, className }: Instructio
     utterance.onerror = (event) => {
       console.error("Speech synthesis error:", event)
       setIsPlaying(false)
-      alert(t("audio.error_playing"))
+      if (showAlerts) {
+        alert(t("audio.error_playing"))
+      }
     }
 
     try {
@@ -95,9 +101,11 @@ export function InstructionAudio({ instructionKey, text, className }: Instructio
     } catch (error) {
       console.error("Failed to start speech synthesis:", error)
       setIsPlaying(false)
-      alert(t("audio.error_playing"))
+      if (showAlerts) {
+        alert(t("audio.error_playing"))
+      }
     }
-  }
+  }, [getBestVoice, getSpeechSettings, language, resolveInstructionText, t])
 
   // Load voices when component mounts
   useEffect(() => {
@@ -117,10 +125,18 @@ export function InstructionAudio({ instructionKey, text, className }: Instructio
 
   useEffect(() => {
     setEnhancedInstruction(null)
-  }, [instructionKey, language, text])
+  }, [instructionKey, language, text, textOverrides])
+
+  useEffect(() => {
+    if (!autoPlay || !baseInstruction) {
+      return
+    }
+
+    void playInstruction(false)
+  }, [autoPlay, baseInstruction, playInstruction])
 
   return (
-    <Button onClick={playInstruction} disabled={isPlaying || !baseInstruction} variant="outline" size="sm" className={className}>
+    <Button onClick={() => void playInstruction()} disabled={isPlaying || !baseInstruction} variant="outline" size="sm" className={className}>
       {isPlaying ? (
         <>
           <VolumeX className="w-4 h-4 mr-2" />
