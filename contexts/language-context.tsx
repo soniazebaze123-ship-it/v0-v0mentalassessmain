@@ -6,6 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 type Language = "en" | "zh" | "yue" | "fr"
 
 type TranslationMap = Record<string, string | string[]>
+type InterpolationValues = Record<string, string | number | boolean | null | undefined>
 
 interface SpeechSettings {
   lang: string
@@ -17,7 +18,7 @@ interface SpeechSettings {
 interface LanguageContextType {
   language: Language
   setLanguage: (lang: Language) => void
-  t: (key: string, options?: Record<string, any>) => string
+  t: (key: string, options?: InterpolationValues) => string
   localizeText: (englishText: string, overrides?: Partial<Record<Language, string>>) => string
   getLanguageName: (lang: Language) => string
   getSpeechLanguage: (lang: Language) => string
@@ -1203,7 +1204,7 @@ const translationOverrides: Partial<Record<Language, TranslationMap>> = {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
-function interpolate(text: string, options?: Record<string, any>) {
+function interpolate(text: string, options?: InterpolationValues) {
   if (!options) return text
   return Object.entries(options).reduce((acc, [key, value]) => {
     return acc.replaceAll(`{${key}}`, String(value))
@@ -1403,7 +1404,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   )
 
   const t = useMemo(
-    () => (key: string, options?: Record<string, any>) => {
+    () => (key: string, options?: InterpolationValues) => {
       const overrideValue = translationOverrides[language]?.[key]
       const fallback = translations.en[key]
       const runtimeValue = runtimeTranslations[language]?.[`key:${key}`]

@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, ArrowRight, CheckCircle2, Leaf, Heart, Droplets, Wind, Flame, Moon, Sun, Sparkles, Upload, Camera, X, ImageIcon } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle2, Leaf, Heart, Droplets, Wind, Flame, Moon, Sun, Sparkles, Camera, X, ImageIcon } from "lucide-react"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
 import { useLanguage } from "@/contexts/language-context"
 import { useUser } from "@/contexts/user-context"
@@ -239,14 +239,17 @@ interface TCMConstitutionProps {
 }
 
 export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
-  const { language, localizeText } = useLanguage()
+  const { localizeText } = useLanguage()
   const { user } = useUser()
-  const uiText = (englishText: string, chineseText: string, cantoneseText?: string, frenchText?: string) =>
-    localizeText(englishText, {
-      zh: chineseText,
-      yue: cantoneseText ?? chineseText,
-      fr: frenchText,
-    })
+  const uiText = useCallback(
+    (englishText: string, chineseText: string, cantoneseText?: string, frenchText?: string) =>
+      localizeText(englishText, {
+        zh: chineseText,
+        yue: cantoneseText ?? chineseText,
+        fr: frenchText,
+      }),
+    [localizeText],
+  )
   const [phase, setPhase] = useState<"intro" | "image_upload" | "questions" | "results">("intro")
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [responses, setResponses] = useState<Record<string, number>>({})
@@ -263,7 +266,6 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [dragActive, setDragActive] = useState(false)
   const [uploadError, setUploadError] = useState("")
-  const [currentUploadType, setCurrentUploadType] = useState<"tongue" | "face">("tongue")
 
   const progress = (currentQuestion / TCM_QUESTIONS.length) * 100
 
@@ -278,16 +280,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
     }
   }, [])
 
-  const handleDrop = useCallback((e: React.DragEvent, type: "tongue" | "face") => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleImageUpload(e.dataTransfer.files[0], type)
-    }
-  }, [])
-
-  const handleImageUpload = async (file: File, type: "tongue" | "face") => {
+  const handleImageUpload = useCallback(async (file: File, type: "tongue" | "face") => {
     if (!file.type.startsWith("image/")) {
       setUploadError(uiText("Please upload an image file", "请上传图片文件"))
       return
@@ -304,7 +297,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
     try {
       const fileExt = file.name.split(".").pop()
       const fileName = `tcm/${user?.id}/${type}-${Date.now()}.${fileExt}`
-      
+
       const { error: uploadError } = await supabase.storage
         .from("user-files")
         .upload(fileName, file, { cacheControl: "3600", upsert: false })
@@ -312,8 +305,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
       if (uploadError) throw uploadError
 
       const { data: { publicUrl } } = supabase.storage.from("user-files").getPublicUrl(fileName)
-      
-      // Save to database
+
       const { data: fileRecord, error: dbError } = await supabase
         .from("uploaded_files")
         .insert({
@@ -329,13 +321,12 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
       if (dbError) throw dbError
 
       const preview = URL.createObjectURL(file)
-      
-      // Remove existing image of same type
-      setUploadedImages(prev => {
-        const filtered = prev.filter(img => img.type !== type)
+
+      setUploadedImages((prev) => {
+        const filtered = prev.filter((img) => img.type !== type)
         return [...filtered, { id: fileRecord.id, type, url: publicUrl, preview }]
       })
-      
+
       setUploadProgress(100)
     } catch (error) {
       console.error("Upload error:", error)
@@ -343,7 +334,16 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
     } finally {
       setUploading(false)
     }
-  }
+  }, [uiText, user?.id])
+
+  const handleDrop = useCallback((e: React.DragEvent, type: "tongue" | "face") => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      void handleImageUpload(e.dataTransfer.files[0], type)
+    }
+  }, [handleImageUpload])
 
   const removeImage = async (imageId: string) => {
     try {

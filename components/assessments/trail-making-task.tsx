@@ -107,24 +107,19 @@ export function TrailMakingTask({ onComplete, onSkip }: TrailMakingTaskProps) {
     return () => window.removeEventListener("resize", initializeCircles)
   }, [])
 
-  const getCirclePosition = (circleId: string): Position => {
-    const circle = circles.find((c) => c.id === circleId)
-    return circle ? { x: circle.x, y: circle.y } : { x: 0, y: 0 }
-  }
-
-  const hasOutgoingConnection = (circleId: string) => {
+  const hasOutgoingConnection = useCallback((circleId: string) => {
     return connections.some((conn) => conn.from === circleId)
-  }
+  }, [connections])
 
-  const hasIncomingConnection = (circleId: string) => {
+  const hasIncomingConnection = useCallback((circleId: string) => {
     return connections.some((conn) => conn.to === circleId)
-  }
+  }, [connections])
 
-  const connectionExists = (fromId: string, toId: string) => {
+  const connectionExists = useCallback((fromId: string, toId: string) => {
     return connections.some(
       (conn) => (conn.from === fromId && conn.to === toId) || (conn.from === toId && conn.to === fromId),
     )
-  }
+  }, [connections])
 
   const getRelativeTouchPosition = useCallback((touch: Touch): Position | null => {
     if (!containerRef.current) {
@@ -159,7 +154,7 @@ export function TrailMakingTask({ onComplete, onSkip }: TrailMakingTaskProps) {
         setDragLine({ start: position, end: position })
       }
     },
-    [connections],
+    [hasOutgoingConnection],
   )
 
   const handleDocumentTouchMove = useCallback(
@@ -231,7 +226,7 @@ export function TrailMakingTask({ onComplete, onSkip }: TrailMakingTaskProps) {
         setDragLine({ start: position, end: position })
       }
     },
-    [connections],
+    [hasOutgoingConnection],
   )
 
   const handleMouseMove = useCallback(
@@ -264,7 +259,7 @@ export function TrailMakingTask({ onComplete, onSkip }: TrailMakingTaskProps) {
       setConnectingFrom(null)
       setDragLine(null)
     },
-    [isConnecting, connectingFrom, connections],
+    [connectionExists, connectingFrom, hasIncomingConnection, isConnecting],
   )
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
