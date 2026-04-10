@@ -1,13 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AssessmentInput } from "@/components/ui/assessment-input"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import { useLanguage } from "@/contexts/language-context"
-import { useUser } from "@/contexts/user-context"
-import { supabase } from "@/lib/supabase"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
 
 interface AnimalNamingProps {
@@ -15,121 +11,71 @@ interface AnimalNamingProps {
   onSkip?: () => void
 }
 
-interface UploadedImage {
-  id: string
-  filename: string
-  file_path: string
-  url: string
+interface AnimalQuestion {
+  image: string
+  answerKey: string
+  optionKeys: string[]
+}
+
+const ANIMAL_POOL = [
+  { image: "/images/tiger.png", labelKey: "common.tiger" },
+  { image: "/images/rhinoceros.png", labelKey: "common.rhinoceros" },
+  { image: "/images/camel.png", labelKey: "common.camel" },
+]
+
+function shuffleArray<T>(items: T[]) {
+  const next = [...items]
+
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1))
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+  }
+
+  return next
+}
+
+function buildAnimalQuestions(): AnimalQuestion[] {
+  return ANIMAL_POOL.map((animal, index) => {
+    const distractor = ANIMAL_POOL[(index + 1) % ANIMAL_POOL.length]
+
+    return {
+      image: animal.image,
+      answerKey: animal.labelKey,
+      optionKeys: shuffleArray([animal.labelKey, distractor.labelKey]),
+    }
+  })
 }
 
 export function AnimalNaming({ onComplete, onSkip }: AnimalNamingProps) {
   const { t } = useLanguage()
-  const { user } = useUser()
-  const [answers, setAnswers] = useState<string[]>(["", "", ""])
-  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const defaultAnimals = [
-    { image: "/images/tiger.png", name: t("common.tiger"), alt: t("common.tiger") },
-    { image: "/images/rhinoceros.png", name: t("common.rhinoceros"), alt: t("common.rhinoceros") },
-    { image: "/images/camel.png", name: t("common.camel"), alt: t("common.camel") },
-  ]
+  const [questions, setQuestions] = useState<AnimalQuestion[]>([])
+  const [selectedAnswers, setSelectedAnswers] = useState<string[]>([])
 
   useEffect(() => {
-    loadUploadedImages()
-  }, [user])
+    const initialQuestions = buildAnimalQuestions()
+    setQuestions(initialQuestions)
+    setSelectedAnswers(Array(initialQuestions.length).fill(""))
+  }, [])
 
-  const loadUploadedImages = async () => {
-    if (!user) {
-      setLoading(false)
-      return
-    }
-
-    try {
-      const { data: files } = await supabase
-        .from("uploaded_files")
-        .select("*")
-        .eq("user_id", user.id)
-        .like("file_type", "image%")
-        .order("uploaded_at", { ascending: false })
-        .limit(3)
-
-      if (files && files.length > 0) {
-        const images = files.slice(0, 3).map((file) => ({
-          id: file.id,
-          filename: file.filename,
-          file_path: file.file_path,
-          url: supabase.storage.from("user-files").getPublicUrl(file.file_path).data.publicUrl,
-        }))
-        setUploadedImages(images)
-      }
-    } catch (error) {
-      console.error("Error loading uploaded images:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const animals = defaultAnimals.map((animal, index) => {
-    const uploadedImage = uploadedImages[index]
-
-    if (!uploadedImage) {
-      return {
-        ...animal,
-        fallbackImage: animal.image,
-        isUploaded: false,
-      }
-    }
-
-    return {
-      image: uploadedImage.url,
-      fallbackImage: animal.image,
-      name: `${t("common.animal")} ${index + 1}`,
-      alt: uploadedImage.filename,
-      isUploaded: true,
-    }
-  })
-
-  const handleAnswerChange = (index: number, value: string) => {
-    const newAnswers = [...answers]
-    newAnswers[index] = value
-    setAnswers(newAnswers)
+  const handleAnswerSelect = (index: number, optionKey: string) => {
+    setSelectedAnswers((previous) => previous.map((value, valueIndex) => (valueIndex === index ? optionKey : value)))
   }
 
   const checkAnswers = () => {
-    let score = 0
-    animals.forEach((animal, index) => {
-      const userAnswer = answers[index].toLowerCase().trim()
-      // For default animals, check against localized name. For uploaded, any non-empty answer gets a point.
-      if (animal.isUploaded) {
-        if (userAnswer !== "") {
-          score += 1
-        }
-      } else {
-        if (userAnswer === animal.name.toLowerCase()) {
-          score += 1
-        }
-      }
-    })
+    const score = questions.reduce((total, question, index) => {
+      return total + (selectedAnswers[index] === question.answerKey ? 1 : 0)
+    }, 0)
+
     onComplete(score)
   }
 
   const handleSkip = () => {
     if (onSkip) {
       onSkip()
-    } else {
-      onComplete(0)
+      return
     }
-  }
 
-  if (loading) {
-    return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardContent className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </CardContent>
-      </Card>
-    )
+    onComplete(0)
   }
 
   return (
@@ -138,36 +84,29 @@ export function AnimalNaming({ onComplete, onSkip }: AnimalNamingProps) {
         <CardTitle>{t("moca.naming")}</CardTitle>
         <p className="text-sm text-gray-600">{t("moca.naming.instruction")}</p>
         <InstructionAudio instructionKey="moca.naming.instruction" className="mt-2" />
-        {uploadedImages.length > 0 && <p className="text-sm text-green-600">✓ {t("upload.using_uploaded_images")}</p>}
       </CardHeader>
       <CardContent>
         <div className="grid md:grid-cols-3 gap-6">
-          {animals.map((animal, index) => (
-            <div key={index} className="space-y-4">
+          {questions.map((question, index) => (
+            <div key={question.image} className="space-y-4 rounded-xl border bg-background p-4">
               <div className="h-48 w-full overflow-hidden rounded-lg bg-gray-100">
-                <img
-                  src={animal.image || animal.fallbackImage || "/placeholder.svg"}
-                  alt={animal.alt}
-                  className="h-full w-full object-contain bg-white p-2"
-                  onError={(event) => {
-                    if (event.currentTarget.src.endsWith(animal.fallbackImage)) {
-                      event.currentTarget.src = "/placeholder.svg"
-                      return
-                    }
-
-                    event.currentTarget.src = animal.fallbackImage
-                  }}
-                />
+                <img src={question.image} alt={t(question.answerKey)} className="h-full w-full object-contain bg-white p-2" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor={`animal-${index}`}>{t("question.animal_label", { index: index + 1 })}</Label>
-                <AssessmentInput
-                  id={`animal-${index}`}
-                  value={answers[index]}
-                  onChange={(e) => handleAnswerChange(index, e.target.value)}
-                  placeholder=""
-                  className="w-full"
-                />
+                <p className="text-sm font-medium text-muted-foreground">{t("question.tap_correct_name")}</p>
+                <div className="grid gap-2">
+                  {question.optionKeys.map((optionKey) => (
+                    <Button
+                      key={optionKey}
+                      type="button"
+                      variant={selectedAnswers[index] === optionKey ? "default" : "outline"}
+                      className="w-full justify-center"
+                      onClick={() => handleAnswerSelect(index, optionKey)}
+                    >
+                      {t(optionKey)}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
           ))}
@@ -179,7 +118,7 @@ export function AnimalNaming({ onComplete, onSkip }: AnimalNamingProps) {
           </Button>
           <Button
             onClick={checkAnswers}
-            disabled={answers.some((answer) => answer.trim() === "")}
+            disabled={!questions.length || selectedAnswers.some((answer) => answer === "")}
             className="w-full max-w-xs"
           >
             {t("common.submit")}

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title desc">
+  <title>Noodles bowl</title>
+  <desc>A bowl of noodles with chopsticks.</desc>
+  <rect width="200" height="200" rx="24" fill="#fff3de"/>
+  <ellipse cx="100" cy="112" rx="60" ry="40" fill="#f8d77f"/>
+  <path d="M42 110c0 30 26 52 58 52s58-22 58-52" fill="#cc6e3d"/>
+  <path d="M40 106h120" stroke="#8d4420" stroke-width="6" stroke-linecap="round"/>
+  <g fill="none" stroke="#f5cc57" stroke-width="5" stroke-linecap="round">
+    <path d="M66 86c12-10 22-10 34 0"/>
+    <path d="M80 98c10-9 22-9 34 0"/>
+    <path d="M58 98c10-8 18-8 28 0"/>
+    <path d="M101 86c11-9 21-9 31 0"/>
+  </g>
+  <path d="M137 46l26 42" stroke="#5b3424" stroke-width="6" stroke-linecap="round"/>
+  <path d="M123 50l27 42" stroke="#7a4930" stroke-width="6" stroke-linecap="round"/>
+</svg>

@@ -235,10 +235,10 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
               isDragging === "hour" ? "bg-blue-600" : ""
             } ${isMobile ? "w-1" : "w-2"}`}
             style={{
-              height: isMobile ? "70px" : "80px",
+              height: isMobile ? "58px" : "80px",
               left: isMobile ? "calc(50% - 2px)" : "calc(50% - 4px)",
-              top: isMobile ? "calc(50% - 70px)" : "calc(50% - 80px)",
-              transformOrigin: isMobile ? "50% 70px" : "50% 80px",
+              top: isMobile ? "calc(50% - 58px)" : "calc(50% - 80px)",
+              transformOrigin: isMobile ? "50% 58px" : "50% 80px",
               transform: `rotate(${hourAngle}deg)`,
             }}
             onMouseDown={handleMouseDown("hour")}
@@ -251,10 +251,10 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
               isDragging === "minute" ? "bg-blue-600" : ""
             } ${isMobile ? "w-0.5" : "w-1"}`}
             style={{
-              height: isMobile ? "95px" : "110px",
+              height: isMobile ? "78px" : "110px",
               left: isMobile ? "calc(50% - 1px)" : "calc(50% - 2px)",
-              top: isMobile ? "calc(50% - 95px)" : "calc(50% - 110px)",
-              transformOrigin: isMobile ? "50% 95px" : "50% 110px",
+              top: isMobile ? "calc(50% - 78px)" : "calc(50% - 110px)",
+              transformOrigin: isMobile ? "50% 78px" : "50% 110px",
               transform: `rotate(${minuteAngle}deg)`,
             }}
             onMouseDown={handleMouseDown("minute")}

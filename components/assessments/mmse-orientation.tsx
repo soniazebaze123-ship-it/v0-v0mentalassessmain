@@ -100,9 +100,12 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
           <h3 className="text-lg font-bold text-blue-800 border-b pb-2">{t("mmse.orientation.time_questions")}</h3>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="year" className="text-base">
-                {t("question.year")}
-              </Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="year" className="text-base">
+                  {t("question.year")}
+                </Label>
+                <InstructionAudio text={t("question.year")} />
+              </div>
               <AssessmentInput
                 id="year"
                 type="number"
@@ -113,9 +116,12 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="season" className="text-base">
-                {t("question.season")}
-              </Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="season" className="text-base">
+                  {t("question.season")}
+                </Label>
+                <InstructionAudio text={t("question.season")} />
+              </div>
               <AssessmentInput
                 id="season"
                 value={answers.season}
@@ -125,9 +131,12 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="date" className="text-base">
-                {t("question.date")}
-              </Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="date" className="text-base">
+                  {t("question.date")}
+                </Label>
+                <InstructionAudio text={t("question.date")} />
+              </div>
               <AssessmentInput
                 id="date"
                 type="number"
@@ -138,9 +147,12 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="day" className="text-base">
-                {t("question.day")}
-              </Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="day" className="text-base">
+                  {t("question.day")}
+                </Label>
+                <InstructionAudio text={t("question.day")} />
+              </div>
               <AssessmentInput
                 id="day"
                 value={answers.day}
@@ -150,9 +162,12 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="month" className="text-base">
-                {t("question.month")}
-              </Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="month" className="text-base">
+                  {t("question.month")}
+                </Label>
+                <InstructionAudio text={t("question.month")} />
+              </div>
               <AssessmentInput
                 id="month"
                 type="number"
@@ -168,9 +183,12 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
           <h3 className="text-lg font-bold text-blue-800 border-b pb-2">{t("mmse.orientation.place_questions")}</h3>
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="country" className="text-base">
-                {t("question.country")}
-              </Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="country" className="text-base">
+                  {t("question.country")}
+                </Label>
+                <InstructionAudio text={t("question.country")} />
+              </div>
               <AssessmentInput
                 id="country"
                 value={answers.country}
@@ -180,9 +198,12 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="president" className="text-base">
-                {t("question.president")}
-              </Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="president" className="text-base">
+                  {t("question.president")}
+                </Label>
+                <InstructionAudio text={t("question.president")} />
+              </div>
               <AssessmentInput
                 id="president"
                 value={answers.president}
@@ -192,9 +213,12 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="sea" className="text-base">
-                {t("question.sea")}
-              </Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="sea" className="text-base">
+                  {t("question.sea")}
+                </Label>
+                <InstructionAudio text={t("question.sea")} />
+              </div>
               <AssessmentInput
                 id="sea"
                 value={answers.sea}

@@ -1,6 +1,10 @@
 import { createBrowserClient } from "@supabase/ssr"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
+declare global {
+  var __mentalAssessSupabaseClient__: SupabaseClient | undefined
+}
+
 function getSupabaseConfig() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -12,15 +16,17 @@ function getSupabaseConfig() {
   return { supabaseUrl, supabasePublishableKey }
 }
 
-let browserClient: SupabaseClient | null = null
-
 export function createClient() {
-  if (browserClient) {
-    return browserClient
+  if (typeof window !== "undefined" && globalThis.__mentalAssessSupabaseClient__) {
+    return globalThis.__mentalAssessSupabaseClient__
   }
 
   const { supabaseUrl, supabasePublishableKey } = getSupabaseConfig()
-  browserClient = createBrowserClient(supabaseUrl, supabasePublishableKey)
+  const client = createBrowserClient(supabaseUrl, supabasePublishableKey)
 
-  return browserClient
+  if (typeof window !== "undefined") {
+    globalThis.__mentalAssessSupabaseClient__ = client
+  }
+
+  return client
 }

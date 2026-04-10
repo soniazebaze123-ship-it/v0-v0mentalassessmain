@@ -24,6 +24,10 @@ interface Position {
   y: number
 }
 
+function distanceBetweenPoints(a: Position, b: Position) {
+  return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2))
+}
+
 interface TrailMakingTaskProps {
   onComplete: (score: number) => void
   onSkip?: () => void
@@ -122,6 +126,25 @@ export function TrailMakingTask({ onComplete, onSkip }: TrailMakingTaskProps) {
     )
   }
 
+  const getRelativeTouchPosition = useCallback((touch: Touch): Position | null => {
+    if (!containerRef.current) {
+      return null
+    }
+
+    const rect = containerRef.current.getBoundingClientRect()
+    return {
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top,
+    }
+  }, [])
+
+  const findCircleAtPosition = useCallback(
+    (position: Position) => {
+      return circles.find((circle) => distanceBetweenPoints(position, { x: circle.x, y: circle.y }) <= CIRCLE_RADIUS)
+    },
+    [circles],
+  )
+
   // Enhanced touch event handlers to prevent button reloads:
   const handleCircleTouchStart = useCallback(
     (circleId: string, position: Position, e: React.TouchEvent) => {
@@ -143,43 +166,42 @@ export function TrailMakingTask({ onComplete, onSkip }: TrailMakingTaskProps) {
       e.stopPropagation()
 
       if (isConnecting && dragLine && containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect()
         const touch = e.touches[0]
-        const newEnd = {
-          x: touch.clientX - rect.left,
-          y: touch.clientY - rect.top,
+        const newEnd = getRelativeTouchPosition(touch)
+
+        if (!newEnd) {
+          return
         }
+
         setDragLine((prev) => (prev ? { ...prev, end: newEnd } : null))
       }
     },
-    [isConnecting, dragLine],
-  )
-
-  const handleCircleTouchEnd = useCallback(
-    (circleId: string, e: React.TouchEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-
-      if (isConnecting && connectingFrom && connectingFrom !== circleId) {
-        if (!hasIncomingConnection(circleId) && !connectionExists(connectingFrom, circleId)) {
-          setConnections((prev) => [...prev, { from: connectingFrom, to: circleId }])
-        }
-      }
-
-      setIsConnecting(false)
-      setConnectingFrom(null)
-      setDragLine(null)
-    },
-    [isConnecting, connectingFrom, connections],
+    [dragLine, getRelativeTouchPosition, isConnecting],
   )
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     e.preventDefault()
     e.stopPropagation()
+
+    if (isConnecting && connectingFrom) {
+      const touch = e.changedTouches[0]
+      const releasePosition = touch ? getRelativeTouchPosition(touch) : null
+      const targetCircle = releasePosition ? findCircleAtPosition(releasePosition) : null
+
+      if (
+        targetCircle &&
+        connectingFrom !== targetCircle.id &&
+        !hasIncomingConnection(targetCircle.id) &&
+        !connectionExists(connectingFrom, targetCircle.id)
+      ) {
+        setConnections((prev) => [...prev, { from: connectingFrom, to: targetCircle.id }])
+      }
+    }
+
     setIsConnecting(false)
     setConnectingFrom(null)
     setDragLine(null)
-  }, [])
+  }, [connectingFrom, connectionExists, findCircleAtPosition, getRelativeTouchPosition, hasIncomingConnection, isConnecting])
 
   const handleCircleMouseDown = useCallback(
     (circleId: string, position: Position, e: React.MouseEvent) => {
@@ -392,7 +414,6 @@ export function TrailMakingTask({ onComplete, onSkip }: TrailMakingTaskProps) {
                 onMouseDown={(e) => canStart && handleCircleMouseDown(circle.id, { x: circle.x, y: circle.y }, e)}
                 onMouseUp={(e) => handleCircleMouseUp(circle.id, e)}
                 onTouchStart={(e) => canStart && handleCircleTouchStart(circle.id, { x: circle.x, y: circle.y }, e)}
-                onTouchEnd={(e) => handleCircleTouchEnd(circle.id, e)}
               >
                 {circle.label}
               </div>

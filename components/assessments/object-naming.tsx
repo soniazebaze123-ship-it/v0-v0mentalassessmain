@@ -1,12 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AssessmentInput } from "@/components/ui/assessment-input"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { useUser } from "@/contexts/user-context"
-import { supabase } from "@/lib/supabase"
 import { useLanguage } from "@/contexts/language-context"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
 
@@ -15,121 +11,77 @@ interface ObjectNamingProps {
   onSkip?: () => void
 }
 
-interface UploadedImage {
-  id: string
-  filename: string
-  file_path: string
-  url: string
+interface ObjectQuestion {
+  image: string
+  answerKey: string
+  optionKeys: string[]
+}
+
+const ITEM_POOL = [
+  { image: "/images/rice.svg", labelKey: "common.rice" },
+  { image: "/images/noodles.svg", labelKey: "common.noodles" },
+  { image: "/images/milk.svg", labelKey: "common.milk" },
+  { image: "/images/chicken.svg", labelKey: "common.chicken" },
+  { image: "/images/fish.svg", labelKey: "common.fish" },
+  { image: "/images/egg.svg", labelKey: "common.egg" },
+]
+
+function shuffleArray<T>(items: T[]) {
+  const next = [...items]
+
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1))
+    ;[next[index], next[swapIndex]] = [next[swapIndex], next[index]]
+  }
+
+  return next
+}
+
+function buildObjectQuestions(): ObjectQuestion[] {
+  const selectedItems = shuffleArray(ITEM_POOL).slice(0, 3)
+
+  return selectedItems.map((item) => {
+    const distractorPool = ITEM_POOL.filter((candidate) => candidate.labelKey !== item.labelKey)
+    const distractor = distractorPool[Math.floor(Math.random() * distractorPool.length)]
+
+    return {
+      image: item.image,
+      answerKey: item.labelKey,
+      optionKeys: shuffleArray([item.labelKey, distractor.labelKey]),
+    }
+  })
 }
 
 export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
   const { t } = useLanguage()
-  const { user } = useUser()
-  const [answers, setAnswers] = useState<string[]>(["", "", ""])
-  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const defaultObjects = [
-    { image: "/images/house.png", name: t("common.house"), alt: t("common.house") },
-    { image: "/images/bag.png", name: t("common.bag"), alt: t("common.bag") },
-    { image: "/images/tv.png", name: t("common.television"), alt: t("common.television") },
-  ]
+  const [questions, setQuestions] = useState<ObjectQuestion[]>([])
+  const [selectedAnswers, setSelectedAnswers] = useState<string[]>([])
 
   useEffect(() => {
-    loadUploadedImages()
-  }, [user])
+    const initialQuestions = buildObjectQuestions()
+    setQuestions(initialQuestions)
+    setSelectedAnswers(Array(initialQuestions.length).fill(""))
+  }, [])
 
-  const loadUploadedImages = async () => {
-    if (!user) {
-      setLoading(false)
-      return
-    }
-
-    try {
-      const { data: files } = await supabase
-        .from("uploaded_files")
-        .select("*")
-        .eq("user_id", user.id)
-        .like("file_type", "image%")
-        .order("uploaded_at", { ascending: false })
-        .limit(3)
-
-      if (files && files.length > 0) {
-        const images = files.slice(0, 3).map((file) => ({
-          id: file.id,
-          filename: file.filename,
-          file_path: file.file_path,
-          url: supabase.storage.from("user-files").getPublicUrl(file.file_path).data.publicUrl,
-        }))
-        setUploadedImages(images)
-      }
-    } catch (error) {
-      console.error("Error loading uploaded images:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const objects = defaultObjects.map((object, index) => {
-    const uploadedImage = uploadedImages[index]
-
-    if (!uploadedImage) {
-      return {
-        ...object,
-        fallbackImage: object.image,
-        isUploaded: false,
-      }
-    }
-
-    return {
-      image: uploadedImage.url,
-      fallbackImage: object.image,
-      name: `${t("common.object")} ${index + 1}`,
-      alt: uploadedImage.filename,
-      isUploaded: true,
-    }
-  })
-
-  const handleAnswerChange = (index: number, value: string) => {
-    const newAnswers = [...answers]
-    newAnswers[index] = value
-    setAnswers(newAnswers)
+  const handleAnswerSelect = (index: number, optionKey: string) => {
+    setSelectedAnswers((previous) => previous.map((value, valueIndex) => (valueIndex === index ? optionKey : value)))
   }
 
   const checkAnswers = () => {
-    let score = 0
-    objects.forEach((object, index) => {
-      const userAnswer = answers[index].toLowerCase().trim()
-      // For default objects, check against localized name. For uploaded, any non-empty answer gets a point.
-      if (object.isUploaded) {
-        if (userAnswer !== "") {
-          score += 1
-        }
-      } else {
-        if (userAnswer === object.name.toLowerCase()) {
-          score += 1
-        }
-      }
-    })
+    const score = questions.reduce((total, question, index) => {
+      return total + (selectedAnswers[index] === question.answerKey ? 1 : 0)
+    }, 0)
+
     onComplete(score)
   }
 
   const handleSkip = () => {
     if (onSkip) {
       onSkip()
-    } else {
-      onComplete(0)
+      return
     }
-  }
 
-  if (loading) {
-    return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardContent className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </CardContent>
-      </Card>
-    )
+    onComplete(0)
   }
 
   return (
@@ -138,46 +90,29 @@ export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
         <CardTitle>{t("mmse.naming")}</CardTitle>
         <p className="text-sm text-muted-foreground">{t("mmse.naming.instruction")}</p>
         <InstructionAudio instructionKey="mmse.naming.instruction" className="mt-2" />
-        {uploadedImages.length > 0 && <p className="text-sm text-green-600">✓ {t("upload.using_uploaded_images")}</p>}
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {objects.map((object, index) => (
-            <div key={index} className="space-y-4">
-              <div
-                className={`relative w-full bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden ${
-                  // Special handling for Object 2 (index 1) on mobile - reduce height
-                  index === 1 ? "h-40 sm:h-48" : "h-48"
-                }`}
-              >
-                <img
-                  src={object.image || object.fallbackImage || "/placeholder.svg"}
-                  alt={object.alt}
-                  className={`h-full w-full bg-white ${
-                    // Special handling for Object 2 (index 1) - contain instead of cover for better fit
-                    index === 1 ? "object-contain p-2" : "object-contain p-2"
-                  }`}
-                  onError={(event) => {
-                    if (event.currentTarget.src.endsWith(object.fallbackImage)) {
-                      event.currentTarget.src = "/placeholder.svg"
-                      return
-                    }
-
-                    event.currentTarget.src = object.fallbackImage
-                  }}
-                />
+          {questions.map((question, index) => (
+            <div key={`${question.image}-${index}`} className="space-y-4 rounded-xl border bg-background p-4">
+              <div className="h-48 w-full overflow-hidden rounded-lg bg-gray-100">
+                <img src={question.image} alt={t(question.answerKey)} className="h-full w-full object-contain bg-white p-2" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor={`object-${index}`} className="text-sm font-medium">
-                  {t("question.object_label", { index: index + 1 })}
-                </Label>
-                <AssessmentInput
-                  id={`object-${index}`}
-                  value={answers[index]}
-                  onChange={(e) => handleAnswerChange(index, e.target.value)}
-                  placeholder=""
-                  className="w-full"
-                />
+                <p className="text-sm font-medium text-muted-foreground">{t("question.tap_correct_name")}</p>
+                <div className="grid gap-2">
+                  {question.optionKeys.map((optionKey) => (
+                    <Button
+                      key={optionKey}
+                      type="button"
+                      variant={selectedAnswers[index] === optionKey ? "default" : "outline"}
+                      className="w-full justify-center"
+                      onClick={() => handleAnswerSelect(index, optionKey)}
+                    >
+                      {t(optionKey)}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
           ))}
@@ -189,7 +124,7 @@ export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
           </Button>
           <Button
             onClick={checkAnswers}
-            disabled={answers.some((answer) => answer.trim() === "")}
+            disabled={!questions.length || selectedAnswers.some((answer) => answer === "")}
             className="w-full sm:w-auto sm:max-w-xs"
           >
             {t("common.submit")}

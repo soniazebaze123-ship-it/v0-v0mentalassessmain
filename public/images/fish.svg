@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title desc">
+  <title>Fish</title>
+  <desc>A fish.</desc>
+  <rect width="200" height="200" rx="24" fill="#e6f7fb"/>
+  <ellipse cx="95" cy="100" rx="46" ry="30" fill="#66b7d6"/>
+  <path d="M136 100l34-24v48z" fill="#4d9ab9"/>
+  <circle cx="76" cy="94" r="5" fill="#14384a"/>
+  <path d="M54 100c-8-8-8-18 0-26" fill="none" stroke="#66b7d6" stroke-width="8" stroke-linecap="round"/>
+  <path d="M54 126c8-8 8-18 0-26" fill="none" stroke="#66b7d6" stroke-width="8" stroke-linecap="round"/>
+  <path d="M86 102c10 10 22 10 32 0" fill="none" stroke="#3f7d97" stroke-width="4" stroke-linecap="round"/>
+</svg>

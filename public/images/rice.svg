@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title desc">
+  <title>Rice bowl</title>
+  <desc>A bowl of rice.</desc>
+  <rect width="200" height="200" rx="24" fill="#f7f1df"/>
+  <ellipse cx="100" cy="106" rx="58" ry="42" fill="#ffffff"/>
+  <path d="M48 106c0 30 23 54 52 54s52-24 52-54" fill="#c76d3a"/>
+  <path d="M40 102h120" stroke="#8e4323" stroke-width="6" stroke-linecap="round"/>
+  <g fill="#f4f4ed">
+    <ellipse cx="77" cy="78" rx="10" ry="7"/>
+    <ellipse cx="95" cy="72" rx="11" ry="8"/>
+    <ellipse cx="116" cy="78" rx="10" ry="7"/>
+    <ellipse cx="88" cy="88" rx="10" ry="7"/>
+    <ellipse cx="109" cy="90" rx="10" ry="7"/>
+    <ellipse cx="70" cy="92" rx="9" ry="6"/>
+    <ellipse cx="126" cy="92" rx="9" ry="6"/>
+  </g>
+</svg>
