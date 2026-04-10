@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, ArrowRight, CheckCircle2, Leaf, Heart, Droplets, Wind, Flame, Moon, Sun, Sparkles, Upload, Camera, X, ImageIcon } from "lucide-react"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
-import { useLanguage } from "@/contexts/language-context"
 import { useUser } from "@/contexts/user-context"
 import { supabase } from "@/lib/supabase"
 import Image from "next/image"
@@ -236,17 +235,11 @@ interface TCMConstitutionProps {
     recommendations: string[]
   }) => void
   onBack: () => void
+  language?: "en" | "zh"
 }
 
-export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
-  const { language, localizeText } = useLanguage()
+export function TCMConstitution({ onComplete, onBack, language = "en" }: TCMConstitutionProps) {
   const { user } = useUser()
-  const uiText = (englishText: string, chineseText: string, cantoneseText?: string, frenchText?: string) =>
-    localizeText(englishText, {
-      zh: chineseText,
-      yue: cantoneseText ?? chineseText,
-      fr: frenchText,
-    })
   const [phase, setPhase] = useState<"intro" | "image_upload" | "questions" | "results">("intro")
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [responses, setResponses] = useState<Record<string, number>>({})
@@ -289,11 +282,11 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
 
   const handleImageUpload = async (file: File, type: "tongue" | "face") => {
     if (!file.type.startsWith("image/")) {
-      setUploadError(uiText("Please upload an image file", "请上传图片文件"))
+      setUploadError(language === "zh" ? "请上传图片文件" : "Please upload an image file")
       return
     }
     if (file.size > 10 * 1024 * 1024) {
-      setUploadError(uiText("Image size must be less than 10MB", "图片大小不能超过10MB"))
+      setUploadError(language === "zh" ? "图片大小不能超过10MB" : "Image size must be less than 10MB")
       return
     }
 
@@ -338,8 +331,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
       
       setUploadProgress(100)
     } catch (error) {
-      console.error("Upload error:", error)
-      setUploadError(uiText("Upload failed, please try again", "上传失败，请重试"))
+      setUploadError(language === "zh" ? "上传失败，请重试" : "Upload failed, please try again")
     } finally {
       setUploading(false)
     }
@@ -350,7 +342,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
       await supabase.from("uploaded_files").delete().eq("id", imageId)
       setUploadedImages(prev => prev.filter(img => img.id !== imageId))
     } catch (error) {
-      console.error("Error removing image:", error)
+      // Error removing image - silently continue
     }
   }
 
@@ -489,34 +481,38 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
             </div>
           </div>
           <CardTitle className="text-2xl">
-            {uiText("TCM Constitution Assessment", "中医体质辨识")}
+            {language === "zh" ? "中医体质辨识" : "TCM Constitution Assessment"}
           </CardTitle>
           <CardDescription className="text-base mt-2">
-            {uiText("Assess your body constitution based on Traditional Chinese Medicine principles and receive personalized health recommendations", "根据中医理论评估您的体质类型，获取个性化健康建议")}
+            {language === "zh"
+              ? "根据中医理论评估您的体质类型，获取个性化健康建议"
+              : "Assess your body constitution based on Traditional Chinese Medicine principles and receive personalized health recommendations"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <InstructionAudio
-            text={uiText("This assessment will evaluate your body constitution through 27 questions. Please answer honestly based on your physical condition over the past year.", "本测试将通过27个问题评估您的体质类型。请根据您近一年的身体状况如实作答。")}
+            text={language === "zh"
+              ? "本测试将通过27个问题评估您的体质类型。请根据您近一年的身体状况如实作答。"
+              : "This assessment will evaluate your body constitution through 27 questions. Please answer honestly based on your physical condition over the past year."}
           />
 
           <div className="bg-muted p-4 rounded-lg space-y-2">
-            <h4 className="font-medium">{uiText("Instructions", "测试说明")}:</h4>
+            <h4 className="font-medium">{language === "zh" ? "测试说明" : "Instructions"}:</h4>
             <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-              <li>{uiText("Step 1: Upload tongue and face images (optional)", "第一步：上传舌象和面部照片（可选）")}</li>
-              <li>{uiText("Step 2: Answer 27 constitution questionnaire questions", "第二步：回答27个体质问卷问题")}</li>
-              <li>{uiText("Answer based on your condition in the past year", "根据您过去一年的状况作答")}</li>
-              <li>{uiText("Results will show your constitution type and recommendations", "完成后将显示您的体质类型和建议")}</li>
+              <li>{language === "zh" ? "第一步：上传舌象和面部照片（可选）" : "Step 1: Upload tongue and face images (optional)"}</li>
+              <li>{language === "zh" ? "第二步：回答27个体质问卷问题" : "Step 2: Answer 27 constitution questionnaire questions"}</li>
+              <li>{language === "zh" ? "根据您过去一年的状况作答" : "Answer based on your condition in the past year"}</li>
+              <li>{language === "zh" ? "完成后将显示您的体质类型和建议" : "Results will show your constitution type and recommendations"}</li>
             </ul>
           </div>
 
           <div className="flex gap-3">
             <Button variant="outline" onClick={onBack} className="flex-1">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              {uiText("Back", "返回")}
+              {language === "zh" ? "返回" : "Back"}
             </Button>
             <Button onClick={() => setPhase("image_upload")} className="flex-1">
-              {uiText("Start Assessment", "开始测试")}
+              {language === "zh" ? "开始测试" : "Start Assessment"}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -535,17 +531,19 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
         <CardHeader>
           <div className="flex items-center justify-between mb-2">
             <Badge variant="outline">
-              {uiText("Step 1: Image Collection", "第1步：图像采集")}
+              {language === "zh" ? "第1步：图像采集" : "Step 1: Image Collection"}
             </Badge>
             <Button variant="ghost" size="sm" onClick={onBack}>
-              {uiText("Exit", "退出")}
+              {language === "zh" ? "退出" : "Exit"}
             </Button>
           </div>
           <CardTitle className="text-xl">
-            {uiText("Upload Tongue and Face Images", "上传舌象和面部照片")}
+            {language === "zh" ? "上传舌象和面部照片" : "Upload Tongue and Face Images"}
           </CardTitle>
           <CardDescription>
-            {uiText("TCM diagnosis uses tongue and facial observation to help determine constitution. This step is optional.", "中医诊断通过观察舌象和面色来辅助判断体质。此步骤为可选，您可以跳过直接进入问卷。")}
+            {language === "zh" 
+              ? "中医诊断通过观察舌象和面色来辅助判断体质。此步骤为可选，您可以跳过直接进入问卷。" 
+              : "TCM diagnosis uses tongue and facial observation to help determine constitution. This step is optional."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -559,7 +557,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Camera className="h-5 w-5 text-red-500" />
-              <h4 className="font-medium">{uiText("Tongue Image", "舌象照片")}</h4>
+              <h4 className="font-medium">{language === "zh" ? "舌象照片" : "Tongue Image"}</h4>
             </div>
             {tongueImage ? (
               <div className="relative border rounded-lg p-2">
@@ -594,10 +592,10 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
                 />
                 <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
                 <p className="text-sm text-gray-600">
-                  {uiText("Drag & drop or click to upload tongue image", "拖放或点击上传舌象照片")}
+                  {language === "zh" ? "拖放或点击上传舌象照片" : "Drag & drop or click to upload tongue image"}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {uiText("Take photo in natural light with tongue extended naturally", "请在自然光下拍摄，舌头自然伸出")}
+                  {language === "zh" ? "请在自然光下拍摄，舌头自然伸出" : "Take photo in natural light with tongue extended naturally"}
                 </p>
               </div>
             )}
@@ -607,7 +605,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Camera className="h-5 w-5 text-blue-500" />
-              <h4 className="font-medium">{uiText("Face Image", "面部照片")}</h4>
+              <h4 className="font-medium">{language === "zh" ? "面部照片" : "Face Image"}</h4>
             </div>
             {faceImage ? (
               <div className="relative border rounded-lg p-2">
@@ -642,10 +640,10 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
                 />
                 <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
                 <p className="text-sm text-gray-600">
-                  {uiText("Drag & drop or click to upload face image", "拖放或点击上传面部照片")}
+                  {language === "zh" ? "拖放或点击上传面部照片" : "Drag & drop or click to upload face image"}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {uiText("Take frontal photo in natural light, preferably without makeup", "请在自然光下拍摄正面照片，无化妆为佳")}
+                  {language === "zh" ? "请在自然光下拍摄正面照片，无化妆为佳" : "Take frontal photo in natural light, preferably without makeup"}
                 </p>
               </div>
             )}
@@ -655,7 +653,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
           {uploading && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>{uiText("Uploading...", "上传中...")}</span>
+                <span>{language === "zh" ? "上传中..." : "Uploading..."}</span>
                 <span>{Math.round(uploadProgress)}%</span>
               </div>
               <Progress value={uploadProgress} className="w-full" />
@@ -665,12 +663,12 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
           <div className="flex gap-3 pt-4">
             <Button variant="outline" onClick={() => setPhase("intro")} className="flex-1">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              {uiText("Back", "返回")}
+              {language === "zh" ? "返回" : "Back"}
             </Button>
             <Button onClick={() => setPhase("questions")} className="flex-1" disabled={uploading}>
               {uploadedImages.length > 0 
-                ? uiText("Continue to Questionnaire", "继续问卷")
-                : uiText("Skip, Go to Questionnaire", "跳过，直接问卷")}
+                ? (language === "zh" ? "继续问卷" : "Continue to Questionnaire")
+                : (language === "zh" ? "跳过，直接问卷" : "Skip, Go to Questionnaire")}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -689,15 +687,10 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
         <CardHeader>
           <div className="flex items-center justify-between mb-2">
             <Badge variant="outline">
-              {uiText(
-                `Question ${currentQuestion + 1} of ${TCM_QUESTIONS.length}`,
-                `问题 ${currentQuestion + 1} / ${TCM_QUESTIONS.length}`,
-                `問題 ${currentQuestion + 1} / ${TCM_QUESTIONS.length}`,
-                `Question ${currentQuestion + 1} sur ${TCM_QUESTIONS.length}`,
-              )}
+              {language === "zh" ? `问题 ${currentQuestion + 1} / ${TCM_QUESTIONS.length}` : `Question ${currentQuestion + 1} of ${TCM_QUESTIONS.length}`}
             </Badge>
             <Button variant="ghost" size="sm" onClick={onBack}>
-              {uiText("Exit", "退出")}
+              {language === "zh" ? "退出" : "Exit"}
             </Button>
           </div>
           <Progress value={progress} className="h-2" />
@@ -705,7 +698,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
         <CardContent className="space-y-6">
           <div className="text-center py-4">
             <h3 className="text-xl font-medium">
-              {localizeText(question.text, { zh: question.textZh, yue: question.textZh })}
+              {language === "zh" ? question.textZh : question.text}
             </h3>
           </div>
 
@@ -726,7 +719,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
               >
                 <RadioGroupItem value={option.value.toString()} id={`option-${option.value}`} />
                 <Label htmlFor={`option-${option.value}`} className="flex-1 cursor-pointer text-base">
-                  {localizeText(option.label, { zh: option.labelZh, yue: option.labelZh })}
+                  {language === "zh" ? option.labelZh : option.label}
                 </Label>
                 <span className="text-sm text-muted-foreground">{option.value}</span>
               </div>
@@ -741,7 +734,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
               className="flex-1"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              {uiText("Previous", "上一题")}
+              {language === "zh" ? "上一题" : "Previous"}
             </Button>
             <Button
               onClick={handleNext}
@@ -749,8 +742,8 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
               className="flex-1"
             >
               {currentQuestion === TCM_QUESTIONS.length - 1
-                ? uiText("View Results", "查看结果")
-                : uiText("Next", "下一题")}
+                ? (language === "zh" ? "查看结果" : "View Results")
+                : (language === "zh" ? "下一题" : "Next")}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -775,7 +768,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
             </div>
           </div>
           <CardTitle className="text-2xl">
-            {uiText("Your Constitution Results", "体质辨识结果")}
+            {language === "zh" ? "体质辨识结果" : "Your Constitution Results"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -785,15 +778,15 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
               <div className="flex items-center gap-3 mb-2">
                 {primaryInfo.icon}
                 <div>
-                  <Badge className="mb-1">{uiText("Primary Constitution", "主要体质")}</Badge>
+                  <Badge className="mb-1">{language === "zh" ? "主要体质" : "Primary Constitution"}</Badge>
                   <h3 className="text-lg font-semibold">
-                    {localizeText(primaryInfo.name, { zh: primaryInfo.nameZh, yue: primaryInfo.nameZh })}
+                    {language === "zh" ? primaryInfo.nameZh : primaryInfo.name}
                   </h3>
                 </div>
               </div>
-              <p className="text-sm opacity-80">{localizeText(primaryInfo.description)}</p>
+              <p className="text-sm opacity-80">{primaryInfo.description}</p>
               <div className="mt-2">
-                <span className="text-sm font-medium">{localizeText("Score")}: {results.constitutionScores[results.primaryConstitution]}%</span>
+                <span className="text-sm font-medium">Score: {results.constitutionScores[results.primaryConstitution]}%</span>
               </div>
             </div>
           )}
@@ -804,26 +797,26 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
               <div className="flex items-center gap-3 mb-2">
                 {secondaryInfo.icon}
                 <div>
-                  <Badge variant="outline" className="mb-1">{uiText("Secondary Constitution", "次要体质")}</Badge>
+                  <Badge variant="outline" className="mb-1">{language === "zh" ? "次要体质" : "Secondary Constitution"}</Badge>
                   <h3 className="text-base font-medium">
-                    {localizeText(secondaryInfo.name, { zh: secondaryInfo.nameZh, yue: secondaryInfo.nameZh })}
+                    {language === "zh" ? secondaryInfo.nameZh : secondaryInfo.name}
                   </h3>
                 </div>
               </div>
-              <p className="text-sm opacity-80">{localizeText(secondaryInfo.description)}</p>
+              <p className="text-sm opacity-80">{secondaryInfo.description}</p>
             </div>
           )}
 
           {/* All Constitution Scores */}
           <div className="space-y-2">
-            <h4 className="font-medium">{uiText("Constitution Score Details", "体质分数详情")}</h4>
+            <h4 className="font-medium">{language === "zh" ? "体质分数详情" : "Constitution Score Details"}</h4>
             <div className="grid grid-cols-2 gap-2">
               {TCM_CONSTITUTIONS.map((constitution) => (
                 <div
                   key={constitution.type}
                   className="flex items-center justify-between p-2 bg-muted rounded text-sm"
                 >
-                  <span className="truncate">{localizeText(constitution.name.split(" (")[0], { zh: constitution.nameZh, yue: constitution.nameZh })}</span>
+                  <span className="truncate">{language === "zh" ? constitution.nameZh : constitution.name.split(" (")[0]}</span>
                   <span className="font-medium ml-2">{results.constitutionScores[constitution.type]}%</span>
                 </div>
               ))}
@@ -833,17 +826,17 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
           {/* Recommendations */}
           <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg">
             <h4 className="font-medium text-green-800 dark:text-green-200 mb-2">
-              {uiText("Health Recommendations", "健康建议")}
+              {language === "zh" ? "健康建议" : "Health Recommendations"}
             </h4>
             <ul className="list-disc list-inside text-sm text-green-700 dark:text-green-300 space-y-1">
               {results.recommendations.slice(0, 6).map((rec, idx) => (
-                <li key={idx}>{localizeText(rec)}</li>
+                <li key={idx}>{rec}</li>
               ))}
             </ul>
           </div>
 
           <Button onClick={handleComplete} className="w-full" size="lg">
-            {uiText("Complete and Continue", "完成并继续")}
+            {language === "zh" ? "完成并继续" : "Complete and Continue"}
           </Button>
         </CardContent>
       </Card>

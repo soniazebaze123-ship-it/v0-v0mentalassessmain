@@ -4,56 +4,68 @@
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 224 71% 4%;
+    /* Vibrant, colorful palette - light warm background with bold accents */
+    --background: 45 30% 97%;
+    --foreground: 240 10% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 224 71% 4%;
+    --card-foreground: 240 10% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
+    --popover-foreground: 240 10% 15%;
 
-    --primary: 220 70% 50%;
-    --primary-foreground: 210 20% 98%;
+    /* Primary: Vibrant blue */
+    --primary: 220 90% 55%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 9% 46%;
+    /* Secondary: Soft gray */
+    --secondary: 220 15% 94%;
+    --secondary-foreground: 220 10% 30%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 10% 45%;
 
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 9% 46%;
+    /* Accent: Vibrant pink */
+    --accent: 330 85% 60%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 20% 98%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 220 70% 50%;
+    --border: 220 15% 88%;
+    --input: 220 15% 90%;
+    --ring: 220 90% 55%;
 
     --radius: 0.75rem;
 
-    /* Assessment card colors - harmonious health-focused palette */
-    --card-cognitive: 220 70% 50%;
-    --card-cognitive-light: 220 70% 96%;
-    --card-cognitive-secondary: 187 70% 45%;
-    --card-cognitive-secondary-light: 187 70% 96%;
+    /* Assessment card colors - Vibrant distinct colors */
+    /* MoCA: Sky Blue */
+    --card-cognitive: 200 85% 50%;
+    --card-cognitive-light: 200 85% 95%;
     
-    --card-tcm: 152 60% 40%;
-    --card-tcm-light: 152 60% 96%;
-    --card-upload: 262 60% 55%;
-    --card-upload-light: 262 60% 96%;
+    /* MMSE: Purple/Violet */
+    --card-cognitive-secondary: 270 70% 55%;
+    --card-cognitive-secondary-light: 270 70% 95%;
     
-    --card-visual: 245 60% 55%;
-    --card-visual-light: 245 60% 96%;
-    --card-auditory: 330 65% 50%;
-    --card-auditory-light: 330 65% 96%;
-    --card-olfactory: 35 85% 50%;
-    --card-olfactory-light: 35 85% 96%;
+    /* TCM: Emerald Green */
+    --card-tcm: 155 70% 42%;
+    --card-tcm-light: 155 70% 94%;
     
-    --card-success: 152 60% 40%;
-    --card-success-light: 152 60% 96%;
+    /* Visual: Indigo Blue */
+    --card-visual: 240 65% 55%;
+    --card-visual-light: 240 65% 95%;
+    
+    /* Auditory: Rose Pink */
+    --card-auditory: 340 75% 55%;
+    --card-auditory-light: 340 75% 95%;
+    
+    /* Olfactory: Warm Orange */
+    --card-olfactory: 25 90% 55%;
+    --card-olfactory-light: 25 90% 95%;
+    
+    /* Success: Bright Green */
+    --card-success: 145 70% 45%;
+    --card-success-light: 145 70% 94%;
   }
 
   .dark {

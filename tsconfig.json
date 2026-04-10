@@ -23,11 +23,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": [
-    "node_modules",
-    "components/multimodal/**",
-    "lib/multimodal/**",
-    "app/multimodal/**",
-    "app/api/multimodal-score/**"
-  ]
+  "exclude": ["node_modules"]
 }

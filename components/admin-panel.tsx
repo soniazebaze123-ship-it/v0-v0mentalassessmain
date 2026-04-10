@@ -9,15 +9,15 @@ import { Badge } from "@/components/ui/badge"
 import { AssessmentTextarea } from "@/components/ui/assessment-textarea"
 import { supabase } from "@/lib/supabase"
 import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp } from "lucide-react"
+import Image from "next/image"
 import { useLanguage } from "@/contexts/language-context"
 
 // Add imports for new chart components and data utilities
 import { AverageScoreChart } from "@/components/admin/average-score-chart"
-import { DeteriorationWorkflowChart } from "@/components/admin/deterioration-workflow-chart"
 import { ScoreDistributionChart } from "@/components/admin/score-distribution-chart"
 import { ProgressTrendChart } from "@/components/admin/progress-trend-chart"
 import { PatientProgressTracker } from "@/components/admin/patient-progress-tracker"
-import { getPatientTrajectories, getScoreDistribution, getScoreTrends, getTrajectoryWorkflowData } from "@/lib/admin-data-utils"
+import { getScoreDistribution, getScoreTrends } from "@/lib/admin-data-utils"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 interface User {
@@ -132,7 +132,7 @@ export function AdminPanel() {
       setUploadedFiles(filesData || [])
       setUserProgress(progressData || [])
     } catch (error) {
-      console.error("Error loading data:", error)
+      // Error loading data - silently continue
     } finally {
       setLoading(false)
     }
@@ -148,7 +148,6 @@ export function AdminPanel() {
       setLabAnalysis("")
       alert("Laboratory analysis updated successfully")
     } catch (error) {
-      console.error("Error updating lab analysis:", error)
       alert("Failed to update laboratory analysis")
     }
   }
@@ -292,8 +291,6 @@ export function AdminPanel() {
   const mocaDistributionData = getScoreDistribution(assessments, "MOCA")
   const mmseDistributionData = getScoreDistribution(assessments, "MMSE")
   const trendData = getScoreTrends(assessments, selectedTrendUser, selectedTrendAssessmentType)
-  const trajectoryWorkflowData = getTrajectoryWorkflowData(assessments)
-  const patientTrajectories = getPatientTrajectories(assessments)
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
@@ -384,11 +381,6 @@ export function AdminPanel() {
             selectedAssessmentType={selectedTrendAssessmentType}
             onSelectAssessmentType={(value) => setSelectedTrendAssessmentType(value)}
           />
-          <DeteriorationWorkflowChart
-            workflowData={trajectoryWorkflowData}
-            trajectories={patientTrajectories}
-            users={users}
-          />
         </div>
 
         {/* Users and Details */}
@@ -468,17 +460,11 @@ export function AdminPanel() {
                           </div>
                           {file.file_type.startsWith("image/") && (
                             <div className="relative w-full h-32 bg-gray-100 rounded overflow-hidden">
-                              <img
+                              <Image
                                 src={getFileUrl(file.file_path) || "/placeholder.svg"}
                                 alt={file.filename}
-                                className="h-full w-full object-cover"
-                                onError={(event) => {
-                                  if (event.currentTarget.src.endsWith("/placeholder.svg")) {
-                                    return
-                                  }
-
-                                  event.currentTarget.src = "/placeholder.svg"
-                                }}
+                                fill
+                                className="object-cover"
                               />
                             </div>
                           )}

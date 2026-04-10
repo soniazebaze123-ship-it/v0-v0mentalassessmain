@@ -218,7 +218,7 @@
 
 ## 📊 DEPENDENCY GRAPH
 
-```
+\`\`\`
 PHASE 1 (Database)
     ↓
 PHASE 2 (MMSE/MoCA Scoring) + PHASE 4 (Patient Data)
@@ -228,7 +228,7 @@ PHASE 3 (Risk Classification)
 PHASE 5 (Reporting)
     ↓
 PHASE 6 (Testing & Deployment)
-```
+\`\`\`
 
 Phases 2+4 can run in parallel after Phase 1 completes.
 

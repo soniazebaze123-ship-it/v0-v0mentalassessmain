@@ -11,85 +11,37 @@ import { InstructionAudio } from "@/components/ui/instruction-audio"
 interface MemoryTaskProps {
   onComplete: (score: number) => void
   onSkip?: () => void
-  words: string[] | string
+  words: string[]
   title: string
-  assessmentType: "MOCA" | "MMSE"
 }
 
-const memoryWordSets = {
-  MOCA: {
-    en: ["Face", "Velvet", "Church", "Daisy", "Red"],
-    zh: ["面孔", "天鹅绒", "教堂", "雏菊", "红色"],
-    yue: ["面", "天鵝絨", "教堂", "雛菊", "紅色"],
-    fr: ["Visage", "Velours", "Église", "Marguerite", "Rouge"],
-  },
-  MMSE: {
-    en: ["Apple", "Table", "Penny"],
-    zh: ["苹果", "桌子", "硬币"],
-    yue: ["蘋果", "枱", "硬幣"],
-    fr: ["Pomme", "Table", "Pièce"],
-  },
-} as const
-
-function normalizeWords(words: string[] | string) {
-  if (Array.isArray(words)) {
-    return words.map((word) => word.trim()).filter(Boolean)
-  }
-
-  return words
-    .split(",")
-    .map((word) => word.trim())
-    .filter(Boolean)
-}
-
-function countMatches(expectedWords: string[], answers: string[]) {
-  const remainingWords = expectedWords.map((word) => word.toLowerCase().trim())
-  let score = 0
-
-  answers.forEach((answer) => {
-    const normalizedAnswer = answer.toLowerCase().trim()
-
-    if (!normalizedAnswer) {
-      return
-    }
-
-    const matchedIndex = remainingWords.findIndex((word) => word === normalizedAnswer)
-
-    if (matchedIndex >= 0) {
-      score += 1
-      remainingWords.splice(matchedIndex, 1)
-    }
-  })
-
-  return score
-}
-
-export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }: MemoryTaskProps) {
-  const { t, language, localizeText } = useLanguage()
-  const instructionKey = assessmentType === "MMSE" ? "mmse.registration.instruction" : "moca.memory.instruction"
+export function MemoryTask({ onComplete, onSkip, words, title }: MemoryTaskProps) {
+  const { t, language } = useLanguage()
   const [phase, setPhase] = useState<"countdown" | "presentation" | "recall">("countdown")
   const [countdown, setCountdown] = useState(10)
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
-  const fallbackWords = normalizeWords(words)
-  const explicitWords = [...memoryWordSets[assessmentType][language]]
-  const memoryWords = explicitWords.length === fallbackWords.length ? explicitWords : fallbackWords
-  const splitIndex = Math.ceil(memoryWords.length / 2)
-  const segmentedWords = [memoryWords.slice(0, splitIndex), memoryWords.slice(splitIndex)].filter((segment) => segment.length > 0)
-  const [recallAnswers, setRecallAnswers] = useState<string[]>(new Array(memoryWords.length).fill(""))
-  const uiText = (englishText: string, chineseText: string, cantoneseText?: string, frenchText?: string) =>
-    localizeText(englishText, {
-      zh: chineseText,
-      yue: cantoneseText ?? chineseText,
-      fr: frenchText,
-    })
+  const [recallAnswers, setRecallAnswers] = useState<string[]>(new Array(words.length).fill(""))
 
-  useEffect(() => {
-    setRecallAnswers(new Array(memoryWords.length).fill(""))
-    setCountdown(10)
-    setCurrentWordIndex(0)
-    setPhase("countdown")
-  }, [memoryWords.join("|")])
+  // Get localized words with Cantonese support
+  const getLocalizedWords = (): string[] => {
+    if (language === "zh") {
+      // Simplified Chinese
+      return title.includes("MoCA")
+        ? ["脸", "天鹅绒", "教堂", "雏菊", "红色"]
+        : ["苹果", "桌子", "硬币"]
+    } else if (language === "yue") {
+      // Cantonese
+      return title.includes("MoCA")
+        ? ["面", "絲絨", "教堂", "菊花", "紅色"]
+        : ["蘋果", "枱", "銀仔"]
+    }
+    // Default English
+    return Array.isArray(words) ? words : ["face", "velvet", "church", "daisy", "red"]
+  }
+  
+  const localizedWords = getLocalizedWords()
 
+  // Countdown phase
   useEffect(() => {
     if (phase === "countdown" && countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
@@ -99,9 +51,10 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
     }
   }, [phase, countdown])
 
+  // Word presentation phase
   useEffect(() => {
     if (phase === "presentation") {
-      if (currentWordIndex < memoryWords.length) {
+      if (currentWordIndex < localizedWords.length) {
         const timer = setTimeout(() => {
           setCurrentWordIndex(currentWordIndex + 1)
         }, 3000)
@@ -110,7 +63,7 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
         setPhase("recall")
       }
     }
-  }, [phase, currentWordIndex, memoryWords.length])
+  }, [phase, currentWordIndex, localizedWords.length])
 
   const handleRecallChange = (index: number, value: string) => {
     const newAnswers = [...recallAnswers]
@@ -119,7 +72,53 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
   }
 
   const checkAnswers = () => {
-    onComplete(countMatches(memoryWords, recallAnswers))
+    let score = 0
+    
+    // Define accepted variations for each word (to handle synonyms and simplified/traditional)
+    const wordVariations: Record<string, string[]> = {
+      // English
+      "face": ["face", "脸", "面", "臉"],
+      "velvet": ["velvet", "天鹅绒", "絲絨", "丝绒"],
+      "church": ["church", "教堂", "教會"],
+      "daisy": ["daisy", "雏菊", "菊花", "雛菊"],
+      "red": ["red", "红色", "紅色", "红", "紅"],
+      "apple": ["apple", "苹果", "蘋果"],
+      "table": ["table", "桌子", "枱", "台", "檯"],
+      "coin": ["coin", "硬币", "銀仔", "硬幣"],
+      // Chinese simplified
+      "脸": ["face", "脸", "面", "臉"],
+      "天鹅绒": ["velvet", "天鹅绒", "絲絨", "丝绒"],
+      "教堂": ["church", "教堂", "教會"],
+      "雏菊": ["daisy", "雏菊", "菊花", "雛菊"],
+      "红色": ["red", "红色", "紅色", "红", "紅"],
+      "苹果": ["apple", "苹果", "蘋果"],
+      "桌子": ["table", "桌子", "枱", "台", "檯"],
+      "硬币": ["coin", "硬币", "銀仔", "硬幣"],
+      // Cantonese
+      "面": ["face", "脸", "面", "臉"],
+      "絲絨": ["velvet", "天鹅绒", "絲絨", "丝绒"],
+      "菊花": ["daisy", "雏菊", "菊花", "雛菊"],
+      "紅色": ["red", "红色", "紅色", "红", "紅"],
+      "蘋果": ["apple", "苹果", "蘋果"],
+      "枱": ["table", "桌子", "枱", "台", "檯"],
+      "銀仔": ["coin", "硬币", "銀仔", "硬幣"],
+    }
+    
+    localizedWords.forEach((word, index) => {
+      const userAnswer = recallAnswers[index].toLowerCase().trim()
+      const acceptedAnswers = wordVariations[word] || [word.toLowerCase()]
+      
+      const isCorrect = acceptedAnswers.some(accepted => 
+        userAnswer === accepted.toLowerCase() ||
+        accepted.toLowerCase().includes(userAnswer) ||
+        userAnswer.includes(accepted.toLowerCase())
+      )
+      
+      if (isCorrect) {
+        score += 1
+      }
+    })
+    onComplete(score)
   }
 
   const handleSkip = () => {
@@ -136,9 +135,9 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
         <CardHeader>
           <CardTitle>{title}</CardTitle>
           <p className="text-sm text-muted-foreground">
-            {t(instructionKey, { count: memoryWords.length })}
+            {t("moca.memory.instruction", { count: localizedWords.length })}
           </p>
-          <InstructionAudio instructionKey={instructionKey} className="mt-2" />
+          <InstructionAudio instructionKey="moca.memory.instruction" className="mt-2" />
         </CardHeader>
         <CardContent className="text-center space-y-6">
           <div className="text-4xl sm:text-6xl font-bold text-blue-600">{countdown}</div>
@@ -158,24 +157,16 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
         <CardHeader>
           <CardTitle>{title}</CardTitle>
           <p className="text-sm text-muted-foreground">
-            {t("memory.word_of", { current: Math.min(currentWordIndex + 1, memoryWords.length), total: memoryWords.length })}
+            {t("memory.word_of", { current: currentWordIndex + 1, total: localizedWords.length })}
           </p>
         </CardHeader>
         <CardContent className="text-center space-y-6 flex flex-col items-center justify-center min-h-[300px]">
-          {currentWordIndex < memoryWords.length ? (
+          {currentWordIndex < localizedWords.length ? (
             <>
-              <div className="rounded-full bg-blue-50 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-blue-700">
-                {uiText(
-                  `Segment ${currentWordIndex < splitIndex ? 1 : 2}`,
-                  `第 ${currentWordIndex < splitIndex ? 1 : 2} 段`,
-                  `第 ${currentWordIndex < splitIndex ? 1 : 2} 段`,
-                  `Segment ${currentWordIndex < splitIndex ? 1 : 2}`,
-                )}
-              </div>
               <div className="text-6xl sm:text-7xl md:text-9xl font-black text-blue-800 py-12 animate-in fade-in zoom-in duration-300">
-                {memoryWords[currentWordIndex]}
+                {localizedWords[currentWordIndex]}
               </div>
-              <Progress value={((currentWordIndex + 1) / memoryWords.length) * 100} className="w-full h-4" />
+              <Progress value={((currentWordIndex + 1) / localizedWords.length) * 100} className="w-full h-4" />
             </>
           ) : (
             <div className="text-lg sm:text-2xl text-muted-foreground py-8 sm:py-12">
@@ -191,69 +182,36 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle>
-          {title} - {t("memory.submit_recall")}
+          {title} - {t("mmse.registration")}
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          {t("memory.recall_instruction", { count: memoryWords.length })}
+          {t("memory.recall_instruction", { count: localizedWords.length })}
         </p>
         <InstructionAudio instructionKey="memory.recall_instruction" className="mt-2" />
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 text-sm text-blue-900">
-          {uiText(
-            "Two-step evaluation: recall the first segment, then the second. Answers can be entered in any order within each segment.",
-            "分两步回忆：先回忆第一段，再回忆第二段。每一段中的答案可以按任意顺序填写。",
-            "分兩步回憶：先回憶第一段，再回憶第二段。每一段入面嘅答案都可以任意次序填寫。",
-            "Évaluation en deux étapes : rappelez d’abord le premier segment, puis le second. Les réponses peuvent être saisies dans n’importe quel ordre à l’intérieur de chaque segment.",
-          )}
-        </div>
-
-        {segmentedWords.map((segment, segmentIndex) => {
-          const answerOffset = segmentedWords.slice(0, segmentIndex).reduce((sum, currentSegment) => sum + currentSegment.length, 0)
-
-          return (
-            <div key={segmentIndex} className="space-y-3 rounded-xl border p-4">
-              <div>
-                <h3 className="text-base font-semibold text-slate-900">
-                  {uiText(`Segment ${segmentIndex + 1}`, `第 ${segmentIndex + 1} 段`, `第 ${segmentIndex + 1} 段`, `Segment ${segmentIndex + 1}`)}
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  {uiText(
-                    `Recall ${segment.length} item${segment.length > 1 ? "s" : ""} from this segment.`,
-                    `请回忆这一段中的 ${segment.length} 个词语。`,
-                    `請回憶呢一段入面嘅 ${segment.length} 個詞語。`,
-                    `Rappelez ${segment.length} élément${segment.length > 1 ? "s" : ""} de ce segment.`,
-                  )}
-                </p>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                {segment.map((_, index) => {
-                  const answerIndex = answerOffset + index
-
-                  return (
-                    <div key={answerIndex} className="space-y-2">
-                      <label className="text-sm font-medium">
-                        {t("common.word")} {answerIndex + 1}:
-                      </label>
-                      <AssessmentInput
-                        value={recallAnswers[answerIndex]}
-                        onChange={(e) => handleRecallChange(answerIndex, e.target.value)}
-                        className="w-full"
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
+        {localizedWords.map((_, index) => (
+          <div key={index} className="space-y-2">
+            <label className="text-sm font-medium">
+              {t("common.word")} {index + 1}:
+            </label>
+            <AssessmentInput
+              value={recallAnswers[index]}
+              onChange={(e) => handleRecallChange(index, e.target.value)}
+              className="w-full"
+            />
+          </div>
+        ))}
 
         <div className="mt-8 flex justify-center space-x-4">
           <Button variant="outline" onClick={handleSkip}>
             {t("common.skip_task")}
           </Button>
-          <Button onClick={checkAnswers} className="w-full max-w-xs">
+          <Button
+            onClick={checkAnswers}
+            disabled={recallAnswers.some((answer) => answer.trim() === "")}
+            className="w-full max-w-xs"
+          >
             {t("memory.submit_recall")}
           </Button>
         </div>

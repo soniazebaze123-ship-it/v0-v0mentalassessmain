@@ -135,8 +135,6 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
 
     const { totalCorrect, percentCorrect, classification, normalizedScore } = calculateOlfactoryScore(finalResults)
 
-    console.log("[v0] Olfactory test complete:", { totalCorrect, percentCorrect, classification, normalizedScore })
-
     if (user) {
       try {
         await supabase.from("sensory_assessments").insert({
@@ -159,9 +157,8 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
             self_administered: true,
           },
         })
-        console.log("[v0] Olfactory screening saved successfully")
       } catch (error) {
-        console.error("[v0] Error saving olfactory screening:", error)
+        // Error saving olfactory screening - silently continue
       }
     }
 

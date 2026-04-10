@@ -1,24 +1,6 @@
-import type { SupabaseClient } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/client"
 
-let client: SupabaseClient | null = null
-
-function getSupabaseClient() {
-  if (!client) {
-    client = createClient()
-  }
-
-  return client
-}
-
-export const supabase = new Proxy({} as SupabaseClient, {
-  get(_target, property, receiver) {
-    const activeClient = getSupabaseClient()
-    const value = Reflect.get(activeClient, property, receiver)
-
-    return typeof value === "function" ? value.bind(activeClient) : value
-  },
-})
+export const supabase = createClient()
 
 export type Database = {
   public: {

@@ -1,11 +1,11 @@
 "use client"
 
-// MentalAssess - Cognitive Assessment Platform
+// MentalAssess - Cognitive Assessment Platform v4.5
 import { useState, useEffect } from "react"
 import { useUser } from "@/contexts/user-context"
 import { Registration } from "@/components/registration"
 import { Dashboard } from "@/components/dashboard"
-import { ImageUpload } from "@/components/image-upload"
+
 import { ResultsDisplay } from "@/components/results-display"
 import { RiskProfileDisplay } from "@/components/risk-profile-display"
 import { Login } from "@/components/login"
@@ -39,20 +39,6 @@ import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
 import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/contexts/language-context"
 
-function isSameCalendarDay(value?: string | null) {
-  if (!value) {
-    return false
-  }
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return false
-  }
-
-  return date.toDateString() === new Date().toDateString()
-}
-
 function AppContent() {
   const { user, loading, progress, saveProgress, clearProgress } = useUser()
   const { t } = useLanguage()
@@ -76,22 +62,25 @@ function AppContent() {
   const [assessmentType, setAssessmentType] = useState<"MOCA" | "MMSE">("MOCA")
   const [completedAssessments, setCompletedAssessments] = useState<Record<string, any>>({})
 
+  // MoCA uses 5 words: face, velvet, church, daisy, red
+  const mocaWords = ["face", "velvet", "church", "daisy", "red"]
+  
   const mocaSteps = [
     { component: InteractiveClock, props: { targetTime: { hour: 2, minute: 10 } } },
     { component: TrailMakingTask, props: {} },
     { component: AnimalNaming, props: {} },
-    {
-      component: MemoryTask,
-      props: { words: t("memory.moca.words"), title: t("moca.memory"), assessmentType: "MOCA" },
-    },
+    { component: MemoryTask, props: { words: mocaWords, title: "MoCA Memory" } },
     { component: AttentionTask, props: {} },
     { component: LanguageAbstraction, props: {} },
     { component: OrientationTask, props: {} },
   ]
 
+  // MMSE uses 3 words: apple, table, coin
+  const mmseWords = ["apple", "table", "coin"]
+  
   const mmseSteps = [
     { component: MMSEOrientation, props: {} },
-    { component: MemoryTask, props: { words: t("memory.mmse.words"), title: t("mmse.registration"), assessmentType: "MMSE" } },
+    { component: MemoryTask, props: { words: mmseWords, title: "MMSE Registration" } },
     { component: MMSEAttention, props: {} },
     { component: ObjectNaming, props: {} },
     { component: MMSERepetition, props: {} },
@@ -108,10 +97,13 @@ function AppContent() {
 
   // Initialize view based on user and loading state
   useEffect(() => {
+    console.log("[v0] User state changed:", { user: user?.id, loading, currentView })
     if (!loading) {
       if (user) {
+        console.log("[v0] User logged in, switching to dashboard")
         setCurrentView("dashboard")
       } else {
+        console.log("[v0] No user, showing login")
         setCurrentView("login")
       }
     }
@@ -125,27 +117,19 @@ function AppContent() {
     try {
       const { data: assessments } = await supabase.from("assessments").select("*").eq("user_id", user.id)
 
-      const completed: Record<string, any> = {}
-
       if (assessments) {
+        const completed: Record<string, any> = {}
         assessments.forEach((assessment) => {
-          if (!isSameCalendarDay(assessment.completed_at)) {
-            return
-          }
-
           completed[assessment.type] = {
             totalScore: assessment.score,
             sectionScores: assessment.data,
             completedAt: assessment.completed_at,
           }
         })
+        setCompletedAssessments(completed)
       }
-
-      setCompletedAssessments(completed)
     } catch (error) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("Error loading completed assessments:", error)
-      }
+      // Error loading completed assessments - silently continue
     }
   }
 
@@ -184,17 +168,6 @@ function AppContent() {
     setScores(savedScores)
   }
 
-  const handleResetAssessmentSession = async (type: "moca" | "mmse") => {
-    const assessmentKey = type.toUpperCase() as "MOCA" | "MMSE"
-
-    await clearProgress(assessmentKey)
-    setAssessmentType(assessmentKey)
-    setCurrentStep(0)
-    setScores([])
-    setCurrentView(type)
-    await saveProgress(assessmentKey, 0, [])
-  }
-
   const handleViewResults = (type: "moca" | "mmse") => {
     setAssessmentType(type.toUpperCase() as "MOCA" | "MMSE")
     setCurrentView("results")
@@ -205,7 +178,6 @@ function AppContent() {
   }
 
   const handleStepComplete = async (score: number) => {
-    console.log("[v0] Step complete - Score:", score, "Assessment:", assessmentType, "Step:", currentStep)
     const newScores = [...scores, score]
     setScores(newScores)
 
@@ -216,7 +188,6 @@ function AppContent() {
       setCurrentStep(currentStep + 1)
     } else {
       const totalScore = newScores.reduce((sum, s) => sum + s, 0)
-      console.log("[v0] Assessment complete - Scores array:", newScores, "Total:", totalScore)
 
       const sectionNames =
         assessmentType === "MOCA"
@@ -234,13 +205,6 @@ function AppContent() {
       const supabase = createClient()
 
       try {
-        console.log("[v0] Saving assessment to DB:", {
-          user_id: user!.id,
-          type: assessmentType,
-          score: totalScore,
-          data: sectionScores,
-        })
-
         const { data, error } = await supabase
           .from("assessments")
           .insert({
@@ -251,10 +215,7 @@ function AppContent() {
           })
           .select()
 
-        console.log("[v0] Assessment save result:", { data, error })
-
         if (error) {
-          console.error("[v0] Error saving assessment:", error)
           alert(`Error saving assessment: ${error.message}`)
           return
         }
@@ -265,14 +226,9 @@ function AppContent() {
 
         setCompletedAssessments((prev) => ({
           ...prev,
-          [assessmentType]: {
-            totalScore,
-            sectionScores,
-            completedAt: new Date().toISOString(),
-          },
+          [assessmentType]: { totalScore, sectionScores },
         }))
       } catch (error) {
-        console.error("[v0] Error saving assessment:", error)
         alert(`Error saving assessment: ${error instanceof Error ? error.message : "Unknown error"}`)
         return
       }
@@ -283,10 +239,6 @@ function AppContent() {
 
   const handleSkipTask = () => {
     handleStepComplete(0)
-  }
-
-  const handleUploadComplete = () => {
-    setCurrentView("dashboard")
   }
 
   const handleBackToDashboard = () => {
@@ -314,10 +266,6 @@ function AppContent() {
     }
   }
 
-  if (currentView === "upload") {
-    return <ImageUpload onComplete={handleUploadComplete} />
-  }
-
   if (currentView === "visual") {
     return <VisualScreening onComplete={() => handleBackToDashboard()} />
   }
@@ -334,7 +282,7 @@ function AppContent() {
     return (
       <TCMConstitution
         onComplete={(score, data) => {
-          console.log("[v0] TCM Constitution completed:", { score, data })
+          
           handleBackToDashboard()
         }}
         onBack={handleBackToDashboard}
@@ -380,14 +328,13 @@ function AppContent() {
     const steps = assessmentType === "MOCA" ? mocaSteps : mmseSteps
     const CurrentComponent = steps[currentStep].component
     const props = steps[currentStep].props
-    const assessmentTitle = assessmentType === "MOCA" ? t("moca.title") : t("mmse.title")
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
         <div className="max-w-4xl mx-auto mb-4">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-2xl font-bold">
-              {assessmentTitle} - {t("common.step")} {currentStep + 1} {t("common.of")} {" "}
+              {assessmentType} {t("common.assessment")} - {t("common.step")} {currentStep + 1} {t("common.of")}{" "}
               {steps.length}
             </h1>
             <div className="text-sm text-gray-600">
@@ -410,23 +357,12 @@ function AppContent() {
     <Dashboard
       onStartAssessment={handleStartAssessment}
       onResumeAssessment={handleResumeAssessment}
-      onResetAssessmentSession={handleResetAssessmentSession}
       onViewResults={handleViewResults}
       onViewRiskProfile={handleViewRiskProfile}
-    >
-      <div className="space-y-8 w-full max-w-2xl">
-        <LanguageAbstraction onComplete={(score) => console.log("Language Abstraction Score:", score)} />
-        <MMSERepetition onComplete={(score) => console.log("MMSE Repetition Score:", score)} />
-      </div>
-    </Dashboard>
+    />
   )
 }
 
 export default function Home() {
-  return (
-    <>
-      <AppContent />
-      <PWAInstallPrompt />
-    </>
-  )
+  return <AppContent />
 }

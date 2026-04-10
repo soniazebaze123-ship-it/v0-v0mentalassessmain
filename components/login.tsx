@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { AssessmentInput } from "@/components/ui/assessment-input"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useUser } from "@/contexts/user-context"
 import { useLanguage } from "@/contexts/language-context"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
@@ -16,35 +17,41 @@ interface LoginProps {
 
 export function Login({ onRegister, onAdminLogin }: LoginProps) {
   const { t, language, setLanguage } = useLanguage()
-  const { login } = useUser()
+  const { login, sendOtp } = useUser()
   const [phoneNumber, setPhoneNumber] = useState("")
-  const [password, setPassword] = useState("")
-  const [rememberPhone, setRememberPhone] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
 
+  // Load saved phone number on mount
   useEffect(() => {
-    const rememberedPhoneNumber = localStorage.getItem("mental_assess_remembered_phone")
-
-    if (rememberedPhoneNumber) {
-      setPhoneNumber(rememberedPhoneNumber)
+    const savedPhone = localStorage.getItem("mental_assess_remembered_phone")
+    if (savedPhone) {
+      setPhoneNumber(savedPhone)
+      setRememberMe(true)
     }
   }, [])
 
-  const handleLogin = async (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault()
+  const handleSendOtpAndLogin = async () => {
     setLoading(true)
     setError(null)
-
-    if (rememberPhone) {
-      localStorage.setItem("mental_assess_remembered_phone", phoneNumber)
+    // Simulate OTP send (no actual OTP needed for this dummy auth)
+    const otpResult = await sendOtp(phoneNumber)
+    if (otpResult.success) {
+      // Directly attempt login after "OTP sent" simulation
+      const loginResult = await login(phoneNumber)
+      if (loginResult.success) {
+        // Save or clear remembered phone based on checkbox
+        if (rememberMe) {
+          localStorage.setItem("mental_assess_remembered_phone", phoneNumber)
+        } else {
+          localStorage.removeItem("mental_assess_remembered_phone")
+        }
+      } else {
+        setError(loginResult.error || t("login.error.notfound"))
+      }
     } else {
-      localStorage.removeItem("mental_assess_remembered_phone")
-    }
-
-    const loginResult = await login(phoneNumber, password)
-    if (!loginResult.success) {
-      setError(loginResult.error || t("login.error.invalid_credentials"))
+      setError(otpResult.error || t("login.error.notfound"))
     }
     setLoading(false)
   }
@@ -93,53 +100,36 @@ export function Login({ onRegister, onAdminLogin }: LoginProps) {
             <ThemeToggle />
           </div>
 
-          <form className="space-y-6" onSubmit={handleLogin} autoComplete="on">
-            <div className="space-y-2">
-              <Label htmlFor="phone">{t("phone")}</Label>
-              <AssessmentInput
-                id="phone"
-                name="username"
-                type="tel"
-                placeholder="+86 123 4567 8901"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                disabled={loading}
-                autoComplete="username tel"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone">{t("phone")}</Label>
+            <AssessmentInput
+              id="phone"
+              type="tel"
+              placeholder="+86 123 4567 8901"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              disabled={loading}
+            />
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">{t("login.password")}</Label>
-              <AssessmentInput
-                id="password"
-                name="password"
-                type="password"
-                placeholder={t("login.password.placeholder")}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-                autoComplete="current-password"
-              />
-            </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="remember"
+              checked={rememberMe}
+              onCheckedChange={(checked) => setRememberMe(checked === true)}
+            />
+            <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
+              {language === "zh" ? "记住手机号" : language === "yue" ? "記住手機號" : language === "fr" ? "Se souvenir du numéro" : "Remember my phone number"}
+            </Label>
+          </div>
 
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={rememberPhone}
-                onChange={(event) => setRememberPhone(event.target.checked)}
-                disabled={loading}
-              />
-              <span>{t("login.remember_phone")}</span>
-            </label>
-
-            <Button
-              type="submit"
-              className="w-full touch-target"
-              disabled={loading || phoneNumber.length < 6 || password.length < 8}
-            >
-              {loading ? t("common.loading") : t("common.next")}
-            </Button>
-          </form>
+          <Button
+            onClick={handleSendOtpAndLogin}
+            className="w-full touch-target"
+            disabled={loading || phoneNumber.length < 10}
+          >
+            {loading ? t("common.loading") : t("common.next")}
+          </Button>
 
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 

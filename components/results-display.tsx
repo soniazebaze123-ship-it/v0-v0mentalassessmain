@@ -23,7 +23,6 @@ export function ResultsDisplay({
   onBackToDashboard,
 }: ResultsDisplayProps) {
   const { t } = useLanguage()
-  const assessmentLabel = assessmentType === "MMSE" ? t("mmse.title") : t("moca.title")
 
   const getInterpretation = () => {
     if (assessmentType === "MOCA") {
@@ -73,7 +72,7 @@ export function ResultsDisplay({
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">{t("results.title", { assessmentType: assessmentLabel })}</CardTitle>
+          <CardTitle className="text-2xl">{t("results.title", { assessmentType })}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-8">
           {/* Overall Score */}

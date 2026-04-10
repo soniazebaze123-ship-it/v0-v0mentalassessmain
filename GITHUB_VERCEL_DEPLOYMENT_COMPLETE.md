@@ -19,11 +19,11 @@
   - ✅ Deployment guides
 
 ### Recent GitHub History
-```
+\`\`\`
 9bd3983 docs: Add comprehensive deployment readiness checklist
 5ec6010 docs: Add Vercel deployment guide with testing checklist
 23b1b50 chore: Phase 4 multimodal deferral and type system fixes
-```
+\`\`\`
 
 ### ✅ Step 2: Ready for Vercel - PENDING
 - Vercel integration ready
@@ -49,15 +49,10 @@
 - Click "Import"
 
 **Step 3:** Add Environment Variables
-```
+\`\`\`
 NEXT_PUBLIC_SUPABASE_URL = [your-supabase-url]
 NEXT_PUBLIC_SUPABASE_ANON_KEY = [your-supabase-key]
-QWEN_API_KEY = [your-qwen-api-key]
-QWEN_MODEL = qwen-plus
-QWEN_BASE_URL = https://dashscope-intl.aliyuncs.com/compatible-mode/v1
-```
-
-These Qwen variables are used by the server-side translation route.
+\`\`\`
 
 **Step 4:** Click "Deploy"
 - ⏳ Wait 2-5 minutes

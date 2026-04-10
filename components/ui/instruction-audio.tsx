@@ -6,60 +6,15 @@ import { Volume2, VolumeX } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 
 interface InstructionAudioProps {
-  instructionKey?: string
-  text?: string
+  instructionKey: string
   className?: string
 }
 
-export function InstructionAudio({ instructionKey, text, className }: InstructionAudioProps) {
-  const { t, localizeText, getSpeechSettings, getBestVoice, language } = useLanguage()
+export function InstructionAudio({ instructionKey, className }: InstructionAudioProps) {
+  const { t, getSpeechLanguage, language } = useLanguage()
   const [isPlaying, setIsPlaying] = useState(false)
-  const [enhancedInstruction, setEnhancedInstruction] = useState<string | null>(null)
 
-  const baseInstruction = instructionKey ? t(instructionKey) : text ? localizeText(text) : ""
-
-  const resolveInstructionText = async () => {
-    if (enhancedInstruction) {
-      return enhancedInstruction
-    }
-
-    if (!baseInstruction) {
-      return ""
-    }
-
-    if (language === "en") {
-      return baseInstruction
-    }
-
-    try {
-      const response = await fetch("/api/translate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: baseInstruction,
-          targetLanguage: language,
-        }),
-      })
-
-      if (!response.ok) {
-        return baseInstruction
-      }
-
-      const payload = await response.json()
-      if (payload.translatedText) {
-        setEnhancedInstruction(payload.translatedText)
-        return payload.translatedText
-      }
-    } catch (error) {
-      console.error("Instruction translation enhancement failed:", error)
-    }
-
-    return baseInstruction
-  }
-
-  const playInstruction = async () => {
+  const playInstruction = () => {
     if (!("speechSynthesis" in window)) {
       alert(t("audio.not_supported"))
       return
@@ -68,24 +23,24 @@ export function InstructionAudio({ instructionKey, text, className }: Instructio
     // Cancel any ongoing speech
     window.speechSynthesis.cancel()
 
-    const instructionText = await resolveInstructionText()
-    const speechSettings = getSpeechSettings(language)
+    const instructionText = t(instructionKey)
     const utterance = new SpeechSynthesisUtterance(instructionText)
-    utterance.lang = speechSettings.lang
-    utterance.rate = speechSettings.rate
-    utterance.pitch = speechSettings.pitch
-    utterance.volume = speechSettings.volume
+    utterance.lang = getSpeechLanguage(language)
+    utterance.rate = 0.7
+    utterance.pitch = 1.0
+    utterance.volume = 1.0
 
-    const preferredVoice = getBestVoice(language)
+    // Try to find a voice that matches the language
+    const voices = window.speechSynthesis.getVoices()
+    const preferredVoice = voices.find((voice) => voice.lang.startsWith(getSpeechLanguage(language).split("-")[0]))
+
     if (preferredVoice) {
       utterance.voice = preferredVoice
-      utterance.lang = preferredVoice.lang || speechSettings.lang
     }
 
     utterance.onstart = () => setIsPlaying(true)
     utterance.onend = () => setIsPlaying(false)
-    utterance.onerror = (event) => {
-      console.error("Speech synthesis error:", event)
+    utterance.onerror = () => {
       setIsPlaying(false)
       alert(t("audio.error_playing"))
     }
@@ -93,7 +48,6 @@ export function InstructionAudio({ instructionKey, text, className }: Instructio
     try {
       window.speechSynthesis.speak(utterance)
     } catch (error) {
-      console.error("Failed to start speech synthesis:", error)
       setIsPlaying(false)
       alert(t("audio.error_playing"))
     }
@@ -108,19 +62,11 @@ export function InstructionAudio({ instructionKey, text, className }: Instructio
     if ("speechSynthesis" in window) {
       loadVoices()
       window.speechSynthesis.onvoiceschanged = loadVoices
-
-      return () => {
-        window.speechSynthesis.onvoiceschanged = null
-      }
     }
   }, [])
 
-  useEffect(() => {
-    setEnhancedInstruction(null)
-  }, [instructionKey, language, text])
-
   return (
-    <Button onClick={playInstruction} disabled={isPlaying || !baseInstruction} variant="outline" size="sm" className={className}>
+    <Button onClick={playInstruction} disabled={isPlaying} variant="outline" size="sm" className={className}>
       {isPlaying ? (
         <>
           <VolumeX className="w-4 h-4 mr-2" />

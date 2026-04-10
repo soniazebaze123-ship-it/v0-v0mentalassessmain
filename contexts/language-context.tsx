@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
+import { createContext, useContext, useEffect, useMemo, useState } from "react"
 
 type Language = "en" | "zh" | "yue" | "fr"
 
@@ -18,7 +18,6 @@ interface LanguageContextType {
   language: Language
   setLanguage: (lang: Language) => void
   t: (key: string, options?: Record<string, any>) => string
-  localizeText: (englishText: string, overrides?: Partial<Record<Language, string>>) => string
   getLanguageName: (lang: Language) => string
   getSpeechLanguage: (lang: Language) => string
   getSpeechSettings: (lang?: Language) => SpeechSettings
@@ -53,10 +52,6 @@ const englishTranslations: TranslationMap = {
   "register.name": "Name",
   "register.name.placeholder": "Enter your full name",
   "register.date_of_birth": "Date of Birth",
-  "register.date_of_birth.placeholder": "Select your birth date",
-  "register.date_of_birth.year": "Year",
-  "register.date_of_birth.month": "Month",
-  "register.date_of_birth.day": "Day",
   "register.gender": "Gender",
   "register.gender.placeholder": "Select gender",
   "register.gender.male": "Male",
@@ -67,21 +62,11 @@ const englishTranslations: TranslationMap = {
   "register.submit": "Register",
   "register.error.invalid": "Please enter a valid phone number",
   "register.error.exists": "Phone number already registered",
-  "register.password": "Password",
-  "register.password.placeholder": "Create a password",
-  "register.confirm_password": "Confirm password",
-  "register.confirm_password.placeholder": "Re-enter your password",
-  "register.error.password_short": "Password must be at least 8 characters.",
-  "register.error.password_mismatch": "Passwords do not match.",
   "login.title": "Login with Phone Number",
   "login.submit": "Login",
   "login.error.notfound": "Phone number not found",
-  "login.error.invalid_credentials": "Invalid phone number or password.",
   "login.admin": "Admin Login",
   "login.enter_phone": "Enter your registered phone number to continue",
-  "login.password": "Password",
-  "login.password.placeholder": "Enter your password",
-  "login.remember_phone": "Remember phone number on this device",
   "login.new_user": "New User? Register Here",
   "login.already_account": "Already have an account? Login here",
   "registration.description": "Enter your phone number to begin the mental health assessment",
@@ -109,8 +94,6 @@ const englishTranslations: TranslationMap = {
   "dashboard.manage_files": "Manage Files",
   "dashboard.upload_files": "Upload Files",
   "dashboard.files_uploaded": "Files uploaded: {count}",
-  "dashboard.name": "Name",
-  "dashboard.id": "ID",
   "dashboard.phone": "Phone",
   "dashboard.logout": "Logout",
   "dashboard.sensory": "Sensory Screening",
@@ -140,12 +123,8 @@ const englishTranslations: TranslationMap = {
 "mmse.title": "Mini-Mental State Examination",
 "mmse.orientation": "Orientation",
 "mmse.orientation.instruction": "Please answer the following questions about time and place.",
-"mmse.orientation.time_questions": "Time Questions (5 points)",
-"mmse.orientation.place_questions": "Place Questions (3 points)",
 "mmse.registration": "Registration & Recall",
-"mmse.registration.instruction": "Remember the words and type them back during the recall phase.",
 "mmse.attention": "Attention & Calculation",
-"mmse.attention.instruction": "Please solve the subtraction questions by subtracting 7 each time from 100.",
 "mmse.naming": "Naming Objects",
 "mmse.naming.instruction": "Look at each image and type the name of the object you see.",
 "mmse.repetition": "Repetition",
@@ -177,7 +156,6 @@ const englishTranslations: TranslationMap = {
   "question.similarity": "In what way are a train and a bicycle alike?",
   "question.dogs": "How many dogs do you see?",
   "question.angles": "How many angles does this shape have?",
-  "question.subtract_series": "Serial subtraction",
   "question.subtract": "What is 10 minus 7?",
   "question.add": "What should we add to 4 to get 7?",
   "question.your_answer": "Your answer:",
@@ -458,17 +436,11 @@ const zhOverrides: TranslationMap = {
   "audio.instruction_error": "语音提示不可用",
   "audio.error_playing": "播放语音时出错，请重试。",
   "audio.not_supported": "当前浏览器不支持语音合成。",
-  "audio.play": "播放语音",
-  "audio.playing": "播放中...",
 
   "register.title": "手机号注册",
   "register.name": "姓名",
   "register.name.placeholder": "请输入您的姓名",
   "register.date_of_birth": "出生日期",
-  "register.date_of_birth.placeholder": "请选择出生日期",
-  "register.date_of_birth.year": "年份",
-  "register.date_of_birth.month": "月份",
-  "register.date_of_birth.day": "日期",
   "register.gender": "性别",
   "register.gender.placeholder": "请选择性别",
   "register.gender.male": "男",
@@ -477,28 +449,13 @@ const zhOverrides: TranslationMap = {
   "register.gender.prefer_not_to_say": "不愿透露",
   phone: "手机号",
   "register.submit": "注册",
-  "register.password": "密码",
-  "register.password.placeholder": "创建密码",
-  "register.confirm_password": "确认密码",
-  "register.confirm_password.placeholder": "再次输入密码",
-  "register.error.password_short": "密码至少需要 8 个字符。",
-  "register.error.password_mismatch": "两次输入的密码不一致。",
   "login.title": "手机号登录",
   "login.submit": "登录",
   "login.admin": "管理员登录",
   "login.enter_phone": "请输入已注册的手机号继续",
-  "login.password": "密码",
-  "login.password.placeholder": "请输入密码",
-  "login.error.invalid_credentials": "手机号或密码不正确。",
-  "login.remember_phone": "在此设备上记住手机号",
-  "login.new_user": "新用户？点此注册",
-  "login.already_account": "已有账号？点此登录",
   "registration.description": "请输入手机号以开始心理健康评估",
 
   "dashboard.title": "心理健康评估面板",
-  "dashboard.name": "姓名",
-  "dashboard.id": "编号",
-  "dashboard.phone": "电话",
   "dashboard.resume": "继续评估",
   "dashboard.retake": "重新测试",
   "dashboard.confirm_retake": "确认重测",
@@ -508,74 +465,21 @@ const zhOverrides: TranslationMap = {
 
   "moca.title": "蒙特利尔认知评估",
   "moca.visuospatial": "视空间能力 - 时钟绘制",
-  "moca.visuospatial.instruction": "请拖动时钟指针，显示 2 点 10 分。",
   "moca.executive": "执行功能 - 连线测试",
-  "moca.executive.instruction": "请按交替顺序连接圆圈：1-A-2-B-3-C-4-D。1、A 和 2 已经连好。",
   "moca.naming": "动物命名",
-  "moca.naming.instruction": "请看每一张图片，并输入你看到的动物名称。",
   "moca.memory": "记忆任务",
-  "moca.memory.instruction": "系统会逐个显示 {count} 个词语，请记住它们，稍后进行回忆。",
   "moca.attention": "注意力任务",
-  "moca.attention.instruction": "请仔细观察图片，并数出你能看到多少只狗。",
   "moca.language": "语言与抽象",
-  "moca.language.instruction": "请认真听并完成任务。",
   "moca.orientation": "定向力",
-  "moca.orientation.instruction": "请回答以下关于当前日期和地点的问题。",
 
   "mmse.title": "简易精神状态检查",
   "mmse.orientation": "定向力",
-  "mmse.orientation.instruction": "请回答以下关于时间和地点的问题。",
-  "mmse.orientation.time_questions": "时间问题（5分）",
-  "mmse.orientation.place_questions": "地点问题（3分）",
   "mmse.registration": "记忆登记与回忆",
-  "mmse.registration.instruction": "请先记住这些词语，并在回忆阶段输入出来。",
   "mmse.attention": "注意力与计算",
-  "mmse.attention.instruction": "请从 100 开始，每次减去 7，完成下面的计算题。",
   "mmse.naming": "物体命名",
-  "mmse.naming.instruction": "请看每一张图片，并输入你看到的物体名称。",
   "mmse.repetition": "复述",
-  "mmse.repetition.instruction": "请认真听句子，并准确输入你听到的内容。",
   "mmse.writing": "书写",
-  "mmse.writing.instruction": "请写一个完整的句子。句子应包含主语和谓语，并且语义完整。",
   "mmse.copying": "图形复制",
-  "mmse.copying.instruction": "请观察下方图形，并照样画出来。",
-
-  "memory.get_ready": "做好准备，词语将在 {countdown} 秒后出现...",
-  "memory.moca.words": ["面孔", "天鹅绒", "教堂", "雏菊", "红色"],
-  "memory.mmse.words": ["苹果", "桌子", "硬币"],
-  "memory.word_of": "第 {current} 个词，共 {total} 个",
-  "memory.preparing_recall": "正在准备回忆阶段...",
-  "memory.recall_instruction": "请按任意顺序输入你刚才看到的 {count} 个词语。",
-  "memory.submit_recall": "提交回忆",
-  "common.submit": "提交",
-  "common.skip_task": "跳过任务",
-  "audio.played_success": "✓ 语音已播放。现在请在下方输入你听到的内容。",
-
-  "question.date": "今天是几号？",
-  "question.month": "现在是几月？",
-  "question.year": "现在是哪一年？",
-  "question.day": "今天是星期几？",
-  "question.country": "我们现在在哪个国家？",
-  "question.season": "现在是什么季节？",
-  "question.president": "现任国家主席是谁？",
-  "question.sea": "请说出一个海的名称：",
-  "question.angles": "这个图形有几个角？",
-  "question.subtract_series": "连续减法",
-  "question.type_sentence": "请输入你听到的句子：",
-  "question.write_sentence": "请在这里写下你的句子：",
-
-  "question.animal_label": "动物 {index}：",
-  "question.object_label": "物体 {index}：",
-
-  "common.animal": "动物",
-  "common.object": "物体",
-  "common.television": "电视",
-  "common.tiger": "老虎",
-  "common.rhinoceros": "犀牛",
-  "common.camel": "骆驼",
-  "common.house": "房子",
-  "common.bag": "包",
-  "common.word": "词语",
 
   "results.title": "{assessmentType} 评估结果",
   "results.score_percentage": "{percentage}% 得分",
@@ -613,11 +517,6 @@ const zhOverrides: TranslationMap = {
   "theme.system": "系统",
 
   "common.loading": "加载中...",
-  "common.assessment": "评估",
-  "common.step": "第",
-  "common.of": "共",
-  "common.progress": "进度",
-  "common.next": "下一步",
   "common.login": "登录",
   "common.logout": "退出登录",
   "common.resume": "继续",
@@ -631,10 +530,8 @@ const zhOverrides: TranslationMap = {
 
   "sensory.visual.title": "视力筛查",
   "sensory.visual.description": "使用翻转 E 视标进行视力测试",
-  "sensory.visual.instruction": "您会看到字母 E 指向不同方向，请选择它所指的方向。",
   "sensory.auditory.title": "听力筛查",
   "sensory.auditory.description": "通过噪声数字测试进行听力筛查",
-  "sensory.auditory.instruction": "请听带有背景噪音的数字，并输入你听到的内容。",
   "sensory.olfactory.title": "嗅觉识别测试",
   "sensory.olfactory.description": "识别常见气味以评估嗅觉功能",
 
@@ -667,17 +564,11 @@ const yueOverrides: TranslationMap = {
   "audio.instruction_error": "語音提示暫時唔可用",
   "audio.error_playing": "播放語音時出錯，請再試一次。",
   "audio.not_supported": "呢個瀏覽器唔支援語音合成。",
-  "audio.play": "播放語音",
-  "audio.playing": "播放中...",
 
   "register.title": "用電話號碼註冊",
   "register.name": "姓名",
   "register.name.placeholder": "請輸入你嘅全名",
   "register.date_of_birth": "出生日期",
-  "register.date_of_birth.placeholder": "請選擇出生日期",
-  "register.date_of_birth.year": "年份",
-  "register.date_of_birth.month": "月份",
-  "register.date_of_birth.day": "日期",
   "register.gender": "性別",
   "register.gender.placeholder": "請選擇性別",
   "register.gender.male": "男",
@@ -686,28 +577,13 @@ const yueOverrides: TranslationMap = {
   "register.gender.prefer_not_to_say": "唔想透露",
   phone: "電話號碼",
   "register.submit": "註冊",
-  "register.password": "密碼",
-  "register.password.placeholder": "建立密碼",
-  "register.confirm_password": "確認密碼",
-  "register.confirm_password.placeholder": "再次輸入密碼",
-  "register.error.password_short": "密碼至少要 8 個字元。",
-  "register.error.password_mismatch": "兩次輸入嘅密碼唔一致。",
   "login.title": "用電話號碼登入",
   "login.submit": "登入",
   "login.admin": "管理員登入",
   "login.enter_phone": "輸入你已註冊嘅電話號碼以繼續",
-  "login.password": "密碼",
-  "login.password.placeholder": "輸入密碼",
-  "login.error.invalid_credentials": "電話號碼或密碼唔正確。",
-  "login.remember_phone": "喺呢部裝置記住電話號碼",
-  "login.new_user": "新用戶？按此註冊",
-  "login.already_account": "已經有帳戶？按此登入",
   "registration.description": "輸入你嘅電話號碼開始心理健康評估",
 
   "dashboard.title": "心理健康評估面板",
-  "dashboard.name": "姓名",
-  "dashboard.id": "編號",
-  "dashboard.phone": "電話",
   "dashboard.resume": "繼續評估",
   "dashboard.retake": "重新測試",
   "dashboard.confirm_retake": "確認重測",
@@ -717,74 +593,21 @@ const yueOverrides: TranslationMap = {
 
   "moca.title": "蒙特利爾認知評估",
   "moca.visuospatial": "視覺空間能力 - 時鐘繪製",
-  "moca.visuospatial.instruction": "請拖動時鐘指針，顯示 2 點 10 分。",
   "moca.executive": "執行功能 - 連線測試",
-  "moca.executive.instruction": "請按交替次序連接圓圈：1-A-2-B-3-C-4-D。1、A 同 2 已經連好。",
   "moca.naming": "動物命名",
-  "moca.naming.instruction": "請睇每一張圖片，輸入你見到嘅動物名稱。",
   "moca.memory": "記憶任務",
-  "moca.memory.instruction": "系統會逐個顯示 {count} 個詞語，請記住佢哋，稍後做回憶。",
   "moca.attention": "注意力任務",
-  "moca.attention.instruction": "請仔細睇圖片，數出你見到幾多隻狗。",
   "moca.language": "語言同抽象",
-  "moca.language.instruction": "請留心聽並完成任務。",
   "moca.orientation": "定向力",
-  "moca.orientation.instruction": "請回答以下關於目前日期同地點嘅問題。",
 
   "mmse.title": "簡易精神狀態檢查",
   "mmse.orientation": "定向力",
-  "mmse.orientation.instruction": "請回答以下關於時間同地點嘅問題。",
-  "mmse.orientation.time_questions": "時間問題（5分）",
-  "mmse.orientation.place_questions": "地點問題（3分）",
   "mmse.registration": "記憶登記同回憶",
-  "mmse.registration.instruction": "請先記住呢啲詞語，然後喺回憶階段輸入返出嚟。",
   "mmse.attention": "注意力同計算",
-  "mmse.attention.instruction": "請由 100 開始，每次減 7，完成下面嘅計算題。",
   "mmse.naming": "物件命名",
-  "mmse.naming.instruction": "請睇每一張圖片，輸入你見到嘅物件名稱。",
   "mmse.repetition": "重複",
-  "mmse.repetition.instruction": "請留心聽句子，並準確輸入你聽到嘅內容。",
   "mmse.writing": "書寫",
-  "mmse.writing.instruction": "請寫一個完整句子，句子要有主語同謂語，並且意思完整。",
   "mmse.copying": "圖形抄寫",
-  "mmse.copying.instruction": "請觀察下面嘅圖形，然後照住畫出嚟。",
-
-  "memory.get_ready": "準備好，詞語會喺 {countdown} 秒後出現...",
-  "memory.moca.words": ["面", "天鵝絨", "教堂", "雛菊", "紅色"],
-  "memory.mmse.words": ["蘋果", "枱", "硬幣"],
-  "memory.word_of": "第 {current} 個詞，共 {total} 個",
-  "memory.preparing_recall": "準備進入回憶階段...",
-  "memory.recall_instruction": "請以任何次序輸入你頭先見到嘅 {count} 個詞語。",
-  "memory.submit_recall": "提交回憶",
-  "common.submit": "提交",
-  "common.skip_task": "略過任務",
-  "audio.played_success": "✓ 語音已播放。依家請喺下面輸入你聽到嘅內容。",
-
-  "question.date": "今日係幾號？",
-  "question.month": "而家係幾月？",
-  "question.year": "而家係邊一年？",
-  "question.day": "今日係星期幾？",
-  "question.country": "我哋而家喺邊個國家？",
-  "question.season": "而家係咩季節？",
-  "question.president": "現任國家主席係邊個？",
-  "question.sea": "講出一個海嘅名稱：",
-  "question.angles": "呢個圖形有幾多個角？",
-  "question.subtract_series": "連續減法",
-  "question.type_sentence": "請輸入你聽到嘅句子：",
-  "question.write_sentence": "請喺度寫低你嘅句子：",
-
-  "question.animal_label": "動物 {index}：",
-  "question.object_label": "物件 {index}：",
-
-  "common.animal": "動物",
-  "common.object": "物件",
-  "common.television": "電視",
-  "common.tiger": "老虎",
-  "common.rhinoceros": "犀牛",
-  "common.camel": "駱駝",
-  "common.house": "屋",
-  "common.bag": "袋",
-  "common.word": "詞語",
 
   "results.title": "{assessmentType} 評估結果",
   "results.score_percentage": "{percentage}% 得分",
@@ -822,11 +645,6 @@ const yueOverrides: TranslationMap = {
   "theme.system": "系統",
 
   "common.loading": "載入中...",
-  "common.assessment": "評估",
-  "common.step": "第",
-  "common.of": "共",
-  "common.progress": "進度",
-  "common.next": "下一步",
   "common.login": "登入",
   "common.logout": "登出",
   "common.resume": "繼續",
@@ -840,10 +658,8 @@ const yueOverrides: TranslationMap = {
 
   "sensory.visual.title": "視力篩查",
   "sensory.visual.description": "用翻轉 E 視標測試視力",
-  "sensory.visual.instruction": "你會見到字母 E 指向唔同方向，請選擇佢指向嘅方向。",
   "sensory.auditory.title": "聽力篩查",
   "sensory.auditory.description": "透過噪音數字測試進行聽力篩查",
-  "sensory.auditory.instruction": "請聽帶有背景噪音嘅數字，然後輸入你聽到嘅內容。",
   "sensory.olfactory.title": "嗅覺識別測試",
   "sensory.olfactory.description": "識別常見氣味以評估嗅覺功能",
 
@@ -876,17 +692,11 @@ const frOverrides: TranslationMap = {
   "audio.instruction_error": "Instruction audio indisponible",
   "audio.error_playing": "Erreur lors de la lecture audio. Veuillez réessayer.",
   "audio.not_supported": "La synthèse vocale n'est pas prise en charge par ce navigateur.",
-  "audio.play": "Lire l'audio",
-  "audio.playing": "Lecture en cours...",
 
   "register.title": "Inscription par numéro de téléphone",
   "register.name": "Nom",
   "register.name.placeholder": "Entrez votre nom complet",
   "register.date_of_birth": "Date de naissance",
-  "register.date_of_birth.placeholder": "Sélectionnez votre date de naissance",
-  "register.date_of_birth.year": "Année",
-  "register.date_of_birth.month": "Mois",
-  "register.date_of_birth.day": "Jour",
   "register.gender": "Genre",
   "register.gender.placeholder": "Sélectionnez le genre",
   "register.gender.male": "Homme",
@@ -895,27 +705,12 @@ const frOverrides: TranslationMap = {
   "register.gender.prefer_not_to_say": "Préfère ne pas répondre",
   phone: "Numéro de téléphone",
   "register.submit": "S'inscrire",
-  "register.password": "Mot de passe",
-  "register.password.placeholder": "Créez un mot de passe",
-  "register.confirm_password": "Confirmer le mot de passe",
-  "register.confirm_password.placeholder": "Saisissez à nouveau votre mot de passe",
-  "register.error.password_short": "Le mot de passe doit contenir au moins 8 caractères.",
-  "register.error.password_mismatch": "Les mots de passe ne correspondent pas.",
   "login.title": "Connexion par numéro de téléphone",
   "login.submit": "Se connecter",
   "login.admin": "Connexion administrateur",
-  "login.password": "Mot de passe",
-  "login.password.placeholder": "Entrez votre mot de passe",
-  "login.error.invalid_credentials": "Numéro de téléphone ou mot de passe invalide.",
-  "login.remember_phone": "Mémoriser le numéro sur cet appareil",
-  "login.new_user": "Nouvel utilisateur ? Inscrivez-vous ici",
-  "login.already_account": "Vous avez déjà un compte ? Connectez-vous ici",
   "registration.description": "Entrez votre numéro de téléphone pour commencer l'évaluation de santé mentale",
 
   "dashboard.title": "Tableau de bord d'évaluation cognitive",
-  "dashboard.name": "Nom",
-  "dashboard.id": "ID",
-  "dashboard.phone": "Téléphone",
   "dashboard.resume": "Reprendre l'évaluation",
   "dashboard.retake": "Repasser le test",
   "dashboard.confirm_retake": "Confirmer la reprise",
@@ -923,68 +718,6 @@ const frOverrides: TranslationMap = {
   "dashboard.multimodal": "Intelligence Cognitive Multimodale",
   "dashboard.multimodal.description":
     "EEG, marqueurs sensoriels et biomarqueurs sanguins pour la stadification cognitive précoce.",
-
-  "moca.title": "Évaluation cognitive de Montréal",
-  "moca.visuospatial": "Compétences visuospatiales - Horloge",
-  "moca.visuospatial.instruction": "Déplacez les aiguilles de l’horloge pour indiquer 2 h 10.",
-  "moca.executive": "Fonction exécutive - Trail Making",
-  "moca.executive.instruction": "Reliez les cercles en alternant : 1-A-2-B-3-C-4-D. Les cercles 1, A et 2 sont déjà reliés.",
-  "moca.naming": "Dénomination des animaux",
-  "moca.naming.instruction": "Regardez chaque image et saisissez le nom de l'animal que vous voyez.",
-  "moca.memory": "Tâches de mémoire",
-  "moca.memory.instruction": "{count} mots vous seront montrés un par un. Mémorisez-les pour les rappeler ensuite.",
-  "moca.attention": "Tâches d’attention",
-  "moca.attention.instruction": "Regardez attentivement l’image et comptez le nombre de chiens que vous voyez.",
-  "moca.language": "Langage et abstraction",
-  "moca.language.instruction": "Écoutez attentivement et réalisez les tâches.",
-  "moca.orientation": "Orientation",
-  "moca.orientation.instruction": "Veuillez répondre aux questions suivantes sur la date actuelle et le lieu.",
-
-  "mmse.title": "Mini-examen de l'état mental",
-  "mmse.orientation": "Orientation",
-  "mmse.orientation.instruction": "Veuillez répondre aux questions suivantes sur le temps et le lieu.",
-  "mmse.orientation.time_questions": "Questions sur le temps (5 points)",
-  "mmse.orientation.place_questions": "Questions sur le lieu (3 points)",
-  "mmse.registration": "Enregistrement et rappel",
-  "mmse.registration.instruction": "Mémorisez les mots puis saisissez-les pendant la phase de rappel.",
-  "mmse.attention": "Attention et calcul",
-  "mmse.attention.instruction": "Résolvez les soustractions en retirant 7 à chaque fois à partir de 100.",
-  "mmse.naming": "Dénomination des objets",
-  "mmse.naming.instruction": "Regardez chaque image et saisissez le nom de l'objet que vous voyez.",
-  "mmse.repetition": "Répétition",
-  "mmse.repetition.instruction": "Écoutez attentivement la phrase et saisissez exactement ce que vous entendez.",
-  "mmse.writing": "Écriture",
-  "mmse.writing.instruction": "Veuillez écrire une phrase complète avec un sujet et un verbe, ayant du sens.",
-  "mmse.copying": "Copie de figure",
-  "mmse.copying.instruction": "Regardez la figure ci-dessous et recopiez-la.",
-
-  "memory.get_ready": "Préparez-vous. Les mots apparaîtront dans {countdown} secondes...",
-  "memory.moca.words": ["Visage", "Velours", "Église", "Marguerite", "Rouge"],
-  "memory.mmse.words": ["Pomme", "Table", "Pièce"],
-  "memory.word_of": "Mot {current} sur {total}",
-  "memory.preparing_recall": "Préparation de la phase de rappel...",
-  "memory.recall_instruction": "Veuillez saisir les {count} mots que vous venez de voir, dans n’importe quel ordre.",
-  "memory.submit_recall": "Soumettre le rappel",
-  "common.submit": "Soumettre",
-  "common.skip_task": "Ignorer la tâche",
-  "audio.played_success": "✓ Audio lu. Saisissez maintenant ce que vous avez entendu ci-dessous.",
-  "question.angles": "Combien d’angles cette figure a-t-elle ?",
-  "question.subtract_series": "Soustraction en série",
-  "question.type_sentence": "Saisissez la phrase entendue :",
-  "question.write_sentence": "Écrivez votre phrase ici :",
-
-  "question.animal_label": "Animal {index} :",
-  "question.object_label": "Objet {index} :",
-
-  "common.animal": "Animal",
-  "common.object": "Objet",
-  "common.television": "télévision",
-  "common.tiger": "tigre",
-  "common.rhinoceros": "rhinocéros",
-  "common.camel": "chameau",
-  "common.house": "maison",
-  "common.bag": "sac",
-  "common.word": "Mot",
 
   "results.title": "Résultats de l'évaluation {assessmentType}",
   "results.score_percentage": "Score de {percentage}%",
@@ -1016,7 +749,6 @@ const frOverrides: TranslationMap = {
   "theme.system": "Système",
 
   "common.loading": "Chargement...",
-  "common.next": "Suivant",
   "common.login": "Se connecter",
   "common.logout": "Se déconnecter",
   "common.resume": "Reprendre",
@@ -1028,10 +760,8 @@ const frOverrides: TranslationMap = {
 
   "sensory.visual.title": "Dépistage visuel",
   "sensory.visual.description": "Évaluez l'acuité visuelle avec le test du E directionnel",
-  "sensory.visual.instruction": "Vous verrez la lettre E orientée dans différentes directions. Sélectionnez la direction indiquée.",
   "sensory.auditory.title": "Dépistage auditif",
   "sensory.auditory.description": "Évaluez l'audition avec un test de chiffres dans le bruit",
-  "sensory.auditory.instruction": "Écoutez les chiffres diffusés avec un bruit de fond et saisissez ce que vous entendez.",
   "sensory.olfactory.title": "Test d'identification des odeurs",
   "sensory.olfactory.description": "Identifiez des odeurs courantes pour évaluer la fonction olfactive",
 
@@ -1066,12 +796,6 @@ const translations: Record<Language, TranslationMap> = {
   fr: { ...englishTranslations, ...frOverrides },
 }
 
-const translationOverrides: Partial<Record<Language, TranslationMap>> = {
-  zh: zhOverrides,
-  yue: yueOverrides,
-  fr: frOverrides,
-}
-
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
 function interpolate(text: string, options?: Record<string, any>) {
@@ -1088,19 +812,9 @@ function safelyReadStoredLanguage(): Language {
   return "en"
 }
 
-function scheduleAfterRender(task: () => void) {
-  if (typeof window === "undefined") {
-    return
-  }
-
-  window.setTimeout(task, 0)
-}
-
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>("en")
   const [voicesReady, setVoicesReady] = useState(false)
-  const [runtimeTranslations, setRuntimeTranslations] = useState<Partial<Record<Language, Record<string, string>>>>({})
-  const pendingTranslationsRef = useRef(new Set<string>())
 
   useEffect(() => {
     setLanguageState(safelyReadStoredLanguage())
@@ -1127,57 +841,6 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         window.speechSynthesis.onvoiceschanged = null
       }
     }
-  }, [])
-
-  const requestRuntimeTranslation = useCallback((lang: Language, sourceText: string, cacheKey: string) => {
-    if (lang === "en" || !sourceText.trim() || typeof window === "undefined") {
-      return
-    }
-
-    const pendingKey = `${lang}:${cacheKey}`
-    if (pendingTranslationsRef.current.has(pendingKey)) {
-      return
-    }
-
-    pendingTranslationsRef.current.add(pendingKey)
-
-    void fetch("/api/translate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        text: sourceText,
-        targetLanguage: lang,
-      }),
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          return null
-        }
-
-        const payload = await response.json()
-        return typeof payload.translatedText === "string" ? payload.translatedText.trim() : null
-      })
-      .then((translatedText) => {
-        if (!translatedText || translatedText === sourceText) {
-          return
-        }
-
-        setRuntimeTranslations((previous) => ({
-          ...previous,
-          [lang]: {
-            ...(previous[lang] ?? {}),
-            [cacheKey]: translatedText,
-          },
-        }))
-      })
-      .catch(() => {
-        // Ignore runtime localization failures and fall back to the source text.
-      })
-      .finally(() => {
-        pendingTranslationsRef.current.delete(pendingKey)
-      })
   }, [])
 
   const getLanguageName = (lang: Language) => {
@@ -1246,44 +909,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       if (byName) return byName
     }
 
-    return null
+    return voices[0] || null
   }
-
-  const localizeText = useCallback(
-    (englishText: string, overrides?: Partial<Record<Language, string>>) => {
-      const directOverride = overrides?.[language]
-      if (directOverride) {
-        return directOverride
-      }
-
-      if (language === "en") {
-        return englishText
-      }
-
-      const cacheKey = `text:${englishText}`
-      const cachedText = runtimeTranslations[language]?.[cacheKey]
-
-      if (cachedText) {
-        return cachedText
-      }
-
-      scheduleAfterRender(() => requestRuntimeTranslation(language, englishText, cacheKey))
-      return englishText
-    },
-    [language, requestRuntimeTranslation, runtimeTranslations],
-  )
 
   const t = useMemo(
     () => (key: string, options?: Record<string, any>) => {
-      const overrideValue = translationOverrides[language]?.[key]
+      const current = translations[language]?.[key]
       const fallback = translations.en[key]
-      const runtimeValue = runtimeTranslations[language]?.[`key:${key}`]
 
-      if (language !== "en" && overrideValue === undefined && runtimeValue === undefined && typeof fallback === "string") {
-        scheduleAfterRender(() => requestRuntimeTranslation(language, fallback, `key:${key}`))
-      }
-
-      const value = overrideValue ?? runtimeValue ?? fallback ?? key
+      const value = current ?? fallback ?? key
 
       if (Array.isArray(value)) {
         return value.join(", ")
@@ -1291,7 +925,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
       return interpolate(String(value), options)
     },
-    [language, requestRuntimeTranslation, runtimeTranslations],
+    [language],
   )
 
   const setLanguage = (lang: Language) => {
@@ -1304,7 +938,6 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         language,
         setLanguage,
         t,
-        localizeText,
         getLanguageName,
         getSpeechLanguage,
         getSpeechSettings,

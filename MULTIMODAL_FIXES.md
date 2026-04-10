@@ -50,15 +50,15 @@
 **Issue:** Multimodal data uses generic JSONB blob instead of clinical-grade schema
 
 **Current (Problematic):**
-```sql
+\`\`\`sql
 -- Generic table with JSONB blob
 assessments (
   id, user_id, type, data -> JSONB blob contains everything
 )
-```
+\`\`\`
 
 **Required (Per Blueprint):**
-```sql
+\`\`\`sql
 -- Separate clinical tables with audit trail
 eeg_erp_results (
   session_id, theta_alpha_ratio, p300_latency, p300_amplitude, ...
@@ -66,7 +66,7 @@ eeg_erp_results (
 blood_biomarker_results (
   session_id, abeta42, abeta40, ptau181, total_tau, nfl, crp, il6, tnf_alpha, ...
 )
-```
+\`\`\`
 
 **Action Items:**
 - [ ] Create `scripts/07-multimodal-schema.sql` with proper eeg_erp_results + blood_biomarker_results tables
@@ -81,10 +81,10 @@ blood_biomarker_results (
 
 **Current State:**
 - **In `multimodal-dashboard.tsx`:** Sensory flags → converted to scores locally
-  ```typescript
+  \`\`\`typescript
   visualScore: data.sensory.visualFlag ? 5 : 10,
   auditoryScore: data.sensory.hearingFlag ? 5 : 10,
-  ```
+  \`\`\`
 - **In `sensory_screenings` table:** Formal sensory assessment with detailed scoring
 - **Multimodal calculations:** Adds sensory scores to cognitive/EEG totals (WRONG per Blueprint)
 
@@ -105,7 +105,7 @@ blood_biomarker_results (
 **Location:** `lib/multimodal/constants.ts`
 
 **Current Parameters:**
-```typescript
+\`\`\`typescript
 thetaAlphaRatioHigh: 1.5          // No source cited
 p300LatencyHigh: 350               // Should be validated with PI
 p300AmplitudeLow: 5                // Arbitrary?
@@ -116,7 +116,7 @@ nflHigh: 200                       // Investigational
 crpHigh: 5                         // mg/L - general inflammation
 il6High: 5                         // pg/mL - general inflammation
 tnfAlphaHigh: 10                   // pg/mL - general inflammation
-```
+\`\`\`
 
 **Required Action:**
 - [ ] Create `research_thresholds` database config table
@@ -153,7 +153,7 @@ tnfAlphaHigh: 10                   // pg/mL - general inflammation
 
 **If Continuing with Phase 1:**
 
-```bash
+\`\`\`bash
 # 1. Create new database schema
 psql -d <your-db> < scripts/07-multimodal-schema.sql
 
@@ -171,7 +171,7 @@ psql -d <your-db> < scripts/07-multimodal-schema.sql
 - Validate type system: npx tsc --noEmit
 - Test data persistence to new schema
 - Verify RLS policies allow correct access
-```
+\`\`\`
 
 ---
 

@@ -295,7 +295,6 @@ export async function saveMMSEResults(
     .single();
 
   if (error) {
-    console.error("❌ Error saving MMSE results:", error);
     throw error;
   }
 
@@ -317,7 +316,6 @@ export async function getMMSEResults(sessionId: string) {
 
   if (error && error.code !== "PGRST116") {
     // PGRST116 = no rows
-    console.error("❌ Error retrieving MMSE results:", error);
     throw error;
   }
 

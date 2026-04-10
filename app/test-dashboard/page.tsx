@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -81,7 +80,7 @@ export default function TestDashboardPage() {
 
     // Test 5: Storage Bucket Access
     try {
-      const { data, error } = await supabase.storage.getBucket("user-files")
+      const { data, error } = await supabase.storage.getBucket("user-uploads")
 
       if (error) throw error
       updateTest(4, "success", "Storage bucket accessible", data)
@@ -240,10 +239,10 @@ export default function TestDashboardPage() {
             </CardHeader>
             <CardContent className="space-y-2">
               <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
-                <Link href="/">Main App</Link>
+                <a href="/">Main App</a>
               </Button>
               <Button variant="outline" className="w-full justify-start bg-transparent" asChild>
-                <Link href="/admin">Admin Panel</Link>
+                <a href="/admin">Admin Panel</a>
               </Button>
             </CardContent>
           </Card>

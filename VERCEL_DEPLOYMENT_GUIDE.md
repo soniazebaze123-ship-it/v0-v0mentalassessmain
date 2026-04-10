@@ -18,31 +18,16 @@ Branch: `development` (latest commit: Phase 4 multimodal deferral + type fixes)
 ### Step 2: Configure Environment Variables in Vercel
 In the Vercel import dialog, add the following environment variables:
 
-```
+\`\`\`
 NEXT_PUBLIC_SUPABASE_URL=<your-supabase-url>
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-supabase-publishable-key>
-QWEN_API_KEY=<your-qwen-api-key>
-QWEN_MODEL=qwen-plus
-QWEN_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
-```
-
-Alternative supported env name:
-
-```
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>
-```
-
-Translation API notes:
-- `QWEN_API_KEY` is used by `app/api/translate/route.ts` for server-side translation requests.
-- `QWEN_MODEL` defaults to `qwen-plus` if omitted.
-- `QWEN_BASE_URL` should be `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`.
-- `DASHSCOPE_API_KEY` is also supported as a fallback secret name.
+\`\`\`
 
 **Where to find these:**
 - Login to **https://app.supabase.com**
 - Select your project
 - Go to **Settings → API**
-- Copy the **Project URL** and **publishable / anon (public) key**
+- Copy the **Project URL** and **anon (public) key**
 
 ### Step 3: Deploy
 1. Click **"Deploy"**
@@ -57,7 +42,6 @@ Translation API notes:
 - ✅ Phase 4 multimodal deferred (not active)
 - ✅ Type system fixed (compilation should pass)
 - ✅ Phase 1-3 core modules ready
-- ✅ Current production build completes cleanly with Supabase SSR middleware
 
 ### Before Testing - IMPORTANT
 
@@ -65,11 +49,11 @@ You'll need to:
 
 1. **Set up Supabase Database**
    - Run migration scripts from `scripts/` folder:
-     ```
+     \`\`\`
      psql -U postgres -h localhost -d postgres -f scripts/01-create-tables.sql
      psql -U postgres -h localhost -d postgres -f scripts/02-create-storage.sql
      psql -U postgres -h localhost -d postgres -f scripts/03-fix-storage-policies.sql
-     ```
+     \`\`\`
 
 2. **Create Test Users**
    - Use phone number registration on the app

@@ -23,11 +23,11 @@
 - ✅ All documentation in place
 
 ### 3. Git History ✅
-```
+\`\`\`
 5ec6010 docs: Add Vercel deployment guide with testing checklist
 23b1b50 chore: Phase 4 multimodal deferral and type system fixes
 59b6f10 [Previous development work]
-```
+\`\`\`
 
 ---
 
@@ -36,9 +36,9 @@
 ### Quick Start (2 minutes)
 
 **Step 1:** Visit Vercel
-```
+\`\`\`
 https://vercel.com/new
-```
+\`\`\`
 
 **Step 2:** Click "Continue with GitHub"
 - Authorize Vercel to access your GitHub account
@@ -51,30 +51,17 @@ https://vercel.com/new
 **Step 4:** Configure Environment Variables
 Add these in the Vercel import dialog:
 
-```env
+\`\`\`env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key_here
-QWEN_API_KEY=your_qwen_api_key_here
-QWEN_MODEL=qwen-plus
-QWEN_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
-```
-
-Alternative supported env name:
-
-```env
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-```
-
-For server-side translation, `app/api/translate/route.ts` also accepts `DASHSCOPE_API_KEY` as an alternative to `QWEN_API_KEY`.
+\`\`\`
 
 **Where to find these:**
 1. Go to https://app.supabase.com
 2. Select your project
 3. Settings → API
 4. Copy the **Project URL** (NEXT_PUBLIC_SUPABASE_URL)
-5. Copy the **publishable / anon (public) key**
-  - Preferred: `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-  - Also supported: `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+5. Copy the **anon (public) key** (NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
 **Step 5:** Click "Deploy"
 - Vercel will build and deploy automatically
@@ -134,11 +121,11 @@ For server-side translation, `app/api/translate/route.ts` also accepts `DASHSCOP
    - Log in to Supabase dashboard
    - Go to SQL Editor
    - Run these scripts in order:
-     ```sql
+     \`\`\`sql
      -- 1. Execute scripts/01-create-tables.sql
      -- 2. Execute scripts/02-create-storage.sql
      -- 3. Execute scripts/03-fix-storage-policies.sql
-     ```
+     \`\`\`
 
 2. **Audio Files** (Optional for Phase 1)
    - If testing audio assessments, place files in `public/audio/`:
@@ -161,15 +148,14 @@ For server-side translation, `app/api/translate/route.ts` also accepts `DASHSCOP
 ### Build & Deployment Notes
 
 **Expected Build Warnings:**
-- Unused variables in archived or in-progress code may still appear in lint output
-- Multimodal remains deferred to Phase 4 and is not part of the active route surface
+- Unused variables in Phase 4 archived code (expected)
+- TypeScript errors in multimodal folder (expected - Phase 4 only)
 
 **Build Should Succeed If:**
 - ✅ All Phase 1-3 files compile
 - ✅ Supabase types import correctly
 - ✅ No missing UI components
 - ✅ Environment variables are set
-- ✅ No active multimodal route is enabled in Phase 1-3
 
 ---
 

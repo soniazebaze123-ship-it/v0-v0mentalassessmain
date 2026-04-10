@@ -1,7 +1,6 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { useLanguage } from "@/contexts/language-context"
 
 export type RiskLevel = "low" | "moderate" | "high"
 
@@ -23,11 +22,18 @@ const levelStyles: Record<RiskLevel, string> = {
   high: "bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300",
 }
 
-export function RiskBadge({ level, size = "md", className }: RiskBadgeProps) {
-  const { t } = useLanguage()
-  const riskLabel =
-    level === "low" ? t("risk.level.low") : level === "moderate" ? t("risk.level.moderate") : t("risk.level.high")
+function getRiskLabel(level: RiskLevel): string {
+  switch (level) {
+    case "low":
+      return "Low Risk"
+    case "moderate":
+      return "Moderate Risk"
+    case "high":
+      return "High Risk"
+  }
+}
 
+export function RiskBadge({ level, size = "md", className }: RiskBadgeProps) {
   return (
     <span
       className={cn(
@@ -37,9 +43,11 @@ export function RiskBadge({ level, size = "md", className }: RiskBadgeProps) {
         className
       )}
       role="status"
-      aria-label={riskLabel}
+      aria-label={`Risk level: ${getRiskLabel(level)}`}
     >
-      {riskLabel}
+      {getRiskLabel(level)}
     </span>
   )
 }
+
+export { getRiskLabel }

@@ -10,10 +10,6 @@ CREATE TABLE IF NOT EXISTS public.users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT UNIQUE NOT NULL,
     phone_number TEXT UNIQUE NOT NULL,
-    name TEXT,
-    date_of_birth DATE,
-    gender TEXT,
-    password_hash TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

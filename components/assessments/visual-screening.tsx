@@ -40,9 +40,8 @@ interface VisualScreeningProps {
 type Phase = "intro" | "calibration" | "distance" | "practice" | "testing" | "results"
 
 export function VisualScreening({ onComplete, onSkip, enhanced = false }: VisualScreeningProps) {
-  const { t, language, localizeText } = useLanguage()
+  const { t, language } = useLanguage()
   const { user } = useUser()
-  const uiText = (englishText: string, chineseText: string) => localizeText(englishText, { zh: chineseText })
 
   // Phase management - enhanced starts with calibration, classic skips to testing
   const [phase, setPhase] = useState<Phase>(enhanced ? "intro" : "intro")
@@ -187,7 +186,7 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
           },
         })
       } catch (error) {
-        console.error("Error saving visual screening:", error)
+        // Error saving visual screening - silently continue
       }
     }
   }
@@ -222,13 +221,13 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
             </div>
             <div>
               <CardTitle>
-                {uiText("Visual Acuity Test", "视力检查")}
+                {language === "zh" ? "视力检查" : "Visual Acuity Test"}
                 {enhanced && <Badge className="ml-2 bg-blue-600">Enhanced</Badge>}
               </CardTitle>
               <CardDescription>
                 {enhanced 
-                  ? uiText("3-5 min · Tumbling-E adaptive staircase test (with calibration)", "3-5分钟 · Tumbling-E自适应阶梯测试 (含校准)")
-                  : uiText("2-3 min · Basic visual acuity test", "2-3分钟 · 基础视力测试")}
+                  ? (language === "zh" ? "3-5分钟 · Tumbling-E自适应阶梯测试 (含校准)" : "3-5 min · Tumbling-E adaptive staircase test (with calibration)")
+                  : (language === "zh" ? "2-3分钟 · 基础视力测试" : "2-3 min · Basic visual acuity test")}
               </CardDescription>
             </div>
           </div>
@@ -236,31 +235,35 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg space-y-3">
-            <h4 className="font-medium">{uiText("About this test", "测试说明")}:</h4>
+            <h4 className="font-medium">{language === "zh" ? "测试说明" : "About this test"}:</h4>
             <p className="text-sm text-muted-foreground">
               {enhanced 
-              ? uiText("This test measures your near-vision sharpness by displaying letter \"E\" in different sizes. Includes screen calibration and precise logMAR scoring.", "此测试通过显示不同大小的字母\"E\"来测量您的近视力敏锐度。包含屏幕校准和精确的logMAR评分。")
-              : uiText("This test quickly assesses your visual acuity by displaying letter \"E\" in different sizes.", "此测试通过显示不同大小的字母\"E\"来快速评估您的视力。")}
+                ? (language === "zh" 
+                    ? "此测试通过显示不同大小的字母\"E\"来测量您的近视力敏锐度。包含屏幕校准和精确的logMAR评分。"
+                    : "This test measures your near-vision sharpness by displaying letter \"E\" in different sizes. Includes screen calibration and precise logMAR scoring.")
+                : (language === "zh" 
+                    ? "此测试通过显示不同大小的字母\"E\"来快速评估您的视力。"
+                    : "This test quickly assesses your visual acuity by displaying letter \"E\" in different sizes.")}
             </p>
           </div>
 
           {enhanced && (
             <div className="space-y-3">
-              <h4 className="font-medium">{uiText("Test steps", "测试步骤")}:</h4>
+              <h4 className="font-medium">{language === "zh" ? "测试步骤" : "Test steps"}:</h4>
               <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-2">
-                <li>{uiText("Screen calibration: Adjust display size using a credit card", "校准屏幕：使用信用卡调整显示尺寸")}</li>
-                <li>{uiText("Set distance: Hold device at 40cm (arm's length)", "设置距离：将设备保持在40厘米处")}</li>
-                <li>{uiText("Start test: Select the direction the letter \"E\" is pointing", "开始测试：选择字母\"E\"指向的方向")}</li>
+                <li>{language === "zh" ? "校准屏幕：使用信用卡调整显示尺寸" : "Screen calibration: Adjust display size using a credit card"}</li>
+                <li>{language === "zh" ? "设置距离：将设备保持在40厘米处" : "Set distance: Hold device at 40cm (arm's length)"}</li>
+                <li>{language === "zh" ? "开始测试：选择字母\"E\"指向的方向" : "Start test: Select the direction the letter \"E\" is pointing"}</li>
               </ol>
             </div>
           )}
 
           <div className="flex gap-3 pt-4">
             <Button variant="outline" onClick={handleSkip} className="flex-1">
-              {uiText("Skip", "跳过")}
+              {language === "zh" ? "跳过" : "Skip"}
             </Button>
             <Button onClick={() => setPhase(enhanced ? "calibration" : "practice")} className="flex-1">
-              {enhanced ? uiText("Start Calibration", "开始校准") : uiText("Start Practice", "开始练习")}
+              {enhanced ? (language === "zh" ? "开始校准" : "Start Calibration") : (language === "zh" ? "开始练习" : "Start Practice")}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -278,14 +281,16 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
       <Card className="w-full max-w-2xl mx-auto">
         <CardHeader>
           <Badge variant="outline" className="w-fit mb-2">
-            {uiText("Step 1: Screen Calibration", "第1步：屏幕校准")}
+            {language === "zh" ? "第1步：屏幕校准" : "Step 1: Screen Calibration"}
           </Badge>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
-            {uiText("Screen Calibration", "屏幕校准")}
+            {language === "zh" ? "屏幕校准" : "Screen Calibration"}
           </CardTitle>
           <CardDescription>
-            {uiText("Place a standard credit card against the screen. Adjust the slider until the rectangle matches your card exactly.", "将标准信用卡放在屏幕上，调整滑块使矩形与卡片完全匹配。")}
+            {language === "zh" 
+              ? "将标准信用卡放在屏幕上，调整滑块使矩形与卡片完全匹配。"
+              : "Place a standard credit card against the screen. Adjust the slider until the rectangle matches your card exactly."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -299,7 +304,7 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
               }}
             >
               <span className="text-blue-500 text-sm font-medium">
-                {uiText("Credit Card Outline", "信用卡轮廓")}
+                {language === "zh" ? "信用卡轮廓" : "Credit Card Outline"}
               </span>
             </div>
           </div>
@@ -307,7 +312,7 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
           {/* Slider */}
           <div className="space-y-4">
             <label className="text-sm font-medium">
-              {uiText("Adjust Size", "调整尺寸")}
+              {language === "zh" ? "调整尺寸" : "Adjust Size"}
             </label>
             <Slider
               value={[cardWidthPixels]}
@@ -322,7 +327,7 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
           {/* PPI Display */}
           <div className="bg-muted p-4 rounded-lg text-center">
             <p className="text-sm text-muted-foreground">
-              {uiText("Estimated screen PPI", "估算屏幕PPI")}: 
+              {language === "zh" ? "估算屏幕PPI" : "Estimated screen PPI"}: 
               <span className="font-bold text-foreground ml-2">{calibration.ppi}</span>
             </p>
           </div>
@@ -330,10 +335,10 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => setPhase("intro")} className="flex-1">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              {uiText("Back", "返回")}
+              {language === "zh" ? "返回" : "Back"}
             </Button>
             <Button onClick={handleConfirmCalibration} className="flex-1">
-              {uiText("Confirm Calibration", "确认校准")}
+              {language === "zh" ? "确认校准" : "Confirm Calibration"}
               <CheckCircle2 className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -348,39 +353,43 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
       <Card className="w-full max-w-2xl mx-auto">
         <CardHeader>
           <Badge variant="outline" className="w-fit mb-2">
-            {uiText("Step 2: Viewing Distance", "第2步：设置距离")}
+            {language === "zh" ? "第2步：设置距离" : "Step 2: Viewing Distance"}
           </Badge>
           <CardTitle className="flex items-center gap-2">
             <Ruler className="h-5 w-5" />
-            {uiText("Viewing Distance", "设置观看距离")}
+            {language === "zh" ? "设置观看距离" : "Viewing Distance"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-6 rounded-lg text-center space-y-4">
             <div className="text-5xl font-bold text-amber-600">40 cm</div>
             <p className="text-lg">
-              {uiText("~16 inches / arm's length", "约16英寸 / 一臂长度")}
+              {language === "zh" ? "约16英寸 / 一臂长度" : "~16 inches / arm's length"}
             </p>
           </div>
 
           <div className="space-y-3 text-sm text-muted-foreground">
             <p className="flex items-start gap-2">
               <AlertCircle className="h-4 w-4 mt-0.5 text-amber-500 flex-shrink-0" />
-              {uiText("Hold your device steady at this distance throughout the test.", "在整个测试过程中保持设备在此距离稳定不动。")}
+              {language === "zh" 
+                ? "在整个测试过程中保持设备在此距离稳定不动。"
+                : "Hold your device steady at this distance throughout the test."}
             </p>
             <p className="flex items-start gap-2">
               <AlertCircle className="h-4 w-4 mt-0.5 text-amber-500 flex-shrink-0" />
-              {uiText("You will see a letter \"E\" pointing in different directions. Tap the arrow matching the direction.", "您将看到指向不同方向的字母\"E\"。点击与方向匹配的箭头。")}
+              {language === "zh" 
+                ? "您将看到指向不同方向的字母\"E\"。点击与方向匹配的箭头。"
+                : "You will see a letter \"E\" pointing in different directions. Tap the arrow matching the direction."}
             </p>
           </div>
 
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => setPhase("calibration")} className="flex-1">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              {uiText("Back", "返回")}
+              {language === "zh" ? "返回" : "Back"}
             </Button>
             <Button onClick={() => setPhase("practice")} className="flex-1">
-              {uiText("Start Practice", "开始练习")}
+              {language === "zh" ? "开始练习" : "Start Practice"}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -410,14 +419,14 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-lg">
-                {uiText("Practice Round", "练习回合")}
+                {language === "zh" ? "练习回合" : "Practice Round"}
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                {uiText("Get familiar with the controls", "先熟悉一下操作")}
+                {language === "zh" ? "先熟悉一下操作" : "Get familiar with the controls"}
               </p>
             </div>
             <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-              {uiText("Practice", "练习")}
+              {language === "zh" ? "练习" : "Practice"}
             </Badge>
           </div>
         </CardHeader>
@@ -428,7 +437,7 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
                 <CheckCircle2 className="h-12 w-12" />
               </div>
               <p className="text-lg font-medium text-green-700">
-                {uiText("Great! Starting the test...", "太棒了！开始正式测试...")}
+                {language === "zh" ? "太棒了！开始正式测试..." : "Great! Starting the test..."}
               </p>
             </div>
           ) : (
@@ -454,12 +463,12 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
 
               {/* Instruction text */}
               <p className="text-center text-base font-medium text-muted-foreground">
-                {uiText("Which direction is the E pointing?", "E指向哪个方向？")}
+                {language === "zh" ? "E指向哪个方向？" : "Which direction is the E pointing?"}
               </p>
 
               {practiceAttempts > 0 && (
                 <p className="text-center text-sm text-amber-600">
-                  {uiText("Try again! Tap the direction the E is pointing.", "再试一次！点击E指向的方向。")}
+                  {language === "zh" ? "再试一次！点击E指向的方向。" : "Try again! Tap the direction the E is pointing."}
                 </p>
               )}
 
@@ -512,7 +521,7 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
                   }}
                   className="text-muted-foreground"
                 >
-                  {uiText("Skip practice", "跳过练习")}
+                  {language === "zh" ? "跳过练习" : "Skip practice"}
                 </Button>
               </div>
             </>
@@ -530,11 +539,11 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-lg">
-                {uiText("Visual Acuity Test", "视力测试")}
+                {language === "zh" ? "视力测试" : "Visual Acuity Test"}
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                {uiText("Level", "等级")} {currentLevelData.level} · 
-                {uiText("Trial", "试验")} {currentTrial + 1}/5
+                {language === "zh" ? "等级" : "Level"} {currentLevelData.level} · 
+                {language === "zh" ? "试验" : "Trial"} {currentTrial + 1}/5
               </p>
             </div>
             <Badge variant="secondary">
@@ -565,7 +574,7 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
 
           {/* Question text */}
           <p className="text-center text-base font-medium text-muted-foreground">
-            {uiText("Which direction is the E pointing?", "E指向哪个方向？")}
+            {language === "zh" ? "E指向哪个方向？" : "Which direction is the E pointing?"}
           </p>
 
           {/* Response buttons - cross pattern */}
@@ -620,14 +629,14 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle2 className="h-6 w-6 text-green-500" />
-            {uiText("Test Complete", "测试完成")}
+            {language === "zh" ? "测试完成" : "Test Complete"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-muted p-4 rounded-lg text-center">
               <p className="text-sm text-muted-foreground mb-1">
-                {uiText("Visual Acuity", "视力")}
+                {language === "zh" ? "视力" : "Visual Acuity"}
               </p>
               <p className="text-3xl font-bold">{snellen}</p>
             </div>
@@ -640,32 +649,32 @@ export function VisualScreening({ onComplete, onSkip, enhanced = false }: Visual
           <div className="bg-muted p-4 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-muted-foreground">
-                {uiText("Classification", "分类")}
+                {language === "zh" ? "分类" : "Classification"}
               </span>
               <RiskBadge level={riskLevel} />
             </div>
             <p className="font-medium">
               {classification === "normal" 
-                ? uiText("Normal Vision", "正常视力")
+                ? (language === "zh" ? "正常视力" : "Normal Vision")
                 : classification === "impaired"
-                  ? uiText("Mildly Impaired", "轻度受损")
-                  : uiText("Further Evaluation Needed", "需要进一步检查")}
+                  ? (language === "zh" ? "轻度受损" : "Mildly Impaired")
+                  : (language === "zh" ? "需要进一步检查" : "Further Evaluation Needed")}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="bg-muted/50 p-3 rounded">
-              <p className="text-muted-foreground">{uiText("Total Trials", "总试验")}</p>
+              <p className="text-muted-foreground">{language === "zh" ? "总试验" : "Total Trials"}</p>
               <p className="font-medium">{totalTrials}</p>
             </div>
             <div className="bg-muted/50 p-3 rounded">
-              <p className="text-muted-foreground">{uiText("Accuracy", "正确率")}</p>
+              <p className="text-muted-foreground">{language === "zh" ? "正确率" : "Accuracy"}</p>
               <p className="font-medium">{totalTrials > 0 ? Math.round((correctCount / totalTrials) * 100) : 0}%</p>
             </div>
           </div>
 
           <Button onClick={() => onComplete(finalScore)} className="w-full">
-            {uiText("Continue", "继续")}
+            {language === "zh" ? "继续" : "Continue"}
           </Button>
         </CardContent>
       </Card>

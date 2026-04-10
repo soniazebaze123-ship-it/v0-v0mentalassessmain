@@ -4,7 +4,7 @@
 
 ## 📊 CURRENT STATUS
 
-```
+\`\`\`
 ✅ GitHub             COMPLETE  
    └─ Repository: https://github.com/soniazebaze123-ship-it/v0-v0mentalassessmain
    └─ Branch: development (4 new commits)
@@ -32,7 +32,7 @@
    └─ Import repository: v0-v0mentalassessmain
    └─ Add Supabase credentials
    └─ Click Deploy!
-```
+\`\`\`
 
 ---
 
@@ -40,21 +40,16 @@
 
 ### Deploy to Vercel in 2 minutes:
 
-```
+\`\`\`
 1. Go to https://vercel.com/new
 2. Click "Continue with GitHub"
 3. Select: v0-v0mentalassessmain
 4. Add Environment Variables:
    NEXT_PUBLIC_SUPABASE_URL = [from Supabase console]
    NEXT_PUBLIC_SUPABASE_ANON_KEY = [from Supabase console]
-   QWEN_API_KEY = [your Qwen / DashScope API key]
-   QWEN_MODEL = qwen-plus
-   QWEN_BASE_URL = https://dashscope-intl.aliyuncs.com/compatible-mode/v1
 5. Click "Deploy"
 6. Wait 2-5 minutes for live URL ✨
-
-The translation endpoint uses the Qwen values on the server side. If `QWEN_API_KEY` is missing, translations fall back to the original text.
-```
+\`\`\`
 
 ---
 

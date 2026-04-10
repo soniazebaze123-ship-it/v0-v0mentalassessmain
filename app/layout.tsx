@@ -9,7 +9,7 @@ import { UserProvider } from "@/contexts/user-context"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "MentalAssess - Cognitive Assessment Platform",
+  title: "MentalAssess - Cognitive Assessment Platform v2.0",
   description: "Professional cognitive assessment application with MoCA, MMSE, TCM Constitution tests and sensory screenings",
   generator: "v0.app",
   manifest: "/manifest.json",

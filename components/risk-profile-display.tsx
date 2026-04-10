@@ -39,7 +39,7 @@ export function RiskProfileDisplay({ onBackToDashboard }: RiskProfileDisplayProp
       const profile = await fetchAndCalculateRiskProfile(user.id, supabase)
       setRiskProfile(profile)
     } catch (error) {
-      console.error("[v0] Error loading risk profile:", error)
+      // Error loading risk profile - silently continue
     } finally {
       setLoading(false)
     }
