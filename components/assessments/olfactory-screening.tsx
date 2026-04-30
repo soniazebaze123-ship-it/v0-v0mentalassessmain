@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useEffectEvent, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useUser } from "@/contexts/user-context"
@@ -74,7 +74,7 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
   const [timeRemaining, setTimeRemaining] = useState(30)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   
-  const handleTimeUp = useEffectEvent(() => {
+  const handleTimeUp = useCallback(() => {
     setLastAnswerCorrect(false)
     setShowFeedback(true)
 
@@ -89,7 +89,7 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
         void finishTest(newResults)
       }
     }, 1500)
-  })
+  }, [currentTrialIndex, results, trials.length])
 
   // Start timer when test starts or question changes
   useEffect(() => {

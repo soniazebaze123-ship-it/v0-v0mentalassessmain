@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useEffectEvent, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/language-context"
@@ -51,7 +51,7 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
     setIsDragging(hand)
   }
 
-  const handleMouseMove = useEffectEvent((e: MouseEvent) => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging || !clockRef.current) return
 
     const rect = clockRef.current.getBoundingClientRect()
@@ -67,9 +67,9 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
       const snappedAngle = snapToIncrement(angle, 6) // 6 degrees per minute
       setMinuteAngle(snappedAngle)
     }
-  })
+  }, [isDragging])
 
-  const handleTouchMove = useEffectEvent((e: TouchEvent) => {
+  const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!isDragging || !clockRef.current) return
 
     const rect = clockRef.current.getBoundingClientRect()
@@ -86,15 +86,15 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
       const snappedAngle = snapToIncrement(angle, 6)
       setMinuteAngle(snappedAngle)
     }
-  })
+  }, [isDragging])
 
-  const handleMouseUp = useEffectEvent(() => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(null)
-  })
+  }, [])
 
-  const handleTouchEnd = useEffectEvent(() => {
+  const handleTouchEnd = useCallback(() => {
     setIsDragging(null)
-  })
+  }, [])
 
   // Update useEffect to include touch events
   useEffect(() => {

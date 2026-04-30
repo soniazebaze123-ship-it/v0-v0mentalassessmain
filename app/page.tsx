@@ -1,7 +1,7 @@
 "use client"
 
 // MentalAssess - Cognitive Assessment Platform
-import { useEffect, useEffectEvent, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useUser } from "@/contexts/user-context"
 import { Registration } from "@/components/registration"
 import { Dashboard } from "@/components/dashboard"
@@ -107,7 +107,7 @@ function AppContent() {
   ]
 
   // Load completed assessments on mount
-  const loadCompletedAssessments = useEffectEvent(async () => {
+  const loadCompletedAssessments = useCallback(async () => {
     if (!user) return
 
     const supabase = createClient()
