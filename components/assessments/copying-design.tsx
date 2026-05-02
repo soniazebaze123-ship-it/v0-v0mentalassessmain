@@ -10,9 +10,20 @@ import { useLanguage } from "@/contexts/language-context"
 interface CopyingDesignProps {
   onComplete: (score: number) => void
   onSkip?: () => void
+  titleKey?: string
+  instructionKey?: string
+  imageSrc?: string
+  promptText?: string
 }
 
-export function CopyingDesign({ onComplete, onSkip }: CopyingDesignProps) {
+export function CopyingDesign({
+  onComplete,
+  onSkip,
+  titleKey = "mmse.copying",
+  instructionKey = "mmse.copying.instruction",
+  imageSrc = "/images/pentagon.png",
+  promptText,
+}: CopyingDesignProps) {
   const { t, localizeText } = useLanguage()
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const isDrawingRef = useRef(false)
@@ -132,24 +143,25 @@ export function CopyingDesign({ onComplete, onSkip }: CopyingDesignProps) {
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>{t("mmse.copying")}</CardTitle>
-        <p className="text-sm text-gray-600">{t("mmse.copying.instruction")}</p>
-        <InstructionAudio instructionKey="mmse.copying.instruction" className="mt-2" />
+        <CardTitle>{t(titleKey)}</CardTitle>
+        <p className="text-sm text-gray-600">{t(instructionKey)}</p>
+        <InstructionAudio instructionKey={instructionKey} className="mt-2" />
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
           <div className="flex justify-center">
             <div className="relative h-64 w-64 overflow-hidden rounded-lg border bg-gray-100">
-              <Image src="/images/pentagon.png" alt="Reference shape" fill className="object-contain" />
+              <Image src={imageSrc} alt="Reference shape" fill className="object-contain" />
             </div>
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
-            {localizeText("Draw the same shape in the box below.", {
-              zh: "请在下方方框内画出相同的图形。",
-              yue: "請喺下面方框內畫出相同嘅圖形。",
-              fr: "Dessinez la même figure dans la zone ci-dessous.",
-            })}
+            {promptText ??
+              localizeText("Draw the same shape in the box below.", {
+                zh: "请在下方方框内画出相同的图形。",
+                yue: "請喺下面方框內畫出相同嘅圖形。",
+                fr: "Dessinez la même figure dans la zone ci-dessous.",
+              })}
           </p>
 
           <div className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-3 shadow-sm">

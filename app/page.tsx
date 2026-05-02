@@ -87,6 +87,7 @@ function AppContent() {
   const mocaSteps = [
     { component: InteractiveClock, props: { targetTime: { hour: 2, minute: 10 } } },
     { component: TrailMakingTask, props: {} },
+    { component: CopyingDesign, props: { titleKey: "moca.cube", instructionKey: "moca.cube.instruction", imageSrc: "/images/cube.svg" } },
     { component: AnimalNaming, props: {} },
     {
       component: MemoryTask,
@@ -229,7 +230,7 @@ function AppContent() {
 
       const sectionNames =
         assessmentType === "MOCA"
-          ? ["visuospatial", "executive", "naming", "memory", "attention", "language", "orientation"]
+          ? ["visuospatial", "executive", "cube", "naming", "memory", "attention", "language", "orientation"]
           : ["orientation", "registration", "attention", "naming", "repetition", "writing", "copying"]
 
       const sectionScores = sectionNames.reduce(

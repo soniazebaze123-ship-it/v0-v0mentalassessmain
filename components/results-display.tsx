@@ -50,6 +50,7 @@ export function ResultsDisplay({
       return {
         visuospatial: t("moca.visuospatial"),
         executive: t("moca.executive"),
+        cube: t("moca.cube"),
         naming: t("moca.naming"),
         memory: t("moca.memory"),
         attention: t("moca.attention"),
