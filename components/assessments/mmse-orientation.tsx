@@ -24,6 +24,10 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
     president: "",
     sea: "",
   })
+  const unknownOption = {
+    value: "unknown",
+    label: localizeText("I don't know", { zh: "我不知道", yue: "我唔知道", fr: "Je ne sais pas" }),
+  }
 
   const currentYear = new Date().getFullYear()
   const dayOptions = [
@@ -143,6 +147,7 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                     {year}
                   </option>
                 ))}
+                <option value={unknownOption.value}>{unknownOption.label}</option>
               </select>
             </div>
 
@@ -154,7 +159,7 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                 <InstructionAudio text={t("question.season")} />
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {seasonOptions.map((option) => (
+                {[...seasonOptions, unknownOption].map((option) => (
                   <Button
                     key={option.value}
                     type="button"
@@ -182,6 +187,7 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                     {date}
                   </option>
                 ))}
+                <option value={unknownOption.value}>{unknownOption.label}</option>
               </select>
             </div>
 
@@ -193,7 +199,7 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                 <InstructionAudio text={t("question.day")} />
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {dayOptions.map((option) => (
+                {[...dayOptions, unknownOption].map((option) => (
                   <Button
                     key={option.value}
                     type="button"
@@ -221,6 +227,7 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                     {t(`common.month_${month}`)}
                   </option>
                 ))}
+                <option value={unknownOption.value}>{unknownOption.label}</option>
               </select>
             </div>
           </div>
@@ -237,7 +244,7 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                 <InstructionAudio text={t("question.country")} />
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {countryOptions.map((option) => (
+                {[...countryOptions, unknownOption].map((option) => (
                   <Button
                     key={option.value}
                     type="button"
@@ -259,7 +266,7 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                 <InstructionAudio text={t("question.president")} />
               </div>
               <div className="grid gap-2">
-                {presidentOptions.map((option) => (
+                {[...presidentOptions, unknownOption].map((option) => (
                   <Button
                     key={option.value}
                     type="button"
@@ -281,7 +288,7 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                 <InstructionAudio text={t("question.sea")} />
               </div>
               <div className="grid gap-2 sm:grid-cols-3">
-                {seaOptions.map((option) => (
+                {[...seaOptions, unknownOption].map((option) => (
                   <Button
                     key={option.value}
                     type="button"

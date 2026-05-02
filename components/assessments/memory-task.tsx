@@ -68,9 +68,11 @@ function countMatches(expectedWords: string[], answers: string[]) {
 export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }: MemoryTaskProps) {
   const { t, language, localizeText } = useLanguage()
   const instructionKey = assessmentType === "MMSE" ? "mmse.registration.instruction" : "moca.memory.instruction"
+  const presentationRounds = 2
   const [phase, setPhase] = useState<"countdown" | "presentation" | "recall">("countdown")
   const [countdown, setCountdown] = useState(10)
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
+  const [presentationRound, setPresentationRound] = useState(1)
   const fallbackWords = normalizeWords(words)
   const explicitWords = [...memoryWordSets[assessmentType][language]]
   const memoryWords = explicitWords.length === fallbackWords.length ? explicitWords : fallbackWords
@@ -109,6 +111,7 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
     setRecallAnswers(new Array(memoryWords.length).fill(""))
     setCountdown(10)
     setCurrentWordIndex(0)
+    setPresentationRound(1)
     setPhase("countdown")
   }, [memoryWords.length, memoryWordsKey])
 
@@ -123,16 +126,25 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
 
   useEffect(() => {
     if (phase === "presentation") {
-      if (currentWordIndex < memoryWords.length) {
+      if (currentWordIndex < memoryWords.length - 1) {
         const timer = setTimeout(() => {
           setCurrentWordIndex(currentWordIndex + 1)
         }, 3000)
         return () => clearTimeout(timer)
+      } else if (presentationRound < presentationRounds) {
+        const timer = setTimeout(() => {
+          setPresentationRound((previous) => previous + 1)
+          setCurrentWordIndex(0)
+        }, 3000)
+        return () => clearTimeout(timer)
       } else {
-        setPhase("recall")
+        const timer = setTimeout(() => {
+          setPhase("recall")
+        }, 3000)
+        return () => clearTimeout(timer)
       }
     }
-  }, [phase, currentWordIndex, memoryWords.length])
+  }, [phase, currentWordIndex, memoryWords.length, presentationRound, presentationRounds])
 
   const handleRecallChange = (index: number, value: string) => {
     const newAnswers = [...recallAnswers]
@@ -213,6 +225,14 @@ export function MemoryTask({ onComplete, onSkip, words, title, assessmentType }:
           </div>
           <p className="text-sm text-muted-foreground">
             {t("memory.word_of", { current: Math.min(currentWordIndex + 1, memoryWords.length), total: memoryWords.length })}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {uiText(
+              `Round ${presentationRound} of ${presentationRounds}`,
+              `第 ${presentationRound} 轮，共 ${presentationRounds} 轮`,
+              `第 ${presentationRound} 輪，共 ${presentationRounds} 輪`,
+              `Tour ${presentationRound} sur ${presentationRounds}`,
+            )}
           </p>
         </CardHeader>
         <CardContent className="flex min-h-[360px] flex-col items-center justify-center space-y-6 pt-6 text-center">

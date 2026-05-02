@@ -19,9 +19,9 @@ interface AnimalQuestion {
 }
 
 const ANIMAL_POOL = [
-  { image: "/images/tiger.png", labelKey: "common.tiger" },
-  { image: "/images/rhinoceros.png", labelKey: "common.rhinoceros" },
-  { image: "/images/camel.png", labelKey: "common.camel" },
+  { image: "/images/house.png", labelKey: "common.house" },
+  { image: "/images/bag.png", labelKey: "common.bag" },
+  { image: "/images/tv.png", labelKey: "common.tv" },
 ]
 
 function buildAnimalQuestions(): AnimalQuestion[] {

@@ -22,6 +22,10 @@ export function OrientationTask({ onComplete, onSkip }: OrientationTaskProps) {
     day: "",
     country: "",
   })
+  const unknownOption = {
+    value: "unknown",
+    label: localizeText("I don't know", { zh: "我不知道", yue: "我唔知道", fr: "Je ne sais pas" }),
+  }
 
   const currentYear = new Date().getFullYear()
   const dayOptions = [
@@ -129,6 +133,7 @@ export function OrientationTask({ onComplete, onSkip }: OrientationTaskProps) {
                 {Array.from({ length: 31 }, (_, index) => index + 1).map((date) => (
                   <option key={date} value={date}>{date}</option>
                 ))}
+                <option value={unknownOption.value}>{unknownOption.label}</option>
               </select>
               </div>
             </div>
@@ -144,6 +149,7 @@ export function OrientationTask({ onComplete, onSkip }: OrientationTaskProps) {
                 {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => (
                   <option key={month} value={month}>{t(`common.month_${month}`)}</option>
                 ))}
+                <option value={unknownOption.value}>{unknownOption.label}</option>
               </select>
               </div>
             </div>
@@ -159,6 +165,7 @@ export function OrientationTask({ onComplete, onSkip }: OrientationTaskProps) {
                 {[currentYear - 1, currentYear, currentYear + 1].map((year) => (
                   <option key={year} value={year}>{year}</option>
                 ))}
+                <option value={unknownOption.value}>{unknownOption.label}</option>
               </select>
               </div>
             </div>
@@ -170,7 +177,7 @@ export function OrientationTask({ onComplete, onSkip }: OrientationTaskProps) {
                 <InstructionAudio text={t("question.day")} />
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {dayOptions.map((option) => (
+                {[...dayOptions, unknownOption].map((option) => (
                   <Button
                     key={option.value}
                     type="button"
@@ -209,7 +216,7 @@ export function OrientationTask({ onComplete, onSkip }: OrientationTaskProps) {
                 <InstructionAudio text={t("question.country")} />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                {countryOptions.map((option) => (
+                {[...countryOptions, unknownOption].map((option) => (
                   <Button
                     key={option.value}
                     type="button"
