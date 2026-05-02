@@ -3,6 +3,7 @@
 // MentalAssess - Cognitive Assessment Platform
 import { useCallback, useEffect, useState } from "react"
 import { useUser } from "@/contexts/user-context"
+import { classifyRisk, type RiskClassificationOutput } from "@/lib/recommendations/risk-classification-service"
 import { Registration } from "@/components/registration"
 import { Dashboard } from "@/components/dashboard"
 import { ImageUpload } from "@/components/image-upload"
@@ -82,7 +83,7 @@ function AppContent() {
   const [scores, setScores] = useState<number[]>([])
   const [assessmentType, setAssessmentType] = useState<"MOCA" | "MMSE">("MOCA")
   const [completedAssessments, setCompletedAssessments] = useState<Record<string, CompletedAssessment>>({})
-
+  const [riskResult, setRiskResult] = useState<RiskClassificationOutput | null>(null)
   const mocaSteps = [
     { component: InteractiveClock, props: { targetTime: { hour: 2, minute: 10 } } },
     { component: TrailMakingTask, props: {} },
@@ -204,6 +205,7 @@ function AppContent() {
 
   const handleViewResults = (type: "moca" | "mmse") => {
     setAssessmentType(type.toUpperCase() as "MOCA" | "MMSE")
+    setRiskResult(null)
     setCurrentView("results")
   }
 
@@ -269,6 +271,22 @@ function AppContent() {
         await clearProgress(assessmentType)
 
         await loadCompletedAssessments()
+
+        // Compute risk classification and persist in assessment data
+        const risk = classifyRisk(
+          assessmentType === "MOCA"
+            ? { moca_score: totalScore }
+            : { mmse_score: totalScore }
+        )
+        setRiskResult(risk)
+
+        // Persist risk into assessments.data for the saved record
+        if (data?.[0]?.id) {
+          await supabase
+            .from("assessments")
+            .update({ data: { ...sectionScores, risk_classification: risk.risk_classification, recommendation: risk.recommendation_text, referral_needed: risk.referral_needed } })
+            .eq("id", data[0].id)
+        }
 
         setCompletedAssessments((prev) => ({
           ...prev,
@@ -378,6 +396,7 @@ function AppContent() {
         totalScore={totalScore}
         maxScore={maxScore}
         sectionScores={sectionScores}
+        riskResult={riskResult}
         onBackToDashboard={handleBackToDashboard}
       />
     )

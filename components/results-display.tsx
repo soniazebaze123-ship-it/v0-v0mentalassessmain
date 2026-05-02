@@ -4,14 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { CheckCircle, AlertTriangle, XCircle } from "lucide-react"
+import { CheckCircle, AlertTriangle, XCircle, ShieldAlert, Phone } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
+import type { RiskClassificationOutput } from "@/lib/recommendations/risk-classification-service"
 
 interface ResultsDisplayProps {
   assessmentType: "MOCA" | "MMSE"
   totalScore: number
   maxScore: number
   sectionScores: Record<string, number>
+  riskResult?: RiskClassificationOutput | null
   onBackToDashboard: () => void
 }
 
@@ -20,6 +22,7 @@ export function ResultsDisplay({
   totalScore,
   maxScore,
   sectionScores,
+  riskResult,
   onBackToDashboard,
 }: ResultsDisplayProps) {
   const { t } = useLanguage()
@@ -145,6 +148,52 @@ export function ResultsDisplay({
               ))}
             </div>
           </div>
+
+          {/* Clinical Risk Classification Panel */}
+          {riskResult && (
+            <div className={`rounded-2xl border p-5 space-y-3 ${
+              riskResult.risk_classification === "normal"
+                ? "border-emerald-200 bg-emerald-50"
+                : riskResult.risk_classification === "mild_risk"
+                ? "border-yellow-200 bg-yellow-50"
+                : riskResult.risk_classification === "moderate_risk"
+                ? "border-orange-200 bg-orange-50"
+                : "border-red-200 bg-red-50"
+            }`}>
+              <div className="flex items-center gap-3">
+                <ShieldAlert className={`h-5 w-5 ${
+                  riskResult.risk_classification === "normal" ? "text-emerald-600"
+                  : riskResult.risk_classification === "mild_risk" ? "text-yellow-600"
+                  : riskResult.risk_classification === "moderate_risk" ? "text-orange-600"
+                  : "text-red-600"
+                }`} />
+                <span className="font-semibold text-slate-800">Clinical Risk Assessment</span>
+                <Badge className={`ml-auto ${
+                  riskResult.risk_classification === "normal"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : riskResult.risk_classification === "mild_risk"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : riskResult.risk_classification === "moderate_risk"
+                    ? "bg-orange-100 text-orange-800"
+                    : "bg-red-100 text-red-800"
+                }`}>
+                  {riskResult.risk_classification.replace("_", " ").toUpperCase()}
+                </Badge>
+              </div>
+              <p className="text-sm text-slate-700 leading-relaxed">{riskResult.recommendation_text}</p>
+              {riskResult.referral_needed && (
+                <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                  <Phone className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-red-800">Specialist Referral Recommended</p>
+                    {riskResult.referral_reason && (
+                      <p className="text-xs text-red-700 mt-0.5">{riskResult.referral_reason}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Action Button */}
           <div className="text-center pt-6">
