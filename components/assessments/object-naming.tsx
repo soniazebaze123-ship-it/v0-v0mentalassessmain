@@ -26,11 +26,24 @@ const ITEM_POOL = [
   { image: "/images/chicken.svg", labelKey: "common.chicken" },
   { image: "/images/fish.svg", labelKey: "common.fish" },
   { image: "/images/egg.svg", labelKey: "common.egg" },
+  { image: "/images/house.png", labelKey: "common.house" },
+  { image: "/images/bag.png", labelKey: "common.bag" },
+  { image: "/images/tv.png", labelKey: "common.tv" },
 ]
 
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
+
 function buildObjectQuestions(): ObjectQuestion[] {
-  return ITEM_POOL.slice(0, 3).map((item, index) => {
-    const distractor = ITEM_POOL[(index + 3) % ITEM_POOL.length]
+  const randomizedPool = shuffleArray(ITEM_POOL)
+  return randomizedPool.slice(0, 3).map((item, index) => {
+    const distractor = randomizedPool[(index + 3) % ITEM_POOL.length]
 
     return {
       image: item.image,
