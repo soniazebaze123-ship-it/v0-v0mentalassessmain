@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-labelledby="t d">
+  <title id="t">Coffee reference image</title>
+  <desc id="d">Temporary smell reference image for coffee.</desc>
+  <rect width="320" height="220" rx="20" fill="#fef3c7" />
+  <circle cx="88" cy="108" r="52" fill="#92400e" />
+  <rect x="150" y="64" width="130" height="88" rx="14" fill="#b45309" />
+  <text x="215" y="114" text-anchor="middle" font-size="20" font-family="Arial, sans-serif" fill="#ffffff">O-02</text>
+  <text x="160" y="192" text-anchor="middle" font-size="22" font-family="Arial, sans-serif" fill="#78350f">Coffee</text>
+</svg>

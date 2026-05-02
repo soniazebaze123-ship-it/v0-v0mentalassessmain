@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mentalassess-v1';
+const CACHE_NAME = 'mentalassess-v2';
 const STATIC_ASSETS = [
   '/',
   '/offline.html',

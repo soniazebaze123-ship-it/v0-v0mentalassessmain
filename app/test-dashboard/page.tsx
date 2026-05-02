@@ -9,11 +9,17 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createClient } from "@/lib/supabase/client"
 import { CheckCircle2, XCircle, Loader2, Database, Users, FileText, Shield } from "lucide-react"
 
+type TestDetails = Record<string, unknown> | Array<Record<string, unknown>> | null
+
 interface TestResult {
   name: string
   status: "pending" | "success" | "error"
   message?: string
-  details?: any
+  details?: TestDetails
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown error"
 }
 
 export default function TestDashboardPage() {
@@ -28,7 +34,7 @@ export default function TestDashboardPage() {
   ])
   const [isRunning, setIsRunning] = useState(false)
 
-  const updateTest = (index: number, status: "success" | "error", message?: string, details?: any) => {
+  const updateTest = (index: number, status: "success" | "error", message?: string, details?: TestDetails) => {
     setTests((prev) => {
       const newTests = [...prev]
       newTests[index] = { ...newTests[index], status, message, details }
@@ -42,11 +48,11 @@ export default function TestDashboardPage() {
 
     // Test 1: Database Connection
     try {
-      const { data, error } = await supabase.from("users").select("count")
+      const { error } = await supabase.from("users").select("count")
       if (error) throw error
       updateTest(0, "success", "Successfully connected to Supabase")
-    } catch (error: any) {
-      updateTest(0, "error", error.message)
+    } catch (error: unknown) {
+      updateTest(0, "error", getErrorMessage(error))
     }
 
     // Test 2: Users Table Query
@@ -55,8 +61,8 @@ export default function TestDashboardPage() {
 
       if (error) throw error
       updateTest(1, "success", `Found ${data?.length || 0} users`, data)
-    } catch (error: any) {
-      updateTest(1, "error", error.message)
+    } catch (error: unknown) {
+      updateTest(1, "error", getErrorMessage(error))
     }
 
     // Test 3: Assessments Table Query
@@ -65,8 +71,8 @@ export default function TestDashboardPage() {
 
       if (error) throw error
       updateTest(2, "success", `Found ${data?.length || 0} assessments`, data)
-    } catch (error: any) {
-      updateTest(2, "error", error.message)
+    } catch (error: unknown) {
+      updateTest(2, "error", getErrorMessage(error))
     }
 
     // Test 4: User Progress Table Query
@@ -75,8 +81,8 @@ export default function TestDashboardPage() {
 
       if (error) throw error
       updateTest(3, "success", `Found ${data?.length || 0} progress records`, data)
-    } catch (error: any) {
-      updateTest(3, "error", error.message)
+    } catch (error: unknown) {
+      updateTest(3, "error", getErrorMessage(error))
     }
 
     // Test 5: Storage Bucket Access
@@ -85,8 +91,8 @@ export default function TestDashboardPage() {
 
       if (error) throw error
       updateTest(4, "success", "Storage bucket accessible", data)
-    } catch (error: any) {
-      updateTest(4, "error", error.message)
+    } catch (error: unknown) {
+      updateTest(4, "error", getErrorMessage(error))
     }
 
     // Test 6: Create Test User
@@ -101,8 +107,8 @@ export default function TestDashboardPage() {
 
       if (error) throw error
       updateTest(5, "success", `Created user: ${testEmail}`, data)
-    } catch (error: any) {
-      updateTest(5, "error", error.message)
+    } catch (error: unknown) {
+      updateTest(5, "error", getErrorMessage(error))
     }
 
     // Test 7: Create Test Assessment
@@ -128,8 +134,8 @@ export default function TestDashboardPage() {
 
       if (error) throw error
       updateTest(6, "success", "Created test assessment", data)
-    } catch (error: any) {
-      updateTest(6, "error", error.message)
+    } catch (error: unknown) {
+      updateTest(6, "error", getErrorMessage(error))
     }
 
     setIsRunning(false)

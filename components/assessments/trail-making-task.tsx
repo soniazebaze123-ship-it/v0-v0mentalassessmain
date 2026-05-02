@@ -87,24 +87,30 @@ export function TrailMakingTask({ onComplete, onSkip }: TrailMakingTaskProps) {
   const [dragLine, setDragLine] = useState<{ start: Position; end: Position } | null>(null)
 
   useEffect(() => {
-    const initializeCircles = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect()
-        const newPositions = generateRandomPositions(CIRCLE_DATA.length, rect.width, rect.height)
-        setCircles(
-          CIRCLE_DATA.map((label, index) => ({
-            id: label,
-            label,
-            x: newPositions[index].x,
-            y: newPositions[index].y,
-          })),
-        )
-      }
+    if (!containerRef.current) return
+
+    const initializeCircles = (width: number, height: number) => {
+      if (width < 1 || height < 1) return
+      const newPositions = generateRandomPositions(CIRCLE_DATA.length, width, height)
+      setCircles(
+        CIRCLE_DATA.map((label, index) => ({
+          id: label,
+          label,
+          x: newPositions[index].x,
+          y: newPositions[index].y,
+        })),
+      )
     }
 
-    initializeCircles()
-    window.addEventListener("resize", initializeCircles)
-    return () => window.removeEventListener("resize", initializeCircles)
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect
+        initializeCircles(width, height)
+      }
+    })
+
+    observer.observe(containerRef.current)
+    return () => observer.disconnect()
   }, [])
 
   const hasOutgoingConnection = useCallback((circleId: string) => {

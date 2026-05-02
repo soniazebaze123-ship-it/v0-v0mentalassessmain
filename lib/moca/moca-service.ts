@@ -6,7 +6,6 @@
 // Purpose: Save MoCA results with education adjustment per validated rule
 
 import { createClient } from "@/lib/supabase/client";
-import type { Database } from "@/lib/database.types";
 
 export interface MoCAItemAnswers {
   // Visuospatial/Executive (5 points)

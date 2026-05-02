@@ -6,8 +6,6 @@
 // Purpose: Generate clinical risk classifications and recommendations
 
 import { createClient } from "@/lib/supabase/client";
-import type { MoCAScores } from "@/lib/moca/moca-service";
-import type { MMSEScores } from "@/lib/mmse/mmse-service";
 
 export interface RiskClassificationInput {
   mmse_score?: number;

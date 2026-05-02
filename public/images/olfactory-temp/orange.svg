@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-labelledby="title desc">
+  <title>Orange scent card</title>
+  <desc>Premium style card with sliced orange illustration.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff7ed"/>
+      <stop offset="100%" stop-color="#ffedd5"/>
+    </linearGradient>
+    <radialGradient id="fruit" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fb923c"/>
+      <stop offset="100%" stop-color="#ea580c"/>
+    </radialGradient>
+  </defs>
+  <rect width="320" height="240" rx="28" fill="url(#bg)"/>
+  <ellipse cx="160" cy="190" rx="82" ry="16" fill="#fdba74" opacity="0.35"/>
+  <circle cx="160" cy="122" r="64" fill="url(#fruit)"/>
+  <circle cx="160" cy="122" r="51" fill="#fed7aa"/>
+  <g stroke="#fb923c" stroke-width="4" opacity="0.85">
+    <path d="M160 71v102"/>
+    <path d="M109 122h102"/>
+    <path d="M124 86l72 72"/>
+    <path d="M196 86l-72 72"/>
+  </g>
+  <path d="M146 55c6-14 20-19 33-13" fill="none" stroke="#65a30d" stroke-width="6" stroke-linecap="round"/>
+</svg>

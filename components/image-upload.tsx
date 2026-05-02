@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import type React from "react"
 import { useState, useCallback, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -85,23 +86,7 @@ export function ImageUpload({ onComplete }: ImageUploadProps) {
     }
   }, [])
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFiles(Array.from(e.dataTransfer.files))
-    }
-  }, [])
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      handleFiles(Array.from(e.target.files))
-    }
-  }
-
-  const handleFiles = async (fileList: File[]) => {
+  const handleFiles = useCallback(async (fileList: File[]) => {
     if (!user) {
       setError(t("upload.error.failed"))
       return
@@ -109,7 +94,7 @@ export function ImageUpload({ onComplete }: ImageUploadProps) {
 
     const validFiles = fileList.filter((file) => {
       const validTypes = ["image/png", "image/jpeg", "image/jpg", "application/pdf"]
-      return validTypes.includes(file.type) && file.size <= 10 * 1024 * 1024 // 10MB limit
+      return validTypes.includes(file.type) && file.size <= 10 * 1024 * 1024
     })
 
     if (validFiles.length === 0) {
@@ -127,8 +112,7 @@ export function ImageUpload({ onComplete }: ImageUploadProps) {
         const fileExt = file.name.split(".").pop()
         const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
 
-        // Upload to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from("user-files")
           .upload(fileName, file, {
             cacheControl: "3600",
@@ -140,27 +124,18 @@ export function ImageUpload({ onComplete }: ImageUploadProps) {
           throw uploadError
         }
 
-        // Get public URL
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("user-files").getPublicUrl(fileName)
-
-        // Save file info to database
-        const { data: fileRecord, error: dbError } = await supabase
+        const { error: dbError } = await supabase
           .from("uploaded_files")
           .insert({
-            user_id: user?.id,
+            user_id: user.id,
             filename: file.name,
             file_path: fileName,
             file_type: file.type,
-            file_size: file.size, // This is where file_size is used
+            file_size: file.size,
           })
-          .select()
-          .single()
 
         if (dbError) throw dbError
 
-        // Create preview for images
         setUploadProgress(((i + 1) / validFiles.length) * 100)
       }
 
@@ -196,6 +171,22 @@ export function ImageUpload({ onComplete }: ImageUploadProps) {
     } finally {
       setUploading(false)
       setUploadProgress(0)
+    }
+  }, [t, user])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      void handleFiles(Array.from(e.dataTransfer.files))
+    }
+  }, [handleFiles])
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      void handleFiles(Array.from(e.target.files))
     }
   }
 
@@ -306,10 +297,11 @@ export function ImageUpload({ onComplete }: ImageUploadProps) {
                     {/* Image Preview */}
                     {file.preview && (
                       <div className="relative w-full h-32 bg-gray-100 rounded overflow-hidden">
-                        <img
+                        <Image
                           src={file.preview || file.url || "/placeholder.svg"}
                           alt={file.name}
-                          className="h-full w-full object-cover"
+                          fill
+                          className="object-cover"
                           onError={(event) => {
                             if (event.currentTarget.src.endsWith("/placeholder.svg")) {
                               return

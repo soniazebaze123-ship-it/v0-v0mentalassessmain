@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useTransition } from "react"
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 
 import { useLanguage } from "@/contexts/language-context"
 import { useUser } from "@/contexts/user-context"
@@ -100,8 +100,10 @@ export function MultimodalDashboard() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [isPending, startTransition] = useTransition()
 
-  const text = (en: string, zh: string, yue: string, fr: string) =>
-    localizeText(en, { zh, yue, fr })
+  const text = useCallback(
+    (en: string, zh: string, yue: string, fr: string) => localizeText(en, { zh, yue, fr }),
+    [localizeText],
+  )
 
   const formatStage = (stage: string) => {
     const labels: Record<string, string> = {
@@ -120,7 +122,7 @@ export function MultimodalDashboard() {
     return labels[stage] ?? stage
   }
 
-  async function loadSavedAssessments(activeUserId: string) {
+  const loadSavedAssessments = useCallback(async (activeUserId: string) => {
     const supabase = createClient()
 
     setHistoryLoading(true)
@@ -151,7 +153,7 @@ export function MultimodalDashboard() {
 
     setSavedAssessments((rows ?? []) as SavedMultimodalAssessment[])
     setHistoryLoading(false)
-  }
+  }, [text])
 
   useEffect(() => {
     if (!user?.id) {
@@ -160,7 +162,7 @@ export function MultimodalDashboard() {
 
     setData((current) => (current.userId ? current : { ...current, userId: user.id }))
     void loadSavedAssessments(user.id)
-  }, [user?.id])
+  }, [loadSavedAssessments, user?.id])
 
   const preview = useMemo(() => {
     try {

@@ -1,6 +1,8 @@
 // Composite Risk Scoring Algorithm for Dementia Screening
 // Combines cognitive assessments (MoCA, MMSE) with sensory screening (Visual, Auditory, Olfactory)
 
+import type { SupabaseClient } from "@supabase/supabase-js"
+
 export interface CognitiveScores {
   moca?: number // 0-30
   mmse?: number // 0-30
@@ -216,7 +218,7 @@ export function getRiskLevelLabel(
 }
 
 // Function to fetch all assessment data and calculate composite score
-export async function fetchAndCalculateRiskProfile(userId: string, supabase: any): Promise<RiskProfile | null> {
+export async function fetchAndCalculateRiskProfile(userId: string, supabase: SupabaseClient): Promise<RiskProfile | null> {
   try {
     console.log("[v0] Fetching risk profile for user:", userId)
 

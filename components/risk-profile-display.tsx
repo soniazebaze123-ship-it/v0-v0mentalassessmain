@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,13 +25,7 @@ export function RiskProfileDisplay({ onBackToDashboard }: RiskProfileDisplayProp
   const [riskProfile, setRiskProfile] = useState<RiskProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (user) {
-      loadRiskProfile()
-    }
-  }, [user])
-
-  const loadRiskProfile = async () => {
+  const loadRiskProfile = useCallback(async () => {
     if (!user) return
 
     setLoading(true)
@@ -43,7 +37,13 @@ export function RiskProfileDisplay({ onBackToDashboard }: RiskProfileDisplayProp
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    if (user) {
+      void loadRiskProfile()
+    }
+  }, [loadRiskProfile, user])
 
   if (loading) {
     return (

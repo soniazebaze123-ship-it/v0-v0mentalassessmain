@@ -44,7 +44,7 @@ export type Database = {
           user_id: string
           assessment_type: "MOCA" | "MMSE"
           total_score: number
-          section_scores: Record<string, any>
+          section_scores: Record<string, unknown>
           completed_at: string
           laboratory_analysis?: string
         }
@@ -52,12 +52,12 @@ export type Database = {
           user_id: string
           assessment_type: "MOCA" | "MMSE"
           total_score: number
-          section_scores: Record<string, any>
+          section_scores: Record<string, unknown>
           laboratory_analysis?: string
         }
         Update: {
           total_score?: number
-          section_scores?: Record<string, any>
+          section_scores?: Record<string, unknown>
           laboratory_analysis?: string
         }
       }

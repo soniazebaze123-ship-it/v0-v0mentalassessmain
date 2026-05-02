@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,9 @@ import { ProgressTrendChart } from "@/components/admin/progress-trend-chart"
 import { PatientProgressTracker } from "@/components/admin/patient-progress-tracker"
 import { getPatientTrajectories, getScoreDistribution, getScoreTrends, getTrajectoryWorkflowData } from "@/lib/admin-data-utils"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { ODOFIN_RISK_CUTOFF, ODOFIN_STRIPS } from "@/lib/odofin-kit"
+import { TCM_PULSE_OPTIONS } from "@/lib/tcm-pulse"
+import { OLFACTORY_TEMP_PREMIUM_12_QUESTIONS, SCENT_LABELS } from "@/lib/olfactory/config"
 
 interface User {
   id: string
@@ -55,6 +59,45 @@ interface UserProgress {
   updated_at: string
 }
 
+interface SensoryAssessment {
+  id: string
+  user_id: string
+  test_type: "visual" | "auditory" | "olfactory"
+  raw_score: number | null
+  normalized_score: number | null
+  classification: string | null
+  test_date: string | null
+  test_data?: {
+    total_trials?: number
+    total_correct?: number
+    percent_correct?: number
+    strip_results?: Array<{
+      strip: number
+      selected?: string | null
+      correctAnswer?: string | null
+      correct: boolean
+      timedOut?: boolean
+    }>
+  }
+}
+
+interface TCMAssessment {
+  id: string
+  user_id: string
+  primary_constitution: string
+  primary_score: number | null
+  overall_score: number | null
+  completed_at: string | null
+  answers?: {
+    pulse_assessment?: {
+      selectedPulseIds?: string[]
+      severity?: number
+      clinicalPulseScore?: number
+      notes?: string
+    }
+  }
+}
+
 export function AdminPanel() {
   const { t } = useLanguage()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -64,9 +107,10 @@ export function AdminPanel() {
   const [assessments, setAssessments] = useState<Assessment[]>([])
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [userProgress, setUserProgress] = useState<UserProgress[]>([])
+  const [sensoryAssessments, setSensoryAssessments] = useState<SensoryAssessment[]>([])
+  const [tcmAssessments, setTcmAssessments] = useState<TCMAssessment[]>([])
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
   const [labAnalysis, setLabAnalysis] = useState("")
-  const [loading, setLoading] = useState(false)
   const [viewingFiles, setViewingFiles] = useState(false)
   const [viewingProgressTracker, setViewingProgressTracker] = useState(false)
 
@@ -98,10 +142,11 @@ export function AdminPanel() {
     setAssessments([])
     setUploadedFiles([])
     setUserProgress([])
+    setSensoryAssessments([])
+    setTcmAssessments([])
   }
 
   const loadData = async () => {
-    setLoading(true)
     try {
       const { data: usersData } = await supabase.from("users").select("*").order("created_at", { ascending: false })
       const { data: assessmentsData } = await supabase
@@ -116,6 +161,14 @@ export function AdminPanel() {
         .from("user_progress")
         .select("*")
         .order("updated_at", { ascending: false })
+      const { data: sensoryData } = await supabase
+        .from("sensory_assessments")
+        .select("*")
+        .order("test_date", { ascending: false })
+      const { data: tcmData } = await supabase
+        .from("tcm_assessments")
+        .select("*")
+        .order("completed_at", { ascending: false })
 
       const mappedAssessments = (assessmentsData || []).map((assessment) => ({
         id: assessment.id,
@@ -131,10 +184,10 @@ export function AdminPanel() {
       setAssessments(mappedAssessments)
       setUploadedFiles(filesData || [])
       setUserProgress(progressData || [])
+      setSensoryAssessments((sensoryData || []) as SensoryAssessment[])
+      setTcmAssessments((tcmData || []) as TCMAssessment[])
     } catch (error) {
       console.error("Error loading data:", error)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -250,6 +303,25 @@ export function AdminPanel() {
 
   const getUserProgress = (userId: string) => {
     return userProgress.filter((p) => p.user_id === userId)
+  }
+
+  const getUserSensoryAssessments = (userId: string) => {
+    return sensoryAssessments.filter((assessment) => assessment.user_id === userId)
+  }
+
+  const getUserTcmAssessments = (userId: string) => {
+    return tcmAssessments.filter((assessment) => assessment.user_id === userId)
+  }
+
+  const getOlfactoryLabel = (value?: string | null) => {
+    if (!value || value === "No answer") return "No answer"
+    const translated = t(`sensory.olfactory.smell.${value}`)
+    return translated.startsWith("sensory.olfactory.smell.") ? value : translated
+  }
+
+  const getPulseLabel = (pulseId: string) => {
+    const pulse = TCM_PULSE_OPTIONS.find((option) => option.id === pulseId)
+    return pulse ? `${pulse.char} · ${pulse.pinyin} · ${pulse.label}` : pulseId
   }
 
   const getAverageScores = () => {
@@ -372,6 +444,57 @@ export function AdminPanel() {
           </Card>
         </div>
 
+        <Card className="mb-8 border-amber-200 bg-[linear-gradient(135deg,rgba(255,251,235,0.98),rgba(255,255,255,0.98),rgba(255,247,237,0.92))]">
+          <CardHeader>
+            <CardTitle>Odofin Answer Key</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Use this clinician-only key to arrange the strips and verify patient scoring. A score below {ODOFIN_RISK_CUTOFF}/12 should be reviewed as olfactory impairment risk.
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {ODOFIN_STRIPS.map((strip) => (
+                <div key={strip.number} className="rounded-xl border border-amber-200 bg-white/90 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge className="bg-amber-500 text-white hover:bg-amber-500">Strip #{strip.number}</Badge>
+                    <span className="text-sm font-semibold text-slate-700">{t(`sensory.olfactory.smell.${strip.answer}`)}</span>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Options: {strip.options.map((option) => t(`sensory.olfactory.smell.${option}`)).join(", ")}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-8 border-cyan-200 bg-[linear-gradient(135deg,rgba(236,254,255,0.98),rgba(255,255,255,0.98),rgba(239,246,255,0.92))]">
+          <CardHeader>
+            <CardTitle>Temporary Premium Olfactory Key (Examiner Only)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-slate-600">
+              This key is only for examiners. Patients should not be shown the correct mapping while completing the temporary premium test.
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {OLFACTORY_TEMP_PREMIUM_12_QUESTIONS.map((question) => (
+                <div key={question.id} className="rounded-xl border border-cyan-200 bg-white/90 p-3">
+                  <div className="relative mb-3 h-28 overflow-hidden rounded-lg border bg-slate-50">
+                    <Image src={question.imagePath} alt={question.questionCode} fill className="object-contain p-2" sizes="220px" />
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge className="bg-cyan-600 text-white hover:bg-cyan-600">{question.questionCode}</Badge>
+                    <span className="text-sm font-semibold text-slate-700">{SCENT_LABELS[question.correctAnswer].en}</span>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">Correct: {SCENT_LABELS[question.correctAnswer].zh}</p>
+                  <p className="mt-1 text-xs text-slate-500">Code description: {question.codeDescription.en}</p>
+                  <p className="mt-1 text-xs text-slate-500">Options: {question.options.map((option) => SCENT_LABELS[option.key].en).join(", ")}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Add the new chart components below the statistics cards, before the "Users and Details" section. */}
         <div className="space-y-8 mb-8">
           <AverageScoreChart data={averageScores} />
@@ -468,10 +591,11 @@ export function AdminPanel() {
                           </div>
                           {file.file_type.startsWith("image/") && (
                             <div className="relative w-full h-32 bg-gray-100 rounded overflow-hidden">
-                              <img
+                              <Image
                                 src={getFileUrl(file.file_path) || "/placeholder.svg"}
                                 alt={file.filename}
-                                className="h-full w-full object-cover"
+                                fill
+                                className="object-cover"
                                 onError={(event) => {
                                   if (event.currentTarget.src.endsWith("/placeholder.svg")) {
                                     return
@@ -545,6 +669,92 @@ export function AdminPanel() {
                       ))}
                       {getUserAssessments(selectedUser).length === 0 && (
                         <p className="text-gray-600">{t("admin.no_completed_assessments")}</p>
+                      )}
+
+                      <h3 className="text-lg font-semibold mt-6">TCM & Pulse Reviews</h3>
+                      {getUserTcmAssessments(selectedUser).map((assessment) => (
+                        <div key={assessment.id} className="border rounded-lg p-4 space-y-3 bg-emerald-50/60">
+                          <div className="flex justify-between items-center flex-wrap gap-2">
+                            <Badge variant="outline" className="bg-emerald-100 text-emerald-800">
+                              {assessment.primary_constitution}
+                            </Badge>
+                            <span className="text-sm text-gray-600">
+                              {assessment.completed_at ? new Date(assessment.completed_at).toLocaleDateString() : "No date"}
+                            </span>
+                          </div>
+                          <p className="text-sm text-slate-700">
+                            Overall score: <span className="font-semibold">{assessment.overall_score ?? "-"}/100</span>
+                          </p>
+                          {assessment.answers?.pulse_assessment && (
+                            <div className="rounded-lg border border-emerald-200 bg-white/90 p-3 text-sm text-slate-700">
+                              <p>
+                                Pulse severity: <span className="font-semibold">{assessment.answers.pulse_assessment.severity ?? 0}</span>
+                                {" • "}
+                                Pulse score: <span className="font-semibold">{assessment.answers.pulse_assessment.clinicalPulseScore ?? 0}/100</span>
+                              </p>
+                              {assessment.answers.pulse_assessment.selectedPulseIds && assessment.answers.pulse_assessment.selectedPulseIds.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {assessment.answers.pulse_assessment.selectedPulseIds.map((pulseId) => (
+                                    <Badge key={`${assessment.id}-${pulseId}`} variant="outline" className="bg-white">
+                                      {getPulseLabel(pulseId)}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                              {assessment.answers.pulse_assessment.notes && (
+                                <p className="mt-2 text-xs text-slate-600">Doctor note: {assessment.answers.pulse_assessment.notes}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {getUserTcmAssessments(selectedUser).length === 0 && (
+                        <p className="text-gray-600">No TCM pulse reviews recorded for this user</p>
+                      )}
+
+                      <h3 className="text-lg font-semibold mt-6">Sensory Screenings</h3>
+                      {getUserSensoryAssessments(selectedUser).map((assessment) => (
+                        <div key={assessment.id} className="border rounded-lg p-4 space-y-3 bg-amber-50/60">
+                          <div className="flex justify-between items-center flex-wrap gap-2">
+                            <Badge variant="outline" className="bg-amber-100 text-amber-800">
+                              {assessment.test_type}
+                            </Badge>
+                            <span className="text-sm text-gray-600">
+                              {assessment.test_date ? new Date(assessment.test_date).toLocaleDateString() : "No date"}
+                            </span>
+                          </div>
+                          <p className="text-sm text-slate-700">
+                            Raw score: <span className="font-semibold">{assessment.raw_score ?? "-"}</span>
+                            {assessment.test_type === "olfactory" ? " / 12" : ""}
+                            {" • "}
+                            Classification: <span className="font-semibold">{assessment.classification ?? "-"}</span>
+                          </p>
+                          {assessment.test_type === "olfactory" && assessment.test_data?.strip_results && (
+                            <div className="rounded-lg border border-amber-200 bg-white/90 p-3">
+                              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Patient strip responses</p>
+                              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                {assessment.test_data.strip_results.map((result) => (
+                                  <div
+                                    key={`${assessment.id}-${result.strip}`}
+                                    className={`rounded-md border p-2 text-xs ${result.correct ? "border-emerald-200 bg-emerald-50/70 text-emerald-800" : "border-rose-200 bg-rose-50/70 text-rose-800"}`}
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="font-semibold">Strip #{result.strip}</div>
+                                      <Badge variant="outline" className={result.correct ? "border-emerald-300 bg-white text-emerald-700" : "border-rose-300 bg-white text-rose-700"}>
+                                        {result.correct ? "Correct" : result.timedOut ? "Timed out" : "Review"}
+                                      </Badge>
+                                    </div>
+                                    <div>Selected: {getOlfactoryLabel(result.selected)}</div>
+                                    <div>Correct: {getOlfactoryLabel(result.correctAnswer)}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {getUserSensoryAssessments(selectedUser).length === 0 && (
+                        <p className="text-gray-600">No sensory screenings recorded for this user</p>
                       )}
 
                       <h3 className="text-lg font-semibold mt-6">{t("admin.assessments_in_progress")}</h3>

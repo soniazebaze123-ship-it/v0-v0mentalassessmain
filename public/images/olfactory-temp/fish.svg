@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-labelledby="title desc">
+  <title>Fish scent card</title>
+  <desc>Premium style card with stylized fish illustration.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ecfeff"/>
+      <stop offset="100%" stop-color="#cffafe"/>
+    </linearGradient>
+    <linearGradient id="fish" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="240" rx="28" fill="url(#bg)"/>
+  <ellipse cx="160" cy="188" rx="86" ry="15" fill="#67e8f9" opacity="0.35"/>
+  <ellipse cx="158" cy="122" rx="78" ry="46" fill="url(#fish)"/>
+  <path d="M236 122l42-30v60z" fill="#0284c7"/>
+  <circle cx="110" cy="112" r="6" fill="#082f49"/>
+  <circle cx="108" cy="110" r="2" fill="#e0f2fe"/>
+  <path d="M92 134c14 10 28 10 42 0" fill="none" stroke="#075985" stroke-width="4" stroke-linecap="round"/>
+  <g fill="none" stroke="#e0f2fe" stroke-width="3" opacity="0.8">
+    <path d="M130 96c20 10 40 10 60 0"/>
+    <path d="M124 116c24 12 48 12 72 0"/>
+    <path d="M130 136c20 10 40 10 60 0"/>
+  </g>
+</svg>

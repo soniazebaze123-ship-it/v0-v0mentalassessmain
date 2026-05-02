@@ -90,10 +90,6 @@ export function estimateScreenPPI(): number {
 
   const dpr = window.devicePixelRatio || 1
   
-  // Common device PPI estimates
-  const screenWidth = window.screen.width * dpr
-  const screenHeight = window.screen.height * dpr
-  
   // Rough estimation based on screen resolution
   // Most mobile devices: 320-480 PPI
   // Desktop monitors: 72-144 PPI

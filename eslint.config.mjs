@@ -9,7 +9,7 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 })
 
-export default [
+const config = [
   {
     ignores: [".next/**", "next-env.d.ts"],
   },
@@ -23,3 +23,5 @@ export default [
     },
   },
 ]
+
+export default config

@@ -1,12 +1,17 @@
-"use client";
+"use client"
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Brain, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { useLanguage } from "@/contexts/language-context";
+import type { MultimodalEngineResult } from "@/lib/multimodal/multimodal-engine"
+import { Card, CardContent } from "@/components/ui/card"
+import { Brain, AlertTriangle, CheckCircle2 } from "lucide-react"
+import { useLanguage } from "@/contexts/language-context"
 
-export function MultimodalStatusHero({ result }: any) {
-  const { t, localizeText } = useLanguage();
-  if (!result) return null;
+interface MultimodalStatusHeroProps {
+  result: MultimodalEngineResult | null
+}
+
+export function MultimodalStatusHero({ result }: MultimodalStatusHeroProps) {
+  const { t, localizeText } = useLanguage()
+  if (!result) return null
 
   const text = (en: string, zh: string, yue: string, fr: string) =>
     localizeText(en, { zh, yue, fr })
@@ -20,7 +25,7 @@ export function MultimodalStatusHero({ result }: any) {
     "Mild Dementia": "text-red-600",
     "Moderate Dementia": "text-red-700",
     "Severe Dementia": "text-red-800",
-  };
+  }
 
   const stageLabelMap: Record<string, string> = {
     Normal: t("multimodal.stage.normal"),
@@ -31,13 +36,13 @@ export function MultimodalStatusHero({ result }: any) {
     "Mild Dementia": t("multimodal.stage.mild_dementia"),
     "Moderate Dementia": t("multimodal.stage.moderate_dementia"),
     "Severe Dementia": t("multimodal.stage.severe_dementia"),
-  };
+  }
 
   const riskLabelMap: Record<string, string> = {
     Low: t("risk.level.low"),
     Moderate: t("risk.level.moderate"),
     High: t("risk.level.high"),
-  };
+  }
 
   const Icon =
     result.riskLevel === "Low"
@@ -64,5 +69,5 @@ export function MultimodalStatusHero({ result }: any) {
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }

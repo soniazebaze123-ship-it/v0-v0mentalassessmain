@@ -350,10 +350,12 @@ function generateAudiogramFromSRT(
 }
 
 export function getDeviceAudioInfo() {
+  const typedWindow = window as Window & { webkitAudioContext?: typeof AudioContext }
+
   return {
     userAgent: navigator.userAgent,
     platform: navigator.platform,
-    hasAudioContext: typeof AudioContext !== "undefined" || typeof (window as any).webkitAudioContext !== "undefined",
+    hasAudioContext: typeof AudioContext !== "undefined" || typeof typedWindow.webkitAudioContext !== "undefined",
     hasSpeechSynthesis: "speechSynthesis" in window,
     timestamp: new Date().toISOString(),
   }

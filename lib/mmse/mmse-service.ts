@@ -6,7 +6,6 @@
 // Purpose: Save MMSE results with item-level granularity to mmse_results table
 
 import { createClient } from "@/lib/supabase/client";
-import type { Database } from "@/lib/database.types";
 
 export interface MMSEItemAnswers {
   // Orientation to time (5 points)

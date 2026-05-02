@@ -769,7 +769,7 @@ export async function playDigitsWithNoise(
   snrDB: number,
   noiseGain: number = 0.15
 ): Promise<void> {
-  const ctx = getAudioContext()
+  getAudioContext()
 
   // Start noise
   const noiseDuration = 5 // seconds

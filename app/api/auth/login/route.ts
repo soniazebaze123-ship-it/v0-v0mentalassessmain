@@ -49,7 +49,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid phone number or password." }, { status: 401 })
     }
 
-    const { password_hash: _passwordHash, ...safeUser } = existingUser
+    const safeUser = {
+      id: existingUser.id,
+      email: existingUser.email,
+      phone_number: existingUser.phone_number,
+      name: existingUser.name,
+      date_of_birth: existingUser.date_of_birth,
+      gender: existingUser.gender,
+    }
     return NextResponse.json({ user: safeUser })
   } catch (error) {
     return NextResponse.json(

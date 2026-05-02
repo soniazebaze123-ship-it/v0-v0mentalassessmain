@@ -1,11 +1,16 @@
-"use client";
+"use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useLanguage } from "@/contexts/language-context";
+import type { MultimodalEngineResult } from "@/lib/multimodal/multimodal-engine"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useLanguage } from "@/contexts/language-context"
 
-export function MultimodalRiskSummary({ result }: any) {
-  const { localizeText } = useLanguage();
-  if (!result) return null;
+interface MultimodalRiskSummaryProps {
+  result: MultimodalEngineResult | null
+}
+
+export function MultimodalRiskSummary({ result }: MultimodalRiskSummaryProps) {
+  const { localizeText } = useLanguage()
+  if (!result) return null
 
   const text = (en: string, zh: string, yue: string, fr: string) =>
     localizeText(en, { zh, yue, fr })
@@ -54,5 +59,5 @@ export function MultimodalRiskSummary({ result }: any) {
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-labelledby="title desc">
+  <title>Premium rhinoceros</title>
+  <desc>A soft premium illustration of a rhinoceros with richer shading and shape.</desc>
+  <defs>
+    <linearGradient id="rhBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f6fbff"/>
+      <stop offset="100%" stop-color="#ddebf5"/>
+    </linearGradient>
+    <linearGradient id="rhBody" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#b9c6d1"/>
+      <stop offset="100%" stop-color="#8192a0"/>
+    </linearGradient>
+    <radialGradient id="rhShadow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#6b7f8d" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#6b7f8d" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="320" height="240" rx="30" fill="url(#rhBg)"/>
+  <ellipse cx="166" cy="190" rx="90" ry="18" fill="url(#rhShadow)"/>
+  <path d="M71 123c0-40 40-70 92-70 32 0 59 9 79 26 18 15 28 35 28 56 0 26-19 42-49 42H123c-34 0-52-17-52-54z" fill="url(#rhBody)"/>
+  <path d="M208 104c9-18 28-30 45-28 11 1 18 8 18 18 0 17-16 35-40 42" fill="url(#rhBody)"/>
+  <path d="M250 92l29-18c7-4 13 5 7 11l-20 22" fill="#d8e1e8"/>
+  <path d="M230 97l18-18c6-6 15 1 11 8l-11 20" fill="#edf3f7"/>
+  <circle cx="238" cy="118" r="5" fill="#23313d"/>
+  <path d="M229 131c8 5 18 5 27 0" fill="none" stroke="#5a6a75" stroke-width="3" stroke-linecap="round"/>
+  <g stroke="#71828e" stroke-width="5" stroke-linecap="round" opacity="0.7">
+    <path d="M120 88c-10 13-16 30-16 46"/>
+    <path d="M151 78c-7 17-8 37-3 56"/>
+    <path d="M180 78c-2 19 0 38 7 55"/>
+    <path d="M207 87c3 14 8 28 15 41"/>
+  </g>
+  <g stroke="#61717d" stroke-width="8" stroke-linecap="round">
+    <path d="M108 168v28"/>
+    <path d="M150 168v28"/>
+    <path d="M208 166v30"/>
+    <path d="M236 161v35"/>
+  </g>
+</svg>

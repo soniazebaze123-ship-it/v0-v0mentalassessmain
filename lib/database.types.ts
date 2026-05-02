@@ -162,7 +162,7 @@ export interface Database {
           writing_score: number | null;
           copying_score: number | null;
           total_score: number | null;
-          raw_answers: any;
+          raw_answers: Record<string, unknown>;
           attention_method: string | null;
           reviewer_notes: string | null;
           created_at: string;
@@ -183,7 +183,7 @@ export interface Database {
           writing_score?: number | null;
           copying_score?: number | null;
           total_score?: number | null;
-          raw_answers?: any;
+          raw_answers?: Record<string, unknown>;
           attention_method?: string | null;
           reviewer_notes?: string | null;
           created_at?: string;
@@ -204,7 +204,7 @@ export interface Database {
           writing_score?: number | null;
           copying_score?: number | null;
           total_score?: number | null;
-          raw_answers?: any;
+          raw_answers?: Record<string, unknown>;
           attention_method?: string | null;
           reviewer_notes?: string | null;
           created_at?: string;
@@ -226,7 +226,7 @@ export interface Database {
           total_score_raw: number | null;
           education_adjustment: number | null;
           total_score_final: number | null;
-          raw_answers: any;
+          raw_answers: Record<string, unknown>;
           reviewer_notes: string | null;
           created_at: string;
           updated_at: string;
@@ -244,7 +244,7 @@ export interface Database {
           total_score_raw?: number | null;
           education_adjustment?: number | null;
           total_score_final?: number | null;
-          raw_answers?: any;
+          raw_answers?: Record<string, unknown>;
           reviewer_notes?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -262,7 +262,7 @@ export interface Database {
           total_score_raw?: number | null;
           education_adjustment?: number | null;
           total_score_final?: number | null;
-          raw_answers?: any;
+          raw_answers?: Record<string, unknown>;
           reviewer_notes?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -277,7 +277,7 @@ export interface Database {
           hearing_status: string | null;
           olfactory_status: string | null;
           touch_status: string | null;
-          hearing_questionnaire: any;
+          hearing_questionnaire: Record<string, unknown>;
           olfactory_kit_code: string | null;
           vision_score: number | null;
           hearing_score: number | null;
@@ -293,7 +293,7 @@ export interface Database {
           hearing_status?: string | null;
           olfactory_status?: string | null;
           touch_status?: string | null;
-          hearing_questionnaire?: any;
+          hearing_questionnaire?: Record<string, unknown>;
           olfactory_kit_code?: string | null;
           vision_score?: number | null;
           hearing_score?: number | null;
@@ -309,7 +309,7 @@ export interface Database {
           hearing_status?: string | null;
           olfactory_status?: string | null;
           touch_status?: string | null;
-          hearing_questionnaire?: any;
+          hearing_questionnaire?: Record<string, unknown>;
           olfactory_kit_code?: string | null;
           vision_score?: number | null;
           hearing_score?: number | null;
@@ -326,7 +326,7 @@ export interface Database {
           session_id: string;
           constitution_primary: string | null;
           constitution_secondary: string | null;
-          questionnaire: any;
+          questionnaire: Record<string, unknown>;
           tongue_image_uri: string | null;
           facial_image_uri: string | null;
           clinician_comment: string | null;
@@ -338,7 +338,7 @@ export interface Database {
           session_id: string;
           constitution_primary?: string | null;
           constitution_secondary?: string | null;
-          questionnaire?: any;
+          questionnaire?: Record<string, unknown>;
           tongue_image_uri?: string | null;
           facial_image_uri?: string | null;
           clinician_comment?: string | null;
@@ -350,7 +350,7 @@ export interface Database {
           session_id?: string;
           constitution_primary?: string | null;
           constitution_secondary?: string | null;
-          questionnaire?: any;
+          questionnaire?: Record<string, unknown>;
           tongue_image_uri?: string | null;
           facial_image_uri?: string | null;
           clinician_comment?: string | null;
@@ -399,7 +399,7 @@ export interface Database {
           entity_type: string;
           entity_id: string;
           action: string;
-          metadata: any;
+          metadata: Record<string, unknown>;
           created_at: string;
         };
         Insert: {
@@ -408,7 +408,7 @@ export interface Database {
           entity_type: string;
           entity_id: string;
           action: string;
-          metadata?: any;
+          metadata?: Record<string, unknown>;
           created_at?: string;
         };
         Update: {
@@ -417,13 +417,13 @@ export interface Database {
           entity_type?: string;
           entity_id?: string;
           action?: string;
-          metadata?: any;
+          metadata?: Record<string, unknown>;
           created_at?: string;
         };
       };
     };
-    Views: {};
-    Functions: {};
-    Enums: {};
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
   };
 }

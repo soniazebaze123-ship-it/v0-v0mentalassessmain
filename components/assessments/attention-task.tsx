@@ -88,7 +88,11 @@ export function AttentionTask({ onComplete, onSkip }: AttentionTaskProps) {
 
             <div className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-sm">
               <Label htmlFor="dog-count" className="text-base font-semibold text-slate-900">
-                {t("question.dogs")}
+                {localizeText("How many dogs do you see?", {
+                  zh: "您看见多少只狗？",
+                  yue: "你見到幾多隻狗？",
+                  fr: "Combien de chiens voyez-vous ?",
+                })}
               </Label>
               <p className="mt-2 text-sm leading-6 text-slate-600">
                 {localizeText(

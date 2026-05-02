@@ -229,7 +229,7 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
 
           {/* Hour hand - thinner on mobile */}
           <div
-            className={`absolute bg-gray-800 rounded-full cursor-grab touch-target ${
+            className={`absolute bg-gray-800 rounded-full cursor-grab ${
               isDragging === "hour" ? "bg-blue-600" : ""
             } ${isMobile ? "w-0.5" : "w-2"}`}
             style={{
@@ -245,7 +245,7 @@ export function InteractiveClock({ onComplete, targetTime, onSkip }: Interactive
 
           {/* Minute hand - thinner on mobile */}
           <div
-            className={`absolute bg-gray-600 rounded-full cursor-grab touch-target ${
+            className={`absolute bg-gray-600 rounded-full cursor-grab ${
               isDragging === "minute" ? "bg-blue-600" : ""
             } ${isMobile ? "w-0.5" : "w-1"}`}
             style={{

@@ -115,15 +115,22 @@ export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {questions.map((question, index) => (
-            <div key={`${question.image}-${index}`} className="space-y-4 rounded-[26px] border border-cyan-100 bg-white p-4 shadow-sm">
+            <div key={`${question.image}-${index}`} className="space-y-4 rounded-[28px] border border-cyan-100/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,252,255,0.98))] p-4 shadow-[0_18px_45px_rgba(14,116,144,0.10)] transition-transform duration-300 hover:-translate-y-1">
               <div className="flex items-center justify-between">
                 <div className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
                   {localizeText("Prompt", { zh: "题目", yue: "題目", fr: "Invite" })} {index + 1}
                 </div>
                 {selectedAnswers[index] === question.answerKey && <BadgeCheck className="h-5 w-5 text-emerald-500" />}
               </div>
-              <div className="relative h-52 w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
-                <Image src={question.image} alt={t(question.answerKey)} fill className="object-contain bg-white p-4" priority />
+              <div className="relative h-60 w-full overflow-hidden rounded-[24px] border border-cyan-100 bg-[radial-gradient(circle_at_top,_rgba(224,242,254,0.75),transparent_32%),linear-gradient(180deg,#ffffff_0%,#f2fbff_100%)] shadow-inner">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,_rgba(6,182,212,0.08),transparent_45%)]" />
+                <Image
+                  src={question.image}
+                  alt={t(question.answerKey)}
+                  fill
+                  className="object-contain p-3 drop-shadow-[0_16px_28px_rgba(15,23,42,0.16)]"
+                  priority
+                />
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">{t("question.tap_correct_name")}</p>

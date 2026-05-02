@@ -1,4 +1,4 @@
-import type { BloodInput, EegErpInput, SensoryInput } from "@/lib/multimodal/types"
+import type { BloodInput, EegErpInput } from "@/lib/multimodal/types"
 
 export interface SensoryEngineInput {
   visualScore?: number | null

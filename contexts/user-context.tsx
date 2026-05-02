@@ -3,7 +3,6 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { v4 as uuidv4 } from "uuid"
 
 interface User {
   id: string
@@ -57,6 +56,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [progress, setProgress] = useState<Record<string, AssessmentProgress>>({})
+  const getErrorMessage = (error: unknown) => (error instanceof Error ? error.message : "An unexpected error occurred.")
 
   useEffect(() => {
     const storedUser = localStorage.getItem("mental_assess_dummy_user")
@@ -126,8 +126,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("mental_assess_dummy_user", JSON.stringify(payload.user))
       await loadUserProgress(payload.user.id)
       return { success: true }
-    } catch (error: any) {
-      return { success: false, error: error.message }
+    } catch (error: unknown) {
+      return { success: false, error: getErrorMessage(error) }
     } finally {
       setLoading(false)
     }
@@ -170,14 +170,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("mental_assess_dummy_user", JSON.stringify(payload.user))
       await loadUserProgress(payload.user.id)
       return { success: true }
-    } catch (error: any) {
-      if (error.message?.includes("Failed to fetch") || error.message?.includes("fetch")) {
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error)
+      if (errorMessage.includes("Failed to fetch") || errorMessage.includes("fetch")) {
         return {
           success: false,
           error: "Network error. Please disable browser extensions that may block requests and try again.",
         }
       }
-      return { success: false, error: error.message || "An unexpected error occurred." }
+      return { success: false, error: errorMessage }
     } finally {
       setLoading(false)
     }

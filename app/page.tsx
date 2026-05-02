@@ -139,7 +139,7 @@ function AppContent() {
         console.error("Error loading completed assessments:", error)
       }
     }
-  })
+  }, [user])
 
   useEffect(() => {
     if (user) {
@@ -353,7 +353,7 @@ function AppContent() {
   }
 
   if (currentView === "olfactory") {
-    return <OlfactoryScreening onComplete={() => handleBackToDashboard()} />
+    return <OlfactoryScreening enhanced onComplete={() => handleBackToDashboard()} />
   }
 
   if (currentView === "tcm") {
