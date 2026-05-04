@@ -1,4 +1,4 @@
-export type TCMConstitutionProfile =
+﻿export type TCMConstitutionProfile =
   | "balanced"
   | "qi_deficiency"
   | "yang_deficiency"
@@ -64,7 +64,7 @@ export const TCM_PULSE_SEVERITY_OPTIONS = [
   { value: 0, label: "Not assessed", labelZh: "未评估" },
   { value: 1, label: "Mild", labelZh: "轻度" },
   { value: 2, label: "Moderate", labelZh: "中度" },
-  { value: 3, label: "Marked", labelZh: "明显" },
+  { value: 3, label: "Severe", labelZh: "严重" },
 ] as const
 
 export const TCM_PULSE_OPTIONS: TCMPulseOption[] = [

@@ -13,13 +13,7 @@ import { InstructionAudio } from "@/components/ui/instruction-audio"
 import { useLanguage } from "@/contexts/language-context"
 import { useUser } from "@/contexts/user-context"
 import { supabase } from "@/lib/supabase"
-import {
-  TCM_PULSE_GROUP_LABELS,
-  TCM_PULSE_OPTIONS,
-  TCM_PULSE_SEVERITY_OPTIONS,
-  calculatePulseContribution,
-  type TCMPulseId,
-} from "@/lib/tcm-pulse"
+import { TCM_PULSE_GROUP_LABELS, TCM_PULSE_OPTIONS, TCM_PULSE_SEVERITY_OPTIONS, calculatePulseContribution, type TCMPulseId } from "@/lib/tcm-pulse"
 import Image from "next/image"
 
 // TCM Constitution Types
@@ -283,7 +277,6 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
   const [dragActive, setDragActive] = useState(false)
   const [uploadError, setUploadError] = useState("")
 
-  const previewPulseShortcutEnabled = process.env.NODE_ENV !== "production"
   const progress = (currentQuestion / TCM_QUESTIONS.length) * 100
 
   // Image upload handlers
@@ -444,16 +437,12 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
         normalizedScores[constitution] = Math.max(0, normalizedScores[constitution] - pulseContribution.balanceReduction)
         return
       }
-
-      normalizedScores[constitution] = Math.min(
-        100,
-        normalizedScores[constitution] + (pulseContribution.adjustments[constitution] ?? 0),
-      )
+      normalizedScores[constitution] = Math.min(100, normalizedScores[constitution] + (pulseContribution.adjustments[constitution] ?? 0))
     })
 
     // For balanced constitution, higher score is better
     // For other constitutions, higher score indicates more imbalance
-
+    
     // Find primary constitution (highest score, excluding balanced if others are high)
     const imbalanceScores = Object.entries(normalizedScores)
       .filter(([key]) => key !== "balanced")
@@ -511,7 +500,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
     return TCM_CONSTITUTIONS.find(c => c.type === type)
   }
 
-  const handleComplete = async () => {
+  const handleComplete = () => {
     if (results) {
       // Calculate overall score (100 = perfectly balanced, lower = more imbalanced)
       const balancedScore = results.constitutionScores.balanced
@@ -520,34 +509,6 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
         .map(([, score]) => score)
       const avgImbalance = imbalanceScores.reduce((a, b) => a + b, 0) / imbalanceScores.length
       const overallScore = Math.round((balancedScore + (100 - avgImbalance)) / 2)
-
-      if (user?.id) {
-        try {
-          await supabase.from("tcm_assessments").insert({
-            user_id: user.id,
-            primary_constitution: results.primaryConstitution,
-            primary_score: results.constitutionScores[results.primaryConstitution],
-            balanced_score: results.constitutionScores.balanced,
-            qi_deficiency_score: results.constitutionScores.qi_deficiency,
-            yang_deficiency_score: results.constitutionScores.yang_deficiency,
-            yin_deficiency_score: results.constitutionScores.yin_deficiency,
-            phlegm_dampness_score: results.constitutionScores.phlegm_dampness,
-            damp_heat_score: results.constitutionScores.damp_heat,
-            blood_stasis_score: results.constitutionScores.blood_stasis,
-            qi_stagnation_score: results.constitutionScores.qi_stagnation,
-            special_constitution_score: results.constitutionScores.special_constitution,
-            answers: {
-              questionnaire: responses,
-              pulse_assessment: results.pulseAssessment,
-              uploaded_images: uploadedImages.map((image) => ({ type: image.type, url: image.url })),
-            },
-            recommendations: results.recommendations,
-            overall_score: overallScore,
-          })
-        } catch (error) {
-          console.error("Error saving TCM assessment:", error)
-        }
-      }
 
       onComplete(overallScore, results)
     }
@@ -581,20 +542,16 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
               <li>{uiText("Step 1: Upload tongue and face images (optional)", "第一步：上传舌象和面部照片（可选）")}</li>
               <li>{uiText("Step 2: Answer 27 constitution questionnaire questions", "第二步：回答27个体质问卷问题")}</li>
               <li>{uiText("Step 3: Doctor completes the pulse examination section", "第三步：由医生完成脉诊评估部分")}</li>
-              <li>{uiText("Results combine questionnaire and pulse findings into one TCM summary", "结果会将问卷与脉诊结果整合为一个中医总结")}</li>
+              <li>{uiText("Step 4: View your constitution type and personalized recommendations", "第四步：查看您的体质类型和个性化建议")}</li>
+              <li>{uiText("Answer based on your condition in the past year", "根据您过去一年的状况作答")}</li>
             </ul>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex gap-3">
             <Button variant="outline" onClick={onBack} className="flex-1">
               <ArrowLeft className="h-4 w-4 mr-2" />
               {uiText("Back", "返回")}
             </Button>
-            {previewPulseShortcutEnabled && (
-              <Button variant="secondary" onClick={() => setPhase("pulse")} className="flex-1">
-                {uiText("Preview Step 3", "预览第3步")}
-              </Button>
-            )}
             <Button onClick={() => setPhase("image_upload")} className="flex-1">
               {uiText("Start Assessment", "开始测试")}
               <ArrowRight className="h-4 w-4 ml-2" />
@@ -742,16 +699,11 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
             </div>
           )}
 
-          <div className="flex flex-col gap-3 pt-4 sm:flex-row">
+          <div className="flex gap-3 pt-4">
             <Button variant="outline" onClick={() => setPhase("intro")} className="flex-1">
               <ArrowLeft className="h-4 w-4 mr-2" />
               {uiText("Back", "返回")}
             </Button>
-            {previewPulseShortcutEnabled && (
-              <Button variant="secondary" onClick={() => setPhase("pulse")} className="flex-1" disabled={uploading}>
-                {uiText("Preview Step 3", "预览第3步")}
-              </Button>
-            )}
             <Button onClick={() => setPhase("questions")} className="flex-1" disabled={uploading}>
               {uploadedImages.length > 0 
                 ? uiText("Continue to Questionnaire", "继续问卷")
@@ -776,10 +728,10 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
           <div className="flex items-center justify-between mb-2">
             <Badge variant="outline">
               {uiText(
-                `Question ${currentQuestion + 1} of ${TCM_QUESTIONS.length}`,
-                `问题 ${currentQuestion + 1} / ${TCM_QUESTIONS.length}`,
-                `問題 ${currentQuestion + 1} / ${TCM_QUESTIONS.length}`,
-                `Question ${currentQuestion + 1} sur ${TCM_QUESTIONS.length}`,
+                `Step 2: Question ${currentQuestion + 1} of ${TCM_QUESTIONS.length}`,
+                `第2步：问题 ${currentQuestion + 1} / ${TCM_QUESTIONS.length}`,
+                `第2步：問題 ${currentQuestion + 1} / ${TCM_QUESTIONS.length}`,
+                `Étape 2 : Question ${currentQuestion + 1} sur ${TCM_QUESTIONS.length}`,
               )}
             </Badge>
             <Button variant="ghost" size="sm" onClick={onBack}>
@@ -836,7 +788,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
             ))}
           </RadioGroup>
 
-          <div className="flex flex-col gap-3 pt-4 sm:flex-row">
+          <div className="flex gap-3 pt-4">
             <Button
               variant="outline"
               onClick={handlePrev}
@@ -846,11 +798,6 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
               <ArrowLeft className="h-4 w-4 mr-2" />
               {uiText("Previous", "上一题")}
             </Button>
-            {previewPulseShortcutEnabled && (
-              <Button variant="secondary" onClick={() => setPhase("pulse")} className="flex-1">
-                {uiText("Preview Step 3", "预览第3步")}
-              </Button>
-            )}
             <Button
               onClick={handleNext}
               disabled={!currentResponse}
@@ -870,46 +817,91 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
   // Pulse phase
   if (phase === "pulse") {
     return (
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader>
-          <div className="flex items-center justify-between mb-2">
-            <Badge variant="outline">
-              {uiText("Step 3: Clinician Pulse Review", "第3步：临床脉诊评估")}
-            </Badge>
-            <Button variant="ghost" size="sm" onClick={onBack}>
+      <Card className="mx-auto w-full max-w-5xl overflow-hidden rounded-[30px] border border-white/70 bg-[radial-gradient(circle_at_top_left,_rgba(251,113,133,0.16),_transparent_28%),linear-gradient(145deg,_rgba(255,251,235,0.95),_rgba(255,255,255,0.98),_rgba(255,241,242,0.96))] shadow-[0_28px_100px_rgba(15,23,42,0.12)] backdrop-blur ring-1 ring-rose-100/70">
+        <CardHeader className="relative overflow-hidden border-b border-white/70 px-6 py-6 md:px-8 md:py-7">
+          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-rose-500 via-orange-400 to-amber-400" />
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">
+                  <Sparkles className="mr-2 h-3.5 w-3.5" />
+                  {uiText("Premium clinician workflow", "高级临床流程")}
+                </span>
+                <Badge className="border-0 bg-slate-900/90 px-3 py-1 text-white hover:bg-slate-900/90">
+                  {uiText("Step 3", "第3步")}
+                </Badge>
+              </div>
+
+              <div>
+                <CardTitle className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500 via-orange-500 to-amber-400 text-white shadow-lg shadow-rose-500/20">
+                    <Activity className="h-5 w-5" />
+                  </span>
+                  {uiText("Pulse Examination", "脉诊评估")}
+                </CardTitle>
+                <CardDescription className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 md:text-base">
+                  {uiText(
+                    "This section should be completed by a trained TCM doctor after pulse palpation. Select up to three dominant pulse qualities, rate their intensity, and add any clinical notes before generating the result.",
+                    "此部分应由受训中医师在切脉后完成。请选择最多三种主要脉象，评定其程度，并在生成结果前补充临床备注。",
+                  )}
+                </CardDescription>
+              </div>
+            </div>
+
+            <Button variant="ghost" size="sm" onClick={onBack} className="rounded-full text-slate-600 hover:bg-white/70 hover:text-slate-900">
               {uiText("Exit", "退出")}
             </Button>
           </div>
-          <CardTitle className="text-xl flex items-center gap-2">
-            <Activity className="h-5 w-5 text-rose-600" />
-            {uiText("Pulse Examination", "脉诊评估")}
-          </CardTitle>
-          <CardDescription>
-            {uiText(
-              "This section should be completed by a trained TCM doctor after pulse palpation. Select up to three dominant pulse qualities and their overall severity.",
-              "此部分应由受训中医师在切脉后完成。请选择最多三种主要脉象，并评定整体程度。",
-            )}
-          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            {uiText(
-              "Suggested workflow: palpate both wrists, identify the dominant pulse qualities, then score the overall abnormality from mild to marked.",
-              "建议流程：先诊查双手寸关尺，辨识主要脉象，再将总体异常程度评分为轻度、中度或明显。",
-            )}
+        <CardContent className="space-y-6 bg-white/65 p-5 md:p-8">
+          <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="rounded-[24px] border border-amber-200/80 bg-[linear-gradient(135deg,rgba(255,251,235,0.95),rgba(255,247,237,0.92))] p-5 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+                {uiText("Suggested workflow", "建议流程")}
+              </p>
+              <p className="mt-3 text-sm leading-6 text-amber-950">
+                {uiText(
+                  "Palpate both wrists, identify the dominant pulse qualities, then score the overall abnormality from mild to severe.",
+                  "建议先诊查双手寸关尺，辨识主要脉象，再将总体异常程度评分为轻度、中度或严重。",
+                )}
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+              <div className="rounded-[22px] border border-white/80 bg-white/85 p-4 shadow-sm backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{uiText("Selections", "已选项目")}</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">{pulseSelections.length}/3</p>
+              </div>
+              <div className="rounded-[22px] border border-white/80 bg-white/85 p-4 shadow-sm backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{uiText("Severity", "程度")}</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">{localizeText(TCM_PULSE_SEVERITY_OPTIONS.find((option) => option.value === pulseSeverity)?.label ?? "Not assessed", { zh: TCM_PULSE_SEVERITY_OPTIONS.find((option) => option.value === pulseSeverity)?.labelZh ?? "未评估", yue: TCM_PULSE_SEVERITY_OPTIONS.find((option) => option.value === pulseSeverity)?.labelZh ?? "未评估" })}</p>
+              </div>
+              <div className="rounded-[22px] border border-white/80 bg-white/85 p-4 shadow-sm backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{uiText("Review mode", "评估模式")}</p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">{uiText("Clinician guided", "医生引导")}</p>
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-3">
-            <h4 className="font-medium">{uiText("Overall pulse severity", "脉象总体程度")}</h4>
+          <div className="rounded-[26px] border border-white/80 bg-white/80 p-5 shadow-sm backdrop-blur">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h4 className="text-base font-semibold text-slate-900">{uiText("Overall pulse severity", "脉象总体程度")}</h4>
+                <p className="mt-1 text-sm text-slate-500">{uiText("Use one intensity grade for the overall pulse presentation.", "请为整体脉象表现选择一个程度等级。")}</p>
+              </div>
+              <Badge className="border-0 bg-rose-100 px-3 py-1 text-rose-700 hover:bg-rose-100">
+                {uiText("Required", "必填")}
+              </Badge>
+            </div>
             <RadioGroup value={String(pulseSeverity)} onValueChange={(value) => setPulseSeverity(Number(value))} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {TCM_PULSE_SEVERITY_OPTIONS.map((option) => (
                 <div
                   key={option.value}
-                  className={`flex items-center gap-3 rounded-lg border-2 p-3 cursor-pointer ${pulseSeverity === option.value ? "border-primary bg-primary/5" : "border-muted hover:border-primary/50"}`}
+                  className={`group flex items-center gap-3 rounded-[20px] border p-4 cursor-pointer transition-all ${pulseSeverity === option.value ? "border-rose-300 bg-gradient-to-br from-rose-50 to-orange-50 shadow-md shadow-rose-100" : "border-slate-200 bg-white hover:border-rose-200 hover:bg-rose-50/40"}`}
                   onClick={() => setPulseSeverity(option.value)}
                 >
                   <RadioGroupItem value={String(option.value)} id={`pulse-severity-${option.value}`} />
-                  <Label htmlFor={`pulse-severity-${option.value}`} className="cursor-pointer">
+                  <Label htmlFor={`pulse-severity-${option.value}`} className="cursor-pointer text-base font-medium text-slate-900">
                     {localizeText(option.label, { zh: option.labelZh, yue: option.labelZh })}
                   </Label>
                 </div>
@@ -919,16 +911,21 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
 
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <h4 className="font-medium">{uiText("Dominant pulse qualities", "主要脉象选择")}</h4>
-              <Badge variant="outline">{uiText(`${pulseSelections.length}/3 selected`, `已选 ${pulseSelections.length}/3 项`)}</Badge>
+              <div>
+                <h4 className="text-base font-semibold text-slate-900">{uiText("Dominant pulse qualities", "主要脉象选择")}</h4>
+                <p className="mt-1 text-sm text-slate-500">{uiText("Select up to three pulse signatures that best represent the clinical reading.", "请选择最多三种最能代表临床判断的脉象。")}</p>
+              </div>
+              <Badge className="border-0 bg-slate-900 px-3 py-1 text-white hover:bg-slate-900">{uiText(`${pulseSelections.length}/3 selected`, `已选 ${pulseSelections.length}/3 项`)}</Badge>
             </div>
 
             {Object.entries(TCM_PULSE_GROUP_LABELS).map(([groupKey, labels]) => {
               const groupOptions = TCM_PULSE_OPTIONS.filter((option) => option.group === groupKey)
               return (
-                <div key={groupKey} className="rounded-xl border bg-muted/20 p-4">
-                  <p className="mb-3 text-sm font-semibold text-slate-700">{localizeText(labels.en, { zh: labels.zh, yue: labels.zh })}</p>
-                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                <div key={groupKey} className="overflow-hidden rounded-[26px] border border-white/80 bg-white/80 shadow-sm backdrop-blur">
+                  <div className="border-b border-slate-100 bg-[linear-gradient(120deg,rgba(255,241,242,0.9),rgba(255,255,255,0.95),rgba(255,247,237,0.9))] px-5 py-4">
+                    <p className="text-sm font-semibold text-slate-800">{localizeText(labels.en, { zh: labels.zh, yue: labels.zh })}</p>
+                  </div>
+                  <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
                     {groupOptions.map((option) => {
                       const active = pulseSelections.includes(option.id)
                       return (
@@ -936,14 +933,14 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
                           key={option.id}
                           type="button"
                           onClick={() => togglePulseSelection(option.id)}
-                          className={`rounded-lg border p-3 text-left transition-colors ${active ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-white hover:border-rose-300"}`}
+                          className={`rounded-[20px] border p-4 text-left transition-all ${active ? "border-rose-300 bg-gradient-to-br from-rose-50 via-white to-orange-50 shadow-md shadow-rose-100" : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-rose-200 hover:shadow-sm"}`}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-semibold text-slate-900">{option.char} · {option.pinyin}</span>
                             {active && <CheckCircle2 className="h-4 w-4 text-rose-600" />}
                           </div>
-                          <p className="text-sm text-slate-700">{localizeText(option.label, { zh: option.label, yue: option.label })}</p>
-                          <p className="mt-1 text-xs text-slate-500">{option.note}</p>
+                          <p className="mt-2 text-lg font-semibold text-slate-900">{localizeText(option.label)}</p>
+                          <p className="mt-1 text-sm text-slate-500">{option.note}</p>
                         </button>
                       )
                     })}
@@ -953,23 +950,27 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
             })}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="pulse-notes">{uiText("Doctor notes", "医生备注")}</Label>
+          <div className="rounded-[26px] border border-white/80 bg-white/80 p-5 shadow-sm backdrop-blur">
+            <div className="mb-3">
+              <Label htmlFor="pulse-notes" className="text-base font-semibold text-slate-900">{uiText("Doctor notes", "医生备注")}</Label>
+              <p className="mt-1 text-sm text-slate-500">{uiText("Capture rhythm, strength, symmetry, or any qualifying observations.", "记录节律、力度、对称性或其他补充观察。")}</p>
+            </div>
             <AssessmentTextarea
               id="pulse-notes"
               value={pulseNotes}
               onChange={(event) => setPulseNotes(event.target.value)}
               rows={4}
+              className="min-h-32 rounded-[20px] border-slate-200 bg-white/95 text-base shadow-sm focus-visible:ring-rose-400"
               placeholder={uiText("Optional notes on rate, rhythm, strength, and any clinical observation", "可选填写脉率、节律、力度及其他临床观察")}
             />
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <Button variant="outline" onClick={() => setPhase("questions")} className="flex-1">
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+            <Button variant="outline" onClick={() => setPhase("questions")} className="h-12 flex-1 rounded-full border-slate-300 bg-white/80 text-slate-700 hover:bg-white">
               <ArrowLeft className="h-4 w-4 mr-2" />
               {uiText("Back to Questions", "返回问卷")}
             </Button>
-            <Button onClick={calculateResults} className="flex-1">
+            <Button onClick={calculateResults} className="h-12 flex-1 rounded-full bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 text-white shadow-lg shadow-rose-500/20 hover:from-rose-600 hover:via-orange-600 hover:to-amber-600">
               {uiText("Generate TCM Result", "生成中医结果")}
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
@@ -989,6 +990,11 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
     return (
       <Card className="w-full max-w-2xl mx-auto">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-2">
+            <Badge variant="outline" className="mb-4">
+              {uiText("Step 4: Results", "第4步：结果", "第4步：結果", "Étape 4 : Résultats")}
+            </Badge>
+          </div>
           <div className="flex justify-center mb-4">
             <div className="p-4 bg-primary/10 rounded-full">
               <CheckCircle2 className="h-12 w-12 text-green-600" />
@@ -1050,45 +1056,6 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
             </div>
           </div>
 
-          {/* Pulse Summary */}
-          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4">
-            <h4 className="font-medium text-rose-800 mb-2">
-              {uiText("Pulse examination summary", "脉诊结果摘要")}
-            </h4>
-            <p className="text-sm text-rose-700">
-              {uiText("Clinical pulse score", "临床脉诊评分")}: {results.pulseAssessment.clinicalPulseScore}/100
-            </p>
-            <p className="text-sm text-rose-700 mt-1">
-              {uiText("Severity", "严重程度")}: {localizeText(
-                TCM_PULSE_SEVERITY_OPTIONS.find((option) => option.value === results.pulseAssessment.severity)?.label || "Not assessed",
-                {
-                  zh: TCM_PULSE_SEVERITY_OPTIONS.find((option) => option.value === results.pulseAssessment.severity)?.labelZh,
-                  yue: TCM_PULSE_SEVERITY_OPTIONS.find((option) => option.value === results.pulseAssessment.severity)?.labelZh,
-                },
-              )}
-            </p>
-            {results.pulseAssessment.selectedPulseIds.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {results.pulseAssessment.selectedPulseIds.map((pulseId) => {
-                  const pulse = TCM_PULSE_OPTIONS.find((item) => item.id === pulseId)
-                  if (!pulse) return null
-                  return (
-                    <Badge key={pulse.id} variant="outline" className="bg-white">
-                      {pulse.char} · {pulse.pinyin} · {pulse.label}
-                    </Badge>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-rose-700 mt-2">{uiText("No pulse qualities were selected.", "未选择具体脉象。")}</p>
-            )}
-            {results.pulseAssessment.notes && (
-              <p className="text-sm text-rose-800 mt-3">
-                {uiText("Doctor note", "医生备注")}: {results.pulseAssessment.notes}
-              </p>
-            )}
-          </div>
-
           {/* Recommendations */}
           <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg">
             <h4 className="font-medium text-green-800 dark:text-green-200 mb-2">
@@ -1101,7 +1068,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
             </ul>
           </div>
 
-          <Button onClick={() => void handleComplete()} className="w-full" size="lg">
+          <Button onClick={handleComplete} className="w-full" size="lg">
             {uiText("Complete and Continue", "完成并继续")}
           </Button>
         </CardContent>
