@@ -17,9 +17,10 @@ interface LanguageAbstractionProps {
 
 export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionProps) {
   const { t, language, getSpeechLanguage, localizeText } = useLanguage()
-  const [phase, setPhase] = useState<"repetition" | "similarity">("repetition")
+  const [phase, setPhase] = useState<"repetition" | "similarity" | "fluency">("repetition")
   const [repetitionAnswer, setRepetitionAnswer] = useState("")
   const [similarityAnswer, setSimilarityAnswer] = useState("")
+  const [fluencyAnswer, setFluencyAnswer] = useState("")
   const [isPlaying, setIsPlaying] = useState(false)
   const [hasPlayedAudio, setHasPlayedAudio] = useState(false)
 
@@ -116,13 +117,21 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
     return score
   }
 
+  const checkFluency = () => {
+    const words = fluencyAnswer.split(/\s+/).filter((word) => word.length > 0)
+    return words.length >= 11 ? 1 : 0 // 1 point for 11+ words
+  }
+
   const handleSubmit = () => {
     if (phase === "repetition") {
       setPhase("similarity")
+    } else if (phase === "similarity") {
+      setPhase("fluency")
     } else {
       const repetitionScore = checkRepetition()
       const similarityScore = checkSimilarity()
-      const totalScore = repetitionScore + similarityScore
+      const fluencyScore = checkFluency()
+      const totalScore = repetitionScore + similarityScore + fluencyScore
       onComplete(totalScore)
     }
   }

@@ -307,23 +307,8 @@ export function TrailMakingTask({ onComplete, onSkip }: TrailMakingTaskProps) {
       }
     }
 
-    // Allow for small mistakes if most are correct, but standard MoCA is strict (1 point only if perfect)
-    // The user claimed "1-A-2-B-3-C is not working", maybe they didn't finish to D?
-    // We will award point if they got at least to C (most of the path)
-
-    if (correctConnections >= 5) {
-      // 1-A, A-2, 2-B, B-3, 3-C (5 connections)
-      score = 1 // Standard MoCA scoring is binary (1 or 0)
-    }
-
-    if (currentPath.length >= 7) {
-      // Also check path length
-      score = 5 // Custom scoring
-    }
-
-    // Fallback to existing permissive scoring
-    if (correctConnections >= 5) score = 5
-    else if (correctConnections >= 3) score = 3
+    // Standard MoCA: 1 point if at least 5 correct sequential connections, 0 otherwise
+    if (correctConnections >= 5) score = 1
 
     onComplete(score)
   }

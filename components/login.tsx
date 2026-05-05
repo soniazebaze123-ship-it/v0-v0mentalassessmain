@@ -28,6 +28,8 @@ export function Login({ onRegister, onAdminLogin }: LoginProps) {
 
     if (rememberedPhoneNumber) {
       setPhoneNumber(rememberedPhoneNumber)
+    } else {
+      setPhoneNumber("+86 ")
     }
   }, [])
 

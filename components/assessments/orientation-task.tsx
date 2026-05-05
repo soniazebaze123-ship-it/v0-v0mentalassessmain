@@ -21,6 +21,7 @@ export function OrientationTask({ onComplete, onSkip }: OrientationTaskProps) {
     year: "",
     day: "",
     country: "",
+    city: "",
   })
   const unknownOption = {
     value: "unknown",
@@ -43,6 +44,12 @@ export function OrientationTask({ onComplete, onSkip }: OrientationTaskProps) {
     { value: "france", label: localizeText("France", { zh: "法国", yue: "法國", fr: "France" }) },
     { value: "usa", label: localizeText("United States", { zh: "美国", yue: "美國", fr: "États-Unis" }) },
   ]
+  const cityOptions = [
+    { value: "beijing", label: t("common.beijing") },
+    { value: "shanghai", label: t("common.shanghai") },
+    { value: "guangzhou", label: t("common.guangzhou") },
+    { value: "shenzhen", label: t("common.shenzhen") },
+  ]
 
   const selectClassName =
     "h-12 w-full rounded-2xl border border-emerald-200/80 bg-white px-4 text-base shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-emerald-500"
@@ -57,6 +64,7 @@ export function OrientationTask({ onComplete, onSkip }: OrientationTaskProps) {
     const currentMonth = now.getMonth() + 1
     const currentYear = now.getFullYear()
     const currentDay = dayOptions[now.getDay()]?.value
+    const currentCity = "beijing" // Default city for now
 
     let score = 0
 
@@ -74,6 +82,9 @@ export function OrientationTask({ onComplete, onSkip }: OrientationTaskProps) {
 
     // Check country (should be China)
     if (answers.country === "china") score += 1
+
+    // Check city
+    if (answers.city === currentCity) score += 1
 
     onComplete(score)
   }

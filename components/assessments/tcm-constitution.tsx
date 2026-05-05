@@ -493,7 +493,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
     }
 
     setResults(resultData)
-    setPhase("results")
+    setPhase("pulse")
   }
 
   const getConstitutionInfo = (type: TCMConstitution) => {
