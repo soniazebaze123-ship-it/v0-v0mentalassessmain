@@ -13,6 +13,12 @@ export function getRiskLevel(correctCount: number, protocolVersion: OlfactoryPro
     return "normal"
   }
 
+  if (protocolVersion === "sat_v3_14") {
+    if (correctCount <= 8) return "high"
+    if (correctCount <= 11) return "mild"
+    return "normal"
+  }
+
   if (correctCount <= 6) return "high"
   if (correctCount <= 9) return "mild"
   return "normal"

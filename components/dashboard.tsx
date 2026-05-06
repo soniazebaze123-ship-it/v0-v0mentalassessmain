@@ -326,8 +326,9 @@ export function Dashboard({
                   <Link href="/olfactory-preview">{localizeText("Odofin Preview", { zh: "Odofin预览", yue: "Odofin預覽", fr: "Aperçu Odofin" })}</Link>
                 </Button>
                 <Button asChild variant="outline" size="sm" className="touch-target rounded-xl border-amber-200 bg-white/80 text-amber-700 hover:bg-amber-50">
-                  <Link href="/olfactory-temp">{localizeText("Temporary Olfactory Premium", { zh: "临时嗅觉高级版", yue: "臨時嗅覺高級版", fr: "Olfactif temporaire premium" })}</Link>
+                  <Link href="/olfactory">{localizeText("Olfactory 14 Module", { zh: "嗅觉14项模块", yue: "嗅覺14項模組", fr: "Module olfactif 14 items" })}</Link>
                 </Button>
+
               </div>
               <Button variant="outline" onClick={handleLogout} className="touch-target rounded-xl border-red-200 bg-white/80 text-red-700 hover:bg-red-50">
                 <LogOut className="w-4 h-4 mr-2" />

@@ -1,4 +1,4 @@
-import { OLFACTORY_TEMP_PREMIUM_12_QUESTIONS } from "@/lib/olfactory/config"
+import { OLFACTORY_14_QUESTIONS, OLFACTORY_TEMP_PREMIUM_12_QUESTIONS } from "@/lib/olfactory/config"
 import type { OlfactoryProtocolVersion, OlfactoryQuestion } from "@/lib/olfactory/types"
 
 export const OLFACTORY_ITEM_SET_VERSION = "premium_12_v1"
@@ -8,6 +8,7 @@ export const OLFACTORY_SCORING_VERSION = "score_12_v1"
 const PROTOCOL_QUESTION_BANK: Record<OlfactoryProtocolVersion, OlfactoryQuestion[]> = {
   temp_v1: OLFACTORY_TEMP_PREMIUM_12_QUESTIONS,
   sat_v2: OLFACTORY_TEMP_PREMIUM_12_QUESTIONS,
+  sat_v3_14: OLFACTORY_14_QUESTIONS,
 }
 
 export function getOlfactoryQuestionsForProtocol(protocolVersion: OlfactoryProtocolVersion): OlfactoryQuestion[] {
@@ -15,5 +16,7 @@ export function getOlfactoryQuestionsForProtocol(protocolVersion: OlfactoryProto
 }
 
 export function parseOlfactoryProtocolVersion(value: string | null | undefined): OlfactoryProtocolVersion {
-  return value === "sat_v2" ? "sat_v2" : "temp_v1"
+  if (value === "sat_v2") return "sat_v2"
+  if (value === "sat_v3_14") return "sat_v3_14"
+  return "temp_v1"
 }

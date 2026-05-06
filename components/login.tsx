@@ -137,7 +137,7 @@ export function Login({ onRegister, onAdminLogin }: LoginProps) {
             <Button
               type="submit"
               className="w-full touch-target"
-              disabled={loading || phoneNumber.length < 6 || password.length < 8}
+              disabled={loading || phoneNumber.trim().length < 6 || password.length === 0}
             >
               {loading ? t("common.loading") : t("common.next")}
             </Button>

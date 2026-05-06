@@ -20,9 +20,10 @@ import { ProgressTrendChart } from "@/components/admin/progress-trend-chart"
 import { PatientProgressTracker } from "@/components/admin/patient-progress-tracker"
 import { getPatientTrajectories, getScoreDistribution, getScoreTrends, getTrajectoryWorkflowData } from "@/lib/admin-data-utils"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
-import { ODOFIN_RISK_CUTOFF, ODOFIN_STRIPS } from "@/lib/odofin-kit"
 import { TCM_PULSE_OPTIONS } from "@/lib/tcm-pulse"
-import { OLFACTORY_TEMP_PREMIUM_12_QUESTIONS, SCENT_LABELS } from "@/lib/olfactory/config"
+import { OLFACTORY_PROTOCOL_QUESTION_SET, SCENT_LABELS } from "@/lib/olfactory/config"
+import { parseOlfactoryProtocolVersion } from "@/lib/olfactory/protocol"
+import type { OlfactoryProtocolVersion } from "@/lib/olfactory/types"
 
 interface User {
   id: string
@@ -117,6 +118,7 @@ export function AdminPanel() {
   // Add new state variables for chart filtering
   const [selectedTrendUser, setSelectedTrendUser] = useState<string | null>(null)
   const [selectedTrendAssessmentType, setSelectedTrendAssessmentType] = useState<"MOCA" | "MMSE" | "ALL">("ALL")
+  const [activeOlfactoryProtocol, setActiveOlfactoryProtocol] = useState<OlfactoryProtocolVersion>("sat_v3_14")
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -186,6 +188,15 @@ export function AdminPanel() {
       setUserProgress(progressData || [])
       setSensoryAssessments((sensoryData || []) as SensoryAssessment[])
       setTcmAssessments((tcmData || []) as TCMAssessment[])
+
+      const { data: runtimeData } = await supabase
+        .from("olfactory_runtime_settings")
+        .select("active_protocol")
+        .limit(1)
+        .single()
+      if (runtimeData?.active_protocol) {
+        setActiveOlfactoryProtocol(parseOlfactoryProtocolVersion(runtimeData.active_protocol))
+      }
     } catch (error) {
       console.error("Error loading data:", error)
     }
@@ -444,44 +455,22 @@ export function AdminPanel() {
           </Card>
         </div>
 
-        <Card className="mb-8 border-amber-200 bg-[linear-gradient(135deg,rgba(255,251,235,0.98),rgba(255,255,255,0.98),rgba(255,247,237,0.92))]">
-          <CardHeader>
-            <CardTitle>Odofin Answer Key</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-slate-600">
-              Use this clinician-only key to arrange the strips and verify patient scoring. A score below {ODOFIN_RISK_CUTOFF}/12 should be reviewed as olfactory impairment risk.
-            </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {ODOFIN_STRIPS.map((strip) => (
-                <div key={strip.number} className="rounded-xl border border-amber-200 bg-white/90 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge className="bg-amber-500 text-white hover:bg-amber-500">Strip #{strip.number}</Badge>
-                    <span className="text-sm font-semibold text-slate-700">{t(`sensory.olfactory.smell.${strip.answer}`)}</span>
-                  </div>
-                  <p className="mt-2 text-xs text-slate-500">
-                    Options: {strip.options.map((option) => t(`sensory.olfactory.smell.${option}`)).join(", ")}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
         <Card className="mb-8 border-cyan-200 bg-[linear-gradient(135deg,rgba(236,254,255,0.98),rgba(255,255,255,0.98),rgba(239,246,255,0.92))]">
           <CardHeader>
-            <CardTitle>Temporary Premium Olfactory Key (Examiner Only)</CardTitle>
+            <CardTitle className="flex items-center gap-3">
+              Olfactory Examiner Key
+              <Badge className="bg-cyan-600 text-white hover:bg-cyan-600 text-xs font-normal">
+                Active: {activeOlfactoryProtocol === "sat_v3_14" ? "14-item" : activeOlfactoryProtocol === "sat_v2" ? "12-item" : "8-item"} ({activeOlfactoryProtocol})
+              </Badge>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-slate-600">
-              This key is only for examiners. Patients should not be shown the correct mapping while completing the temporary premium test.
+              This key is only for examiners. Scents are shown in the order they are presented to the patient. Patients should not be shown the correct mapping.
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {OLFACTORY_TEMP_PREMIUM_12_QUESTIONS.map((question) => (
+              {OLFACTORY_PROTOCOL_QUESTION_SET[activeOlfactoryProtocol].map((question) => (
                 <div key={question.id} className="rounded-xl border border-cyan-200 bg-white/90 p-3">
-                  <div className="relative mb-3 h-28 overflow-hidden rounded-lg border bg-slate-50">
-                    <Image src={question.imagePath} alt={question.questionCode} fill className="object-contain p-2" sizes="220px" />
-                  </div>
                   <div className="flex items-center justify-between gap-2">
                     <Badge className="bg-cyan-600 text-white hover:bg-cyan-600">{question.questionCode}</Badge>
                     <span className="text-sm font-semibold text-slate-700">{SCENT_LABELS[question.correctAnswer].en}</span>

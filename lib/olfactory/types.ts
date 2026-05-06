@@ -2,7 +2,7 @@ export type LanguageCode = "en" | "zh" | "yue" | "fr"
 
 export type RiskLevel = "normal" | "mild" | "high"
 
-export type OlfactoryProtocolVersion = "temp_v1" | "sat_v2"
+export type OlfactoryProtocolVersion = "temp_v1" | "sat_v2" | "sat_v3_14"
 
 export type OlfactoryScentKey =
   | "orange"
@@ -17,6 +17,8 @@ export type OlfactoryScentKey =
   | "pineapple"
   | "rose"
   | "fish"
+  | "ginger"
+  | "alcohol"
 
 export interface OlfactoryOption {
   key: OlfactoryScentKey

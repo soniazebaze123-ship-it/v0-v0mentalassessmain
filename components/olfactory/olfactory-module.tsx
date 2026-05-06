@@ -1,9 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
 import { useMemo, useState, useTransition } from "react"
-import { ArrowLeft, Clock3, FlaskConical, Lock, Sparkles } from "lucide-react"
+import { ArrowLeft, Clock3, FlaskConical, Sparkles } from "lucide-react"
 import { OLFACTORY_COPY, OLFACTORY_PROTOCOL_QUESTION_SET, SCENT_LABELS } from "@/lib/olfactory/config"
 import { buildOlfactoryResult } from "@/lib/olfactory/scoring"
 import type {
@@ -13,7 +12,7 @@ import type {
   OlfactoryScentKey,
   OlfactorySubmission,
 } from "@/lib/olfactory/types"
-import { saveOlfactoryResult } from "@/app/olfactory-temp/actions"
+import { saveOlfactoryResult } from "@/app/actions/olfactory-actions"
 import { useLanguage } from "@/contexts/language-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,6 +22,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { InstructionAudio } from "@/components/ui/instruction-audio"
+import { NormReferralPanel } from "@/components/olfactory/norm-referral-panel"
 
 type Phase = "intro" | "testing" | "results"
 
@@ -81,6 +82,22 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
 
     return buildOlfactoryResult(items, activeLanguage, protocolVersion)
   }, [activeLanguage, answers, confidenceMap, protocolVersion, questions, responseTimes])
+
+  const audioPrompt = useMemo(() => {
+    const englishOptions = currentQuestion.options.map((option) => SCENT_LABELS[option.key].en).join(", ")
+    const chineseOptions = currentQuestion.options.map((option) => SCENT_LABELS[option.key].zh).join("、")
+    const cantoneseOptions = currentQuestion.options.map((option) => SCENT_LABELS[option.key].yue).join("、")
+    const frenchOptions = currentQuestion.options.map((option) => SCENT_LABELS[option.key].fr).join(", ")
+
+    return {
+      text: `Question ${currentIndex + 1}. Code ${currentQuestion.questionCode}. Smell the strip and choose one answer from: ${englishOptions}.`,
+      textOverrides: {
+        zh: `第 ${currentIndex + 1} 题，编码 ${currentQuestion.questionCode}。请闻气味条，并从以下选项中选择一个答案：${chineseOptions}。`,
+        yue: `第 ${currentIndex + 1} 題，編碼 ${currentQuestion.questionCode}。請聞氣味條，然後由以下選項揀一個答案：${cantoneseOptions}。`,
+        fr: `Question ${currentIndex + 1}, code ${currentQuestion.questionCode}. Sentez la bandelette puis choisissez une réponse parmi : ${frenchOptions}.`,
+      } as const,
+    }
+  }, [currentIndex, currentQuestion])
 
   function beginTest() {
     setPhase("testing")
@@ -149,14 +166,26 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
   }
 
   function saveResult() {
+    const itemSetVersionByProtocol: Record<OlfactoryProtocolVersion, string> = {
+      temp_v1: "temp_v1_items_8",
+      sat_v2: "sat_v2_items_12",
+      sat_v3_14: "sat_v3_14_items_14",
+    }
+
+    const scoringVersionByProtocol: Record<OlfactoryProtocolVersion, string> = {
+      temp_v1: "temp_v1_scoring",
+      sat_v2: "sat_v2_scoring",
+      sat_v3_14: "sat_v3_14_scoring",
+    }
+
     const payload: OlfactorySubmission = {
       patientId: patientId || undefined,
       language: activeLanguage,
       testName: copy.testNameByProtocol[protocolVersion][activeLanguage],
       testedAt: startedAtISO || new Date().toISOString(),
       protocolVersion,
-      itemSetVersion: protocolVersion === "temp_v1" ? "temp_v1_items_8" : "sat_v2_items_12",
-      scoringVersion: protocolVersion === "temp_v1" ? "temp_v1_scoring" : "sat_v2_scoring",
+      itemSetVersion: itemSetVersionByProtocol[protocolVersion],
+      scoringVersion: scoringVersionByProtocol[protocolVersion],
       notes: notes || undefined,
       result,
     }
@@ -196,11 +225,13 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <Badge className="border-0 bg-amber-600 text-white hover:bg-amber-600">
               <FlaskConical className="mr-1.5 h-3.5 w-3.5" />
-              Temporary Premium Protocol
-            </Badge>
-            <Badge className="border-0 bg-slate-900 text-white hover:bg-slate-900">
-              <Lock className="mr-1.5 h-3.5 w-3.5" />
-              Examiner Key Only In Admin
+              {activeLanguage === "zh"
+                ? "嗅觉任务14项模块"
+                : activeLanguage === "yue"
+                  ? "嗅覺任務14項模組"
+                  : activeLanguage === "fr"
+                    ? "Module olfactif 14 items"
+                    : "Olfactory Task 14 Module"}
             </Badge>
           </div>
           <CardTitle>{copy.title[activeLanguage]}</CardTitle>
@@ -280,8 +311,29 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
       )}
 
       {phase === "testing" && (
-        <Card>
-          <CardHeader>
+        <Card className="overflow-hidden rounded-[28px] border border-white/80 bg-[radial-gradient(circle_at_top_left,_rgba(244,114,182,0.12),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(251,191,36,0.12),_transparent_38%),linear-gradient(140deg,_rgba(255,255,255,0.98),_rgba(255,251,235,0.96),_rgba(255,247,237,0.94))] shadow-[0_24px_90px_rgba(15,23,42,0.12)]">
+          <CardHeader className="border-b border-white/80 bg-[linear-gradient(120deg,_rgba(255,255,255,0.92),_rgba(255,250,245,0.94))]">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Badge className="rounded-full border-0 bg-rose-600 px-3 py-1 text-white">
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                {activeLanguage === "zh"
+                  ? "高级流程"
+                  : activeLanguage === "yue"
+                    ? "高級流程"
+                    : activeLanguage === "fr"
+                      ? "Flux premium"
+                      : "Premium Flow"}
+              </Badge>
+              <Badge className="rounded-full border-0 bg-slate-900 px-3 py-1 text-white">
+                {activeLanguage === "zh"
+                  ? "受试者盲测"
+                  : activeLanguage === "yue"
+                    ? "受試者盲測"
+                    : activeLanguage === "fr"
+                      ? "Mode a l'aveugle"
+                      : "Blinded Patient Mode"}
+              </Badge>
+            </div>
             <CardTitle>
               {activeLanguage === "zh"
                 ? `第 ${currentIndex + 1} 题 / 共 ${questions.length} 题`
@@ -303,45 +355,60 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <div className="grid gap-4 rounded-xl border bg-muted/20 p-4 md:grid-cols-[220px_1fr]">
-              <div className="relative h-[180px] overflow-hidden rounded-lg border bg-[radial-gradient(circle,_rgba(255,255,255,0.9),rgba(255,251,235,0.9))] shadow-inner">
-                <Image
-                  src={currentQuestion.imagePath}
-                  alt={currentQuestion.questionCode}
-                  fill
-                  className="object-contain p-3"
-                  sizes="220px"
-                  priority={currentIndex < 2}
-                />
+            <div className="rounded-[22px] border border-rose-100 bg-[linear-gradient(155deg,rgba(255,241,242,0.9),rgba(255,255,255,0.96),rgba(255,247,237,0.94))] p-5 text-center shadow-sm">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">
+                {activeLanguage === "zh"
+                  ? "请闻气味条后，从以下选项中选择您辨认出的气味"
+                  : activeLanguage === "yue"
+                    ? "請聞氣味條後，從以下選項中揀選你辨認到嘅氣味"
+                    : activeLanguage === "fr"
+                      ? "Sentez la bandelette puis sélectionnez l'odeur que vous reconnaissez"
+                      : "Smell the strip, then select the scent you recognise"}
+              </p>
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+                <Clock3 className="h-3.5 w-3.5" />
+                {activeLanguage === "zh"
+                  ? "记录响应时间用于后续认知联合分析"
+                  : activeLanguage === "yue"
+                    ? "記錄反應時間，用於後續認知聯合分析"
+                    : activeLanguage === "fr"
+                      ? "Le temps de réponse est enregistré pour l'analyse combinée cognitive"
+                      : "Response time is captured for later cognitive fusion analysis"}
               </div>
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
-                  {activeLanguage === "zh"
-                    ? "编码描述"
-                    : activeLanguage === "yue"
-                      ? "編碼描述"
-                      : activeLanguage === "fr"
-                        ? "Description codee"
-                        : "Coded Description"}
-                </p>
-                <p className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm text-slate-800">
-                  {currentQuestion.codeDescription[activeLanguage]}
-                </p>
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <Clock3 className="h-3.5 w-3.5" />
-                  {activeLanguage === "zh"
-                    ? "记录响应时间用于后续认知联合分析"
-                    : activeLanguage === "yue"
-                      ? "記錄反應時間，用於後續認知聯合分析"
-                      : activeLanguage === "fr"
-                        ? "Le temps de reponse est enregistre pour l'analyse combinee cognitive"
-                        : "Response time is captured for later cognitive fusion analysis"}
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50/75 px-4 py-3 text-left">
+                <div>
+                  <p className="text-sm font-semibold text-rose-800">
+                    {activeLanguage === "zh"
+                      ? "语音气味引导"
+                      : activeLanguage === "yue"
+                        ? "語音氣味引導"
+                        : activeLanguage === "fr"
+                          ? "Guide audio des odeurs"
+                          : "Audio scent guidance"}
+                  </p>
+                  <p className="text-xs text-rose-700">
+                    {activeLanguage === "zh"
+                      ? "可先听语音播报选项，再进行选择。"
+                      : activeLanguage === "yue"
+                        ? "可以先聽語音播報選項，再作選擇。"
+                        : activeLanguage === "fr"
+                          ? "Ecoutez les choix audio avant de selectionner."
+                          : "Listen to the spoken answer choices before selecting."}
+                  </p>
                 </div>
+                <InstructionAudio
+                  key={currentQuestion.questionCode}
+                  text={audioPrompt.text}
+                  textOverrides={audioPrompt.textOverrides}
+                  autoPlay
+                  className="rounded-full border-rose-300 bg-white text-rose-700 hover:bg-rose-50"
+                />
               </div>
             </div>
 
-            <div className="space-y-3">
-              <Label className="text-base">{currentQuestion.prompt[activeLanguage]}</Label>
+            <div className="space-y-3 rounded-[22px] border border-slate-200/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(255,250,245,0.9))] p-5">
+              <Label className="text-base font-semibold text-slate-800">{currentQuestion.prompt[activeLanguage]}</Label>
 
               <RadioGroup
                 value={answers[currentQuestion.id] ?? ""}
@@ -352,17 +419,17 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
                   <Label
                     key={option.key}
                     htmlFor={`${currentQuestion.id}-${option.key}`}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg border p-4 hover:bg-muted/50"
+                    className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white/80 p-4 transition hover:border-rose-300 hover:bg-rose-50/60"
                   >
                     <RadioGroupItem id={`${currentQuestion.id}-${option.key}`} value={option.key} />
-                    <span>{option.label[activeLanguage]}</span>
+                    <span className="font-medium text-slate-700">{option.label[activeLanguage]}</span>
                   </Label>
                 ))}
               </RadioGroup>
             </div>
 
-            <div className="space-y-3">
-              <Label>{copy.confidence[activeLanguage]}</Label>
+            <div className="space-y-3 rounded-[22px] border border-amber-200/80 bg-amber-50/60 p-5">
+              <Label className="font-semibold text-amber-900">{copy.confidence[activeLanguage]}</Label>
               <RadioGroup
                 value={confidenceMap[currentQuestion.id]?.toString() ?? ""}
                 onValueChange={handleConfidence}
@@ -370,21 +437,21 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
               >
                 <Label
                   htmlFor={`confidence-low-${currentQuestion.id}`}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg border p-4 hover:bg-muted/50"
+                  className="flex cursor-pointer items-center gap-3 rounded-xl border border-amber-200 bg-white/80 p-4 transition hover:border-amber-300 hover:bg-amber-100/60"
                 >
                   <RadioGroupItem id={`confidence-low-${currentQuestion.id}`} value="1" />
                   <span>{copy.confidenceLow[activeLanguage]}</span>
                 </Label>
                 <Label
                   htmlFor={`confidence-mid-${currentQuestion.id}`}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg border p-4 hover:bg-muted/50"
+                  className="flex cursor-pointer items-center gap-3 rounded-xl border border-amber-200 bg-white/80 p-4 transition hover:border-amber-300 hover:bg-amber-100/60"
                 >
                   <RadioGroupItem id={`confidence-mid-${currentQuestion.id}`} value="2" />
                   <span>{copy.confidenceMid[activeLanguage]}</span>
                 </Label>
                 <Label
                   htmlFor={`confidence-high-${currentQuestion.id}`}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg border p-4 hover:bg-muted/50"
+                  className="flex cursor-pointer items-center gap-3 rounded-xl border border-amber-200 bg-white/80 p-4 transition hover:border-amber-300 hover:bg-amber-100/60"
                 >
                   <RadioGroupItem id={`confidence-high-${currentQuestion.id}`} value="3" />
                   <span>{copy.confidenceHigh[activeLanguage]}</span>
@@ -393,16 +460,26 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Button type="button" variant="outline" onClick={goPrevious} disabled={currentIndex === 0}>
+              <Button type="button" variant="outline" onClick={goPrevious} disabled={currentIndex === 0} className="rounded-full border-slate-300 bg-white/90">
                 {copy.previous[activeLanguage]}
               </Button>
 
               {currentIndex < questions.length - 1 ? (
-                <Button type="button" onClick={goNext} disabled={!answers[currentQuestion.id]}>
+                <Button
+                  type="button"
+                  onClick={goNext}
+                  disabled={!answers[currentQuestion.id]}
+                  className="rounded-full bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 text-white shadow-lg shadow-rose-500/20 hover:from-rose-600 hover:via-orange-600 hover:to-amber-600"
+                >
                   {copy.next[activeLanguage]}
                 </Button>
               ) : (
-                <Button type="button" onClick={goNext} disabled={!answers[currentQuestion.id]}>
+                <Button
+                  type="button"
+                  onClick={goNext}
+                  disabled={!answers[currentQuestion.id]}
+                  className="rounded-full bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 text-white shadow-lg shadow-rose-500/20 hover:from-rose-600 hover:via-orange-600 hover:to-amber-600"
+                >
                   {copy.finish[activeLanguage]}
                 </Button>
               )}
@@ -448,6 +525,12 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
               <p className="text-sm">{result.interpretation[activeLanguage]}</p>
             </div>
 
+            <NormReferralPanel
+              correctCount={result.correctCount}
+              totalQuestions={result.totalQuestions}
+              language={activeLanguage}
+            />
+
             <div className="rounded-lg border border-cyan-200 bg-cyan-50/70 p-4 text-sm text-cyan-800">
               <div className="mb-2 flex items-center gap-2 font-medium">
                 <Sparkles className="h-4 w-4" />
@@ -479,21 +562,9 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
                 return (
                 <div key={item.questionId} className="rounded-lg border p-4 text-sm">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="font-medium">Item {item.questionId}</span>
+                    <span className="font-medium">{question?.questionCode ?? `Item ${item.questionId}`}</span>
                     <Badge variant="outline">Recorded</Badge>
                   </div>
-
-                  {question && (
-                    <div className="relative mb-3 h-28 overflow-hidden rounded-lg border bg-white">
-                      <Image
-                        src={question.imagePath}
-                        alt={question.questionCode}
-                        fill
-                        className="object-contain p-2"
-                        sizes="240px"
-                      />
-                    </div>
-                  )}
 
                   <div>
                     <strong>Your answer:</strong> {item.selectedAnswer ? SCENT_LABELS[item.selectedAnswer][activeLanguage] : "-"}

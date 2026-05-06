@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const password = typeof body.password === "string" ? body.password : ""
     const phoneLookupCandidates = getPhoneLookupCandidates(phoneNumber)
 
-    if (phoneNumber.length < 6 || password.length < 8) {
+    if (phoneNumber.length < 6 || password.length === 0) {
       return NextResponse.json({ error: "Phone number and password are required." }, { status: 400 })
     }
 
