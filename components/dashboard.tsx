@@ -325,10 +325,6 @@ export function Dashboard({
                 <Button asChild variant="outline" size="sm" className="touch-target rounded-xl border-rose-200 bg-white/80 text-rose-700 hover:bg-rose-50">
                   <Link href="/olfactory-preview">{localizeText("Odofin Preview", { zh: "Odofin预览", yue: "Odofin預覽", fr: "Aperçu Odofin" })}</Link>
                 </Button>
-                <Button asChild variant="outline" size="sm" className="touch-target rounded-xl border-amber-200 bg-white/80 text-amber-700 hover:bg-amber-50">
-                  <Link href="/olfactory">{localizeText("Olfactory 14 Module", { zh: "嗅觉14项模块", yue: "嗅覺14項模組", fr: "Module olfactif 14 items" })}</Link>
-                </Button>
-
               </div>
               <Button variant="outline" onClick={handleLogout} className="touch-target rounded-xl border-red-200 bg-white/80 text-red-700 hover:bg-red-50">
                 <LogOut className="w-4 h-4 mr-2" />
@@ -635,26 +631,34 @@ export function Dashboard({
           <Card className={`${premiumCardBase} ${status.olfactory.completed ? completedCardSurface : "bg-[linear-gradient(135deg,rgba(255,251,235,0.98),rgba(255,255,255,0.98),rgba(255,247,237,0.92))]"}`}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <div className={`p-3 rounded-2xl shadow-sm ${status.olfactory.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-amber-500 to-orange-500 text-white"}`}>
+                <div className={`p-3 rounded-2xl shadow-sm ${status.olfactory.completed ? "bg-gradient-to-br from-emerald-400 to-green-500 text-white" : "bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 text-white"}`}>
                   <Flower2 className="w-7 h-7" />
                 </div>
                 {status.olfactory.completed && <CheckCircle className="w-6 h-6 text-emerald-500" />}
               </div>
-              <CardTitle className="text-lg mt-4 font-semibold">{t("sensory.olfactory.title")}</CardTitle>
-              <CardDescription className="text-sm">{t("sensory.olfactory.description")}</CardDescription>
+              <CardTitle className="text-lg mt-4 font-semibold">CogniScent™</CardTitle>
+              <CardDescription className="text-sm">
+                {localizeText("14-item olfactory cognitive screening assessment", {
+                  zh: "14项嗅觉认知筛查评估",
+                  yue: "14項嗅覺認知篩查評估",
+                  fr: "Évaluation olfacto-cognitive 14 items",
+                })}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {status.olfactory.completed ? (
                 <div className="space-y-3">
                   <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 text-center">
-                    <p className="text-3xl font-bold text-emerald-600">{status.olfactory.score}/12</p>
+                    <p className="text-3xl font-bold text-emerald-600">{status.olfactory.score}/14</p>
                     <p className="text-xs text-emerald-700 mt-1">
                       {status.olfactory.classification === "normal"
                         ? localizeText("Normal identification range", { zh: "识别结果正常", yue: "識別結果正常", fr: "Identification normale" })
                         : localizeText("Review recommended", { zh: "建议复核", yue: "建議覆核", fr: "Révision recommandée" })}
                     </p>
                   </div>
-                  <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300" onClick={() => handleRetake("olfactory")}>{t("common.retake")}</Button>
+                  <Button asChild variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300">
+                    <Link href="/olfactory">{t("common.retake")}</Link>
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -662,7 +666,9 @@ export function Dashboard({
                     <Clock className="w-4 h-4 mr-1.5" />
                     <span>{t("dashboard.pending")}</span>
                   </div>
-                  <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("olfactory")}>{t("common.start")}</Button>
+                  <Button asChild className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:via-orange-600 hover:to-rose-600 text-white shadow-md rounded-xl font-medium">
+                    <Link href="/olfactory">{t("common.start")}</Link>
+                  </Button>
                 </div>
               )}
             </CardContent>
