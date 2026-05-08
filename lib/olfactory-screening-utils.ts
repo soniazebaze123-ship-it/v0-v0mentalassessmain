@@ -7,18 +7,17 @@ export interface SmellItem {
   category: "food" | "nature" | "household"
 }
 
-// Clinical olfactory identification test scents (standard 8-item test + alcohol)
-// Based on temporary olfactory identification test sheet for clinical assessment
+// Clinical olfactory identification test scents (8 scents, alcohol replaces coffee)
+// Images located in /images/olfactory-temp/
 export const SMELL_ITEMS: SmellItem[] = [
-  { id: "peppermint", name: "Peppermint", image: "/images/smells/peppermint.png", category: "nature" },
-  { id: "coffee", name: "Coffee", image: "/images/smells/coffee.png", category: "food" },
-  { id: "cloves", name: "Cloves", image: "/images/smells/cloves.png", category: "food" },
-  { id: "rose", name: "Rose", image: "/images/smells/rose.png", category: "nature" },
-  { id: "ginger", name: "Ginger", image: "/images/smells/ginger.png", category: "food" },
-  { id: "jasmine", name: "Jasmine", image: "/images/smells/jasmine.png", category: "nature" },
-  { id: "lavender", name: "Lavender", image: "/images/smells/lavender.png", category: "nature" },
-  { id: "tea_tree", name: "Tea Tree", image: "/images/smells/tea-tree.png", category: "nature" },
-  { id: "alcohol", name: "Alcohol", image: "/images/smells/alcohol.png", category: "household" },
+  { id: "peppermint", name: "Peppermint", image: "/images/olfactory-temp/peppermint.svg", category: "nature" },
+  { id: "alcohol",    name: "Alcohol",    image: "/images/olfactory-temp/alcohol.svg",    category: "household" },
+  { id: "cloves",     name: "Cloves",     image: "/images/olfactory-temp/cloves.svg",     category: "food" },
+  { id: "rose",       name: "Rose",       image: "/images/olfactory-temp/rose.svg",       category: "nature" },
+  { id: "ginger",     name: "Ginger",     image: "/images/olfactory-temp/ginger.svg",     category: "food" },
+  { id: "jasmine",    name: "Jasmine",    image: "/images/olfactory-temp/jasmine.svg",    category: "nature" },
+  { id: "lavender",   name: "Lavender",   image: "/images/olfactory-temp/lavender.svg",   category: "nature" },
+  { id: "tea_tree",   name: "Tea Tree",   image: "/images/olfactory-temp/tea-tree.svg",   category: "nature" },
 ]
 
 export function selectRandomSmells(count = 8): SmellItem[] {

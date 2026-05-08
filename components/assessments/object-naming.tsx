@@ -11,6 +11,7 @@ import { InstructionAudio } from "@/components/ui/instruction-audio"
 interface ObjectNamingProps {
   onComplete: (score: number) => void
   onSkip?: () => void
+  assessmentMode?: "MMSE" | "MOCA"
 }
 
 interface ObjectQuestion {
@@ -19,16 +20,20 @@ interface ObjectQuestion {
   optionKeys: string[]
 }
 
-const ITEM_POOL = [
-  { image: "/images/rice.svg", labelKey: "common.rice" },
-  { image: "/images/noodles.svg", labelKey: "common.noodles" },
-  { image: "/images/milk.svg", labelKey: "common.milk" },
-  { image: "/images/chicken.svg", labelKey: "common.chicken" },
-  { image: "/images/fish.svg", labelKey: "common.fish" },
-  { image: "/images/egg.svg", labelKey: "common.egg" },
+const MMSE_ITEM_POOL = [
+  { image: "/images/rice.png", labelKey: "common.rice" },
+  { image: "/images/spaghetti.jpeg", labelKey: "common.noodles" },
+  { image: "/images/milk.jpeg", labelKey: "common.milk" },
+  { image: "/images/egg.jpeg", labelKey: "common.egg" },
+  { image: "/images/fish.png", labelKey: "common.fish" },
+  { image: "/images/chicken.jpeg", labelKey: "common.chicken" },
+  { image: "/images/towel-paper.jpeg", labelKey: "common.towel_paper" },
+]
+
+const MOCA_OBJECT_POOL = [
   { image: "/images/house.png", labelKey: "common.house" },
-  { image: "/images/bag.png", labelKey: "common.bag" },
-  { image: "/images/tv.png", labelKey: "common.tv" },
+  { image: "/images/bag.jpeg", labelKey: "common.bag" },
+  { image: "/images/tv.webp", labelKey: "common.tv" },
 ]
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -40,10 +45,12 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled
 }
 
-function buildObjectQuestions(): ObjectQuestion[] {
-  const randomizedPool = shuffleArray(ITEM_POOL)
-  return randomizedPool.slice(0, 3).map((item, index) => {
-    const distractor = randomizedPool[(index + 3) % ITEM_POOL.length]
+function buildObjectQuestions(pool: { image: string; labelKey: string }[]): ObjectQuestion[] {
+  const randomizedPool = shuffleArray(pool)
+  const questionCount = Math.min(3, randomizedPool.length)
+
+  return randomizedPool.slice(0, questionCount).map((item, index) => {
+    const distractor = randomizedPool[(index + 1) % randomizedPool.length]
 
     return {
       image: item.image,
@@ -53,12 +60,11 @@ function buildObjectQuestions(): ObjectQuestion[] {
   })
 }
 
-const DEFAULT_OBJECT_QUESTIONS = buildObjectQuestions()
-
-export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
+export function ObjectNaming({ onComplete, onSkip, assessmentMode = "MMSE" }: ObjectNamingProps) {
   const { t, localizeText } = useLanguage()
-  const [questions] = useState<ObjectQuestion[]>(DEFAULT_OBJECT_QUESTIONS)
-  const [selectedAnswers, setSelectedAnswers] = useState<string[]>(Array(DEFAULT_OBJECT_QUESTIONS.length).fill(""))
+  const itemPool = assessmentMode === "MOCA" ? MOCA_OBJECT_POOL : MMSE_ITEM_POOL
+  const [questions] = useState<ObjectQuestion[]>(() => buildObjectQuestions(itemPool))
+  const [selectedAnswers, setSelectedAnswers] = useState<string[]>(() => Array(questions.length).fill(""))
 
   const handleAnswerSelect = (index: number, optionKey: string) => {
     setSelectedAnswers((previous) => previous.map((value, valueIndex) => (valueIndex === index ? optionKey : value)))
@@ -96,11 +102,11 @@ export function ObjectNaming({ onComplete, onSkip }: ObjectNamingProps) {
                 fr: "Tâche de reconnaissance premium",
               })}
             </p>
-            <CardTitle className="text-cyan-950">{t("mmse.naming")}</CardTitle>
+            <CardTitle className="text-cyan-950">{assessmentMode === "MOCA" ? t("moca.naming") : t("mmse.naming")}</CardTitle>
           </div>
         </div>
-        <p className="max-w-2xl text-sm text-slate-600">{t("mmse.naming.instruction")}</p>
-        <InstructionAudio instructionKey="mmse.naming.instruction" className="mt-2" />
+        <p className="max-w-2xl text-sm text-slate-600">{assessmentMode === "MOCA" ? t("moca.naming.instruction") : t("mmse.naming.instruction")}</p>
+        <InstructionAudio instructionKey={assessmentMode === "MOCA" ? "moca.naming.instruction" : "mmse.naming.instruction"} className="mt-2" />
       </CardHeader>
       <CardContent className="pt-6">
         <div className="mb-6 rounded-[24px] border border-cyan-100 bg-cyan-50/70 p-4 text-sm text-cyan-900 shadow-sm">

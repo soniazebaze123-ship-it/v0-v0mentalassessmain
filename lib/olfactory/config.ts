@@ -306,7 +306,7 @@ export const OLFACTORY_COPY = {
   instructionsTitle: { en: "Instructions", zh: "说明", yue: "說明", fr: "Instructions" },
   instructions: {
     en: [
-      "This module is part of the core olfactory assessment workflow.",
+      "This tool is temporary and separate from Odofin.",
       "Patient should keep eyes closed during scent presentation.",
       "Present one odor at a time at 2-3 cm for around 3 seconds.",
       "Use the coded strip sequence for protocol consistency.",
@@ -315,7 +315,7 @@ export const OLFACTORY_COPY = {
       "For alcohol scent, use a tiny amount and avoid direct skin or nose contact.",
     ],
     zh: [
-      "此模块属于核心嗅觉评估流程。",
+      "此工具为临时流程，并与 Odofin 分离。",
       "呈现气味时受试者应保持闭眼。",
       "每次仅呈现一种气味，距离鼻子2-3厘米，约3秒。",
       "使用编码气味条顺序保持流程一致性。",
@@ -324,7 +324,7 @@ export const OLFACTORY_COPY = {
       "酒精气味仅使用极少量，避免直接接触皮肤或鼻腔。",
     ],
     yue: [
-      "呢個模組屬於核心嗅覺評估流程。",
+      "呢個工具係臨時流程，並且同 Odofin 分開。",
       "呈現氣味時受試者應該保持合眼。",
       "每次只呈現一種氣味，離鼻2-3厘米，約3秒。",
       "用編碼氣味條順序保持流程一致。",
@@ -333,7 +333,7 @@ export const OLFACTORY_COPY = {
       "酒精氣味只用好少量，避免直接掂到皮膚或鼻腔。",
     ],
     fr: [
-      "Ce module fait partie du flux principal d'evaluation olfactive.",
+      "Cet outil est temporaire et separe d'Odofin.",
       "Le patient doit garder les yeux fermes pendant la presentation.",
       "Presentez une odeur a la fois a 2-3 cm pendant environ 3 secondes.",
       "Utilisez la sequence codee des bandelettes pour standardiser le protocole.",

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" role="img" aria-labelledby="title desc">
+  <title id="title">Lion</title>
+  <desc id="desc">Illustration card for a lion</desc>
+  <defs>
+    <linearGradient id="lion-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff7ed"/>
+      <stop offset="100%" stop-color="#ffedd5"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="240" rx="24" fill="url(#lion-bg)"/>
+  <g transform="translate(80 36)">
+    <circle cx="80" cy="76" r="58" fill="#b45309"/>
+    <circle cx="80" cy="76" r="42" fill="#f59e0b"/>
+    <circle cx="80" cy="84" r="30" fill="#fde68a"/>
+    <circle cx="66" cy="78" r="4" fill="#7c2d12"/>
+    <circle cx="94" cy="78" r="4" fill="#7c2d12"/>
+    <path d="M70 94c8 8 20 8 28 0" stroke="#7c2d12" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M80 84l-6 8h12z" fill="#92400e"/>
+    <circle cx="50" cy="46" r="10" fill="#f59e0b"/>
+    <circle cx="110" cy="46" r="10" fill="#f59e0b"/>
+  </g>
+  <text x="160" y="215" text-anchor="middle" font-size="28" font-family="Arial, sans-serif" fill="#7c2d12">LION</text>
+</svg>

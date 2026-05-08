@@ -89,6 +89,7 @@ function AppContent() {
     { component: TrailMakingTask, props: {} },
     { component: CopyingDesign, props: { titleKey: "moca.cube", instructionKey: "moca.cube.instruction", imageSrc: "/images/cube.svg" } },
     { component: AnimalNaming, props: {} },
+    { component: ObjectNaming, props: { assessmentMode: "MOCA" } },
     {
       component: MemoryTask,
       props: { words: t("memory.moca.words"), title: t("moca.memory"), assessmentType: "MOCA" },
@@ -102,7 +103,7 @@ function AppContent() {
     { component: MMSEOrientation, props: {} },
     { component: MemoryTask, props: { words: t("memory.mmse.words"), title: t("mmse.registration"), assessmentType: "MMSE" } },
     { component: MMSEAttention, props: {} },
-    { component: ObjectNaming, props: {} },
+    { component: ObjectNaming, props: { assessmentMode: "MMSE" } },
     { component: MMSERepetition, props: {} },
     { component: WritingTask, props: {} },
     { component: CopyingDesign, props: {} },
