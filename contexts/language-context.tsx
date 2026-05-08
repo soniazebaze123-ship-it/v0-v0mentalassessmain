@@ -194,7 +194,6 @@ const englishTranslations: TranslationMap = {
 
   // Supplemental naming/writing content
   "common.rice": "rice",
-  "common.lion": "lion",
   "common.rhinoceros": "rhinoceros",
   "common.camel": "camel",
   "common.spaghetti": "spaghetti",
@@ -708,7 +707,6 @@ const zhOverrides: TranslationMap = {
   "common.president_name": "习近平",
   "common.china": "中国",
   "common.rice": "米饭",
-  "common.lion": "狮子",
   "common.rhinoceros": "犀牛",
   "common.camel": "骆驼",
   "common.spaghetti": "意大利面",
@@ -1011,7 +1009,6 @@ const yueOverrides: TranslationMap = {
   "common.president_name": "習近平",
   "common.china": "中國",
   "common.rice": "白飯",
-  "common.lion": "獅子",
   "common.rhinoceros": "犀牛",
   "common.camel": "駱駝",
   "common.spaghetti": "意粉",
@@ -1301,7 +1298,6 @@ const frOverrides: TranslationMap = {
   "common.confirm_retake": "Confirmer la reprise",
   "common.continue": "Continuer",
   "common.rice": "riz",
-  "common.lion": "lion",
   "common.rhinoceros": "rhinoceros",
   "common.camel": "chameau",
   "common.spaghetti": "spaghetti",
