@@ -128,41 +128,41 @@ export function calculateCompositeRiskScore(cognitive: CognitiveScores, sensory:
   const recommendations: string[] = []
 
   if (hasCognitiveImpairment) {
-    recommendations.push("Consider comprehensive neuropsychological evaluation")
-    recommendations.push("Discuss cognitive concerns with healthcare provider")
+    recommendations.push("risk.recommendation.comprehensive_neuropsych_eval")
+    recommendations.push("risk.recommendation.discuss_with_provider")
   }
 
   if (sensory.olfactory && sensory.olfactory > 50) {
-    recommendations.push("Olfactory impairment detected - consider neurological consultation")
+    recommendations.push("risk.recommendation.olfactory_consult")
   }
 
   if (sensory.auditory && sensory.auditory > 50) {
-    recommendations.push("Hearing impairment detected - consider audiological evaluation")
-    recommendations.push("Hearing aids may help reduce cognitive decline risk")
+    recommendations.push("risk.recommendation.auditory_eval")
+    recommendations.push("risk.recommendation.hearing_aids")
   }
 
   if (sensory.visual && sensory.visual > 50) {
-    recommendations.push("Visual impairment detected - consider ophthalmological evaluation")
-    recommendations.push("Corrective lenses may improve daily functioning")
+    recommendations.push("risk.recommendation.visual_eval")
+    recommendations.push("risk.recommendation.corrective_lenses")
   }
 
   if (hasMultipleSensoryDeficits) {
-    recommendations.push("Multiple sensory deficits increase dementia risk - prioritize clinical evaluation")
+    recommendations.push("risk.recommendation.multiple_sensory")
   }
 
   if (riskLevel === "high" || riskLevel === "very_high") {
-    recommendations.push("High risk profile - recommend immediate clinical assessment")
-    recommendations.push("Consider lifestyle modifications: exercise, Mediterranean diet, social engagement")
+    recommendations.push("risk.recommendation.high_risk_immediate")
+    recommendations.push("risk.recommendation.lifestyle_mods")
   }
 
   if (riskLevel === "moderate") {
-    recommendations.push("Moderate risk - schedule follow-up assessment in 6-12 months")
-    recommendations.push("Focus on preventive measures and healthy lifestyle")
+    recommendations.push("risk.recommendation.moderate_followup")
+    recommendations.push("risk.recommendation.preventive_lifestyle")
   }
 
   if (recommendations.length === 0) {
-    recommendations.push("Results within normal range - continue regular health monitoring")
-    recommendations.push("Maintain healthy lifestyle to support cognitive health")
+    recommendations.push("risk.recommendation.normal_monitoring")
+    recommendations.push("risk.recommendation.maintain_lifestyle")
   }
 
   return {

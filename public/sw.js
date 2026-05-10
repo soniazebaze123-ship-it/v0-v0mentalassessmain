@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mentalassess-v2';
+const CACHE_NAME = 'mentalassess-v3';
 const STATIC_ASSETS = [
   '/',
   '/offline.html',
@@ -40,6 +40,21 @@ self.addEventListener('fetch', (event) => {
 
   // Skip API requests - always fetch from network
   if (event.request.url.includes('/api/')) return;
+
+  // Never cache assessment images so replacements appear immediately.
+  if (event.request.url.includes('/images/') || event.request.url.includes('/_next/image')) {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' }).catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          return new Response('Offline', { status: 503 });
+        });
+      })
+    );
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)

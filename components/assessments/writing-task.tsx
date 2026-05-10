@@ -41,7 +41,8 @@ export function WritingTask({ onComplete, onSkip }: WritingTaskProps) {
   }
 
   const checkAnswer = () => {
-    if (!sentenceTemplate) {
+    if (!sentenceTemplate || selectedParts.length !== 2) {
+      onComplete(0)
       return
     }
 
@@ -133,7 +134,7 @@ export function WritingTask({ onComplete, onSkip }: WritingTaskProps) {
           <Button variant="outline" onClick={resetSelection}>
             {t("common.reset")}
           </Button>
-          <Button onClick={checkAnswer} disabled={!sentenceTemplate || selectedParts.length !== 2} className="w-full max-w-xs">
+          <Button onClick={checkAnswer} className="w-full max-w-xs">
             {t("common.submit")}
           </Button>
         </div>

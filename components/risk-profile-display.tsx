@@ -25,6 +25,14 @@ export function RiskProfileDisplay({ onBackToDashboard }: RiskProfileDisplayProp
   const [riskProfile, setRiskProfile] = useState<RiskProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const renderRecommendation = (recommendation: string) => {
+    if (recommendation.startsWith("risk.recommendation.")) {
+      return t(recommendation)
+    }
+
+    return recommendation
+  }
+
   const loadRiskProfile = useCallback(async () => {
     if (!user) return
 
@@ -147,7 +155,7 @@ export function RiskProfileDisplay({ onBackToDashboard }: RiskProfileDisplayProp
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Score</span>
+                  <span className="text-sm font-medium">{t("risk.score")}</span>
                   <span className="text-2xl font-bold">{riskProfile.cognitiveComponent}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
@@ -186,7 +194,7 @@ export function RiskProfileDisplay({ onBackToDashboard }: RiskProfileDisplayProp
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Score</span>
+                  <span className="text-sm font-medium">{t("risk.score")}</span>
                   <span className="text-2xl font-bold">{riskProfile.sensoryComponent}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
@@ -202,7 +210,7 @@ export function RiskProfileDisplay({ onBackToDashboard }: RiskProfileDisplayProp
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <Eye className="h-4 w-4" />
-                      <span className="text-sm">Visual</span>
+                      <span className="text-sm">{t("risk.sensory.visual")}</span>
                     </div>
                     <span className="font-semibold">{Math.round(riskProfile.individualScores.sensory.visual)}%</span>
                   </div>
@@ -211,7 +219,7 @@ export function RiskProfileDisplay({ onBackToDashboard }: RiskProfileDisplayProp
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <Ear className="h-4 w-4" />
-                      <span className="text-sm">Auditory</span>
+                      <span className="text-sm">{t("risk.sensory.auditory")}</span>
                     </div>
                     <span className="font-semibold">{Math.round(riskProfile.individualScores.sensory.auditory)}%</span>
                   </div>
@@ -220,7 +228,7 @@ export function RiskProfileDisplay({ onBackToDashboard }: RiskProfileDisplayProp
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <Flower2 className="h-4 w-4" />
-                      <span className="text-sm">Olfactory</span>
+                      <span className="text-sm">{t("risk.sensory.olfactory")}</span>
                     </div>
                     <span className="font-semibold">{Math.round(riskProfile.individualScores.sensory.olfactory)}%</span>
                   </div>
@@ -294,7 +302,7 @@ export function RiskProfileDisplay({ onBackToDashboard }: RiskProfileDisplayProp
                   <div className="flex-shrink-0 mt-1">
                     <div className="w-2 h-2 rounded-full bg-blue-600" />
                   </div>
-                  <span className="text-sm leading-relaxed">{recommendation}</span>
+                  <span className="text-sm leading-relaxed">{renderRecommendation(recommendation)}</span>
                 </li>
               ))}
             </ul>

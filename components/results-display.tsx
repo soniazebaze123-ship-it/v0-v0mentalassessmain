@@ -28,6 +28,30 @@ export function ResultsDisplay({
   const { t } = useLanguage()
   const assessmentLabel = assessmentType === "MMSE" ? t("mmse.title") : t("moca.title")
 
+  const getRiskRecommendationText = (result: RiskClassificationOutput) => {
+    return t(`results.risk_recommendation.${result.risk_classification}`)
+  }
+
+  const getReferralReasonText = (result: RiskClassificationOutput) => {
+    if (!result.referral_reason) {
+      return null
+    }
+
+    if (result.risk_classification === "mild_risk") {
+      return t("results.referral_reason.mild_risk")
+    }
+
+    if (result.risk_classification === "moderate_risk") {
+      return t("results.referral_reason.moderate_risk")
+    }
+
+    if (result.risk_classification === "high_risk") {
+      return t("results.referral_reason.high_risk")
+    }
+
+    return result.referral_reason
+  }
+
   const getInterpretation = () => {
     if (assessmentType === "MOCA") {
       if (totalScore >= 26) return { level: t("results.interpretation.normal"), color: "green", icon: CheckCircle }
@@ -168,7 +192,7 @@ export function ResultsDisplay({
                   : riskResult.risk_classification === "moderate_risk" ? "text-orange-600"
                   : "text-red-600"
                 }`} />
-                <span className="font-semibold text-slate-800">Clinical Risk Assessment</span>
+                <span className="font-semibold text-slate-800">{t("results.clinical_risk_assessment")}</span>
                 <Badge className={`ml-auto ${
                   riskResult.risk_classification === "normal"
                     ? "bg-emerald-100 text-emerald-800"
@@ -178,17 +202,17 @@ export function ResultsDisplay({
                     ? "bg-orange-100 text-orange-800"
                     : "bg-red-100 text-red-800"
                 }`}>
-                  {riskResult.risk_classification.replace("_", " ").toUpperCase()}
+                  {t(`results.risk_classification.${riskResult.risk_classification}`)}
                 </Badge>
               </div>
-              <p className="text-sm text-slate-700 leading-relaxed">{riskResult.recommendation_text}</p>
+              <p className="text-sm text-slate-700 leading-relaxed">{getRiskRecommendationText(riskResult)}</p>
               {riskResult.referral_needed && (
                 <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
                   <Phone className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-sm font-semibold text-red-800">Specialist Referral Recommended</p>
+                    <p className="text-sm font-semibold text-red-800">{t("results.referral_recommended")}</p>
                     {riskResult.referral_reason && (
-                      <p className="text-xs text-red-700 mt-0.5">{riskResult.referral_reason}</p>
+                      <p className="text-xs text-red-700 mt-0.5">{getReferralReasonText(riskResult)}</p>
                     )}
                   </div>
                 </div>
