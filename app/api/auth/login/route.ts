@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const supabase = await createClient()
     const { data, error } = await supabase
       .from("users")
-      .select("id, email, phone_number, name, date_of_birth, gender, password_hash")
+      .select("id, email, phone_number, name, national_id, date_of_birth, gender, password_hash")
       .in("phone_number", phoneLookupCandidates)
       .limit(1)
 
@@ -54,6 +54,7 @@ export async function POST(request: Request) {
       email: existingUser.email,
       phone_number: existingUser.phone_number,
       name: existingUser.name,
+      national_id: existingUser.national_id,
       date_of_birth: existingUser.date_of_birth,
       gender: existingUser.gender,
     }

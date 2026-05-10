@@ -83,6 +83,7 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
   const { t, language, setLanguage } = useLanguage()
   const { register } = useUser()
   const [name, setName] = useState("")
+  const [nationalId, setNationalId] = useState("")
   const [phoneNumber, setPhoneNumber] = useState("")
   const [birthYear, setBirthYear] = useState("")
   const [birthMonth, setBirthMonth] = useState("")
@@ -146,7 +147,7 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
       return
     }
 
-    const registerResult = await register(phoneNumber, password, name, dateOfBirth, gender)
+    const registerResult = await register(phoneNumber, password, name, dateOfBirth, gender, nationalId)
     if (!registerResult.success) {
       setError(registerResult.error || t("register.error.invalid"))
     }
@@ -224,6 +225,20 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 disabled={loading}
                 autoComplete="username tel"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="national-id">{t("register.national_id")}</Label>
+              <AssessmentInput
+                id="national-id"
+                name="national-id"
+                type="text"
+                placeholder={t("register.national_id.placeholder")}
+                value={nationalId}
+                onChange={(e) => setNationalId(e.target.value)}
+                disabled={loading}
+                autoComplete="off"
               />
             </div>
 
@@ -337,6 +352,7 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
                 loading ||
                 phoneNumber.length < 6 ||
                 name.trim().length < 2 ||
+                nationalId.trim().length < 3 ||
                 !dateOfBirth ||
                 !gender ||
                 password.length < 8 ||

@@ -11,6 +11,7 @@ interface User {
   name?: string
   date_of_birth?: string
   gender?: string
+  national_id?: string
 }
 
 interface AssessmentProgress {
@@ -29,6 +30,7 @@ interface UserContextType {
     name?: string,
     dateOfBirth?: string,
     gender?: string,
+    nationalId?: string,
   ) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   progress: Record<string, AssessmentProgress>
@@ -139,6 +141,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     name?: string,
     dateOfBirth?: string,
     gender?: string,
+    nationalId?: string,
   ): Promise<{ success: boolean; error?: string }> => {
     setLoading(true)
 
@@ -154,6 +157,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           name,
           dateOfBirth,
           gender,
+          nationalId,
         }),
       })
 
