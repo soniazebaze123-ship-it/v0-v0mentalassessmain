@@ -36,15 +36,46 @@ export function CopyingDesign({
       return
     }
 
-    const context = canvas.getContext("2d")
-    if (!context) {
-      return
+    const configureContext = () => {
+      const context = canvas.getContext("2d")
+      if (!context) {
+        return
+      }
+
+      const dpr = window.devicePixelRatio || 1
+      context.lineCap = "round"
+      context.lineJoin = "round"
+      context.lineWidth = 3 * dpr
+      context.strokeStyle = "#111827"
     }
 
-    context.lineCap = "round"
-    context.lineJoin = "round"
-    context.lineWidth = 3
-    context.strokeStyle = "#111827"
+    const resizeCanvasToDisplaySize = () => {
+      const rect = canvas.getBoundingClientRect()
+      if (rect.width === 0 || rect.height === 0) {
+        return
+      }
+
+      const dpr = window.devicePixelRatio || 1
+      const nextWidth = Math.round(rect.width * dpr)
+      const nextHeight = Math.round(rect.height * dpr)
+
+      if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+        canvas.width = nextWidth
+        canvas.height = nextHeight
+      }
+
+      configureContext()
+    }
+
+    resizeCanvasToDisplaySize()
+
+    window.addEventListener("resize", resizeCanvasToDisplaySize)
+    window.addEventListener("orientationchange", resizeCanvasToDisplaySize)
+
+    return () => {
+      window.removeEventListener("resize", resizeCanvasToDisplaySize)
+      window.removeEventListener("orientationchange", resizeCanvasToDisplaySize)
+    }
   }, [])
 
   const getPoint = (event: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -54,13 +85,21 @@ export function CopyingDesign({
     }
 
     const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+
+    const x = (event.clientX - rect.left) * scaleX
+    const y = (event.clientY - rect.top) * scaleY
+
     return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
+      x: Math.max(0, Math.min(canvas.width, x)),
+      y: Math.max(0, Math.min(canvas.height, y)),
     }
   }
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    event.preventDefault()
+
     const canvas = canvasRef.current
     const point = getPoint(event)
 
@@ -84,6 +123,8 @@ export function CopyingDesign({
   }
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    event.preventDefault()
+
     if (!isDrawingRef.current) {
       return
     }
