@@ -102,10 +102,16 @@ function scoreAttention(answers: MoCAItemAnswers): number {
 
 function scoreLanguage(answers: MoCAItemAnswers): number {
   let score = 0;
+
+  // Moderate sentence: "The nurse is helping the patient in the hospital."
   if (answers.sentence_1_repetition_correct) score += 1; // 1 point
-  if (answers.sentence_2_repetition_correct) score += 1; // 1 point
+
+  // Difficult sentence: "The little boy carried a basket of fresh flowers to his grandmother’s house."
+  if (answers.sentence_2_repetition_correct) score += 2; // 2 points
+
   if (answers.verbal_fluency_correct) score += 1; // 1 point
-  return Math.min(score, 3);
+
+  return Math.min(score, 4); // Adjusted max score for language section
 }
 
 function scoreAbstraction(answers: MoCAItemAnswers): number {
@@ -269,3 +275,19 @@ export async function getMoCAResults(sessionId: string) {
 
   return data;
 }
+
+// Translations for new sentences
+const translations = {
+  moderate: {
+    en: "The nurse is helping the patient in the hospital.",
+    zh: "护士正在医院里帮助病人。",
+    yue: "護士喺醫院幫緊病人。",
+    fr: "L'infirmière aide le patient à l'hôpital.",
+  },
+  difficult: {
+    en: "The little boy carried a basket of fresh flowers to his grandmother’s house.",
+    zh: "小男孩提着一篮鲜花到他奶奶家。",
+    yue: "細路仔提住一籃鮮花去佢奶奶屋企。",
+    fr: "Le petit garçon a porté un panier de fleurs fraîches chez sa grand-mère.",
+  },
+};
