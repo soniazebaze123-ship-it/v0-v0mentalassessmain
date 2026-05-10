@@ -17,32 +17,41 @@ interface LanguageAbstractionProps {
 
 export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionProps) {
   const { t, language, getSpeechLanguage, localizeText } = useLanguage()
-  const [phase, setPhase] = useState<"repetition" | "similarity" | "fluency">("repetition")
-  const [repetitionAnswer, setRepetitionAnswer] = useState("")
+  const [phase, setPhase] = useState<"moderate" | "difficult" | "similarity">("moderate")
+  const [moderateAnswer, setModerateAnswer] = useState("")
+  const [difficultAnswer, setDifficultAnswer] = useState("")
   const [similarityAnswer, setSimilarityAnswer] = useState("")
-  const [fluencyAnswer, setFluencyAnswer] = useState("")
   const [isPlaying, setIsPlaying] = useState(false)
   const [hasPlayedAudio, setHasPlayedAudio] = useState(false)
 
-  const getSpeechText = () => {
-    // Enhanced multilingual sentences for MoCA Language Abstraction
-    const sentences = {
-      en: "The quick brown fox jumps over the lazy dog",
-      zh: "那只敏捷的棕色狐狸跳过那只懒洋洋的狗",
-      yue: "快速嘅啡色狐狸跳過懶狗",
-      fr: "Le renard brun rapide saute par-dessus le chien paresseux",
-    }
-    return sentences[language] || sentences.en
-  }
+  const repetitionContent = {
+    moderate: {
+      en: "The nurse is helping the patient in the hospital.",
+      zh: "护士正在医院里帮助病人。",
+      yue: "護士喺醫院幫緊病人。",
+      fr: "L'infirmière aide le patient à l'hôpital.",
+    },
+    difficult: {
+      en: "The little boy carried a basket of fresh flowers to his grandmother's house.",
+      zh: "小男孩提着一篮鲜花到他奶奶家。",
+      yue: "細路仔提住一籃鮮花去佢奶奶屋企。",
+      fr: "Le petit garçon a porté un panier de fleurs fraîches chez sa grand-mère.",
+    },
+  } as const
 
-  const getCorrectAnswer = () => {
-    const answers = {
-      en: "The quick brown fox jumps over the lazy dog",
-      zh: "敏捷的棕色狐狸跳过懒惰的狗",
-      yue: "敏捷嘅棕色狐狸跳過懶惰嘅狗",
-      fr: "Le renard brun rapide saute par-dessus le chien paresseux",
+  const currentRepetitionPhase = phase === "difficult" ? "difficult" : "moderate"
+
+  const getSpeechText = () => repetitionContent[currentRepetitionPhase][language] || repetitionContent[currentRepetitionPhase].en
+
+  const getCurrentAnswer = () => (phase === "difficult" ? difficultAnswer : moderateAnswer)
+
+  const setCurrentAnswer = (value: string) => {
+    if (phase === "difficult") {
+      setDifficultAnswer(value)
+      return
     }
-    return answers[language] || answers.en
+
+    setModerateAnswer(value)
   }
 
   const playAudio = () => {
@@ -85,14 +94,13 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
     window.speechSynthesis.speak(utterance)
   }
 
-  const checkRepetition = () => {
-    const actualTargetSentence = getCorrectAnswer()
-    const userAnswer = repetitionAnswer.toLowerCase().trim()
-    const correctAnswer = actualTargetSentence.toLowerCase()
+  const checkRepetition = (userResponse: string, targetSentence: string) => {
+    const userAnswer = userResponse.toLowerCase().trim()
+    const correctAnswer = targetSentence.toLowerCase()
 
     // More flexible matching for different languages
     const similarity = calculateSimilarity(userAnswer, correctAnswer)
-    return similarity > 0.8 ? 2 : similarity > 0.6 ? 1 : 0
+    return similarity > 0.8 ? 1 : 0
   }
 
   const calculateSimilarity = (str1: string, str2: string): number => {
@@ -113,25 +121,21 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
   }
 
   const checkSimilarity = () => {
-    const score = similarityAnswer === "C" ? 2 : 0
+    const score = similarityAnswer === "C" ? 1 : 0
     return score
   }
 
-  const checkFluency = () => {
-    const words = fluencyAnswer.split(/\s+/).filter((word) => word.length > 0)
-    return words.length >= 11 ? 1 : 0 // 1 point for 11+ words
-  }
-
   const handleSubmit = () => {
-    if (phase === "repetition") {
+    if (phase === "moderate") {
+      setPhase("difficult")
+      setHasPlayedAudio(false)
+    } else if (phase === "difficult") {
       setPhase("similarity")
-    } else if (phase === "similarity") {
-      setPhase("fluency")
     } else {
-      const repetitionScore = checkRepetition()
+      const moderateScore = checkRepetition(moderateAnswer, repetitionContent.moderate[language] || repetitionContent.moderate.en)
+      const difficultScore = checkRepetition(difficultAnswer, repetitionContent.difficult[language] || repetitionContent.difficult.en)
       const similarityScore = checkSimilarity()
-      const fluencyScore = checkFluency()
-      const totalScore = repetitionScore + similarityScore + fluencyScore
+      const totalScore = moderateScore + difficultScore + similarityScore
       onComplete(totalScore)
     }
   }
@@ -144,7 +148,7 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
     }
   }
 
-  if (phase === "repetition") {
+  if (phase === "moderate" || phase === "difficult") {
     return (
       <Card className="mx-auto w-full max-w-3xl overflow-hidden border border-fuchsia-100/80 shadow-[0_24px_70px_rgba(217,70,239,0.12)]">
         <CardHeader className="bg-[radial-gradient(circle_at_top_left,_rgba(232,121,249,0.18),_transparent_32%),linear-gradient(135deg,_rgba(253,244,255,0.98),_rgba(255,255,255,0.98),_rgba(250,245,255,0.96))] pb-6">
@@ -163,6 +167,11 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
               <CardTitle className="text-fuchsia-950">
                 {t("moca.language")} - {t("mmse.repetition")}
               </CardTitle>
+              <p className="mt-1 text-sm font-medium text-fuchsia-700">
+                {phase === "moderate"
+                  ? localizeText("Moderate sentence", { zh: "中等难度句子", yue: "中等難度句子", fr: "Phrase de niveau modéré" })
+                  : localizeText("Difficult sentence", { zh: "较高难度句子", yue: "較高難度句子", fr: "Phrase de niveau difficile" })}
+              </p>
             </div>
           </div>
           <CardTitle className="flex items-center justify-between flex-wrap gap-4">
@@ -215,8 +224,8 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
             </Label>
             <AssessmentInput
               id="repetition"
-              value={repetitionAnswer}
-              onChange={(e) => setRepetitionAnswer(e.target.value)}
+              value={getCurrentAnswer()}
+              onChange={(e) => setCurrentAnswer(e.target.value)}
               placeholder=""
               className="min-h-[48px] w-full text-base touch-manipulation"
               disabled={!hasPlayedAudio}
@@ -243,10 +252,12 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!hasPlayedAudio || repetitionAnswer.trim() === ""}
+              disabled={!hasPlayedAudio || getCurrentAnswer().trim() === ""}
               className="w-full max-w-xs touch-manipulation min-h-[44px] order-1 sm:order-2"
             >
-              {t("common.next")}: {t("question.similarity")}
+              {phase === "moderate"
+                ? `${t("common.next")}: ${localizeText("Difficult repetition", { zh: "较高难度复述", yue: "較高難度複述", fr: "Répétition difficile" })}`
+                : `${t("common.next")}: ${t("question.similarity")}`}
             </Button>
           </div>
         </CardContent>
