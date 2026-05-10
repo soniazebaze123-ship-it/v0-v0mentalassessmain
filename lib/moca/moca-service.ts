@@ -26,12 +26,12 @@ export interface MoCAItemAnswers {
   vigilance_tapping_correct: boolean; // 0 or 1
   serial_7s_steps_correct: number; // 0-3 (number of correct subtractions)
 
-  // Language (3 points)
+  // Language - repetition only (2 points)
   sentence_1_repetition_correct: boolean; // 0 or 1
   sentence_2_repetition_correct: boolean; // 0 or 1
   verbal_fluency_correct: boolean; // 0 or 1
 
-  // Abstraction (2 points)
+  // Abstraction (1 point)
   similarity_pair_1_correct: boolean; // 0 or 1
   similarity_pair_2_correct: boolean; // 0 or 1
 
@@ -55,8 +55,8 @@ export interface MoCAScores {
   visuospatial_exec_score: number; // 0-5
   naming_score: number; // 0-3
   attention_score: number; // 0-6
-  language_score: number; // 0-3
-  abstraction_score: number; // 0-2
+  language_score: number; // 0-2
+  abstraction_score: number; // 0-1
   delayed_recall_score: number; // 0-5
   orientation_score: number; // 0-6
   total_score_raw: number; // 0-30
@@ -107,18 +107,15 @@ function scoreLanguage(answers: MoCAItemAnswers): number {
   if (answers.sentence_1_repetition_correct) score += 1; // 1 point
 
   // Difficult sentence: "The little boy carried a basket of fresh flowers to his grandmother’s house."
-  if (answers.sentence_2_repetition_correct) score += 2; // 2 points
+  if (answers.sentence_2_repetition_correct) score += 1; // 1 point
 
-  if (answers.verbal_fluency_correct) score += 1; // 1 point
-
-  return Math.min(score, 4); // Adjusted max score for language section
+  return Math.min(score, 2);
 }
 
 function scoreAbstraction(answers: MoCAItemAnswers): number {
   let score = 0;
   if (answers.similarity_pair_1_correct) score += 1;
-  if (answers.similarity_pair_2_correct) score += 1;
-  return Math.min(score, 2);
+  return Math.min(score, 1);
 }
 
 function scoreDelayedRecall(
@@ -276,18 +273,3 @@ export async function getMoCAResults(sessionId: string) {
   return data;
 }
 
-// Translations for new sentences
-const translations = {
-  moderate: {
-    en: "The nurse is helping the patient in the hospital.",
-    zh: "护士正在医院里帮助病人。",
-    yue: "護士喺醫院幫緊病人。",
-    fr: "L'infirmière aide le patient à l'hôpital.",
-  },
-  difficult: {
-    en: "The little boy carried a basket of fresh flowers to his grandmother’s house.",
-    zh: "小男孩提着一篮鲜花到他奶奶家。",
-    yue: "細路仔提住一籃鮮花去佢奶奶屋企。",
-    fr: "Le petit garçon a porté un panier de fleurs fraîches chez sa grand-mère.",
-  },
-};
