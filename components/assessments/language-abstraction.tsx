@@ -32,10 +32,10 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
       fr: "L'infirmière aide le patient à l'hôpital.",
     },
     difficult: {
-      en: "The little boy carried a basket of fresh flowers to his grandmother's house.",
-      zh: "小男孩提着一篮鲜花到他奶奶家。",
-      yue: "細路仔提住一籃鮮花去佢奶奶屋企。",
-      fr: "Le petit garçon a porté un panier de fleurs fraîches chez sa grand-mère.",
+      en: "The little boy brought a basket of flowers to his grandmother's house.",
+      zh: "小男孩提着一篮花到他奶奶家。",
+      yue: "細路仔提住一籃花去佢奶奶屋企。",
+      fr: "Le petit garçon a apporté un panier de fleurs chez sa grand-mère.",
     },
   } as const
 

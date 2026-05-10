@@ -106,7 +106,7 @@ function scoreLanguage(answers: MoCAItemAnswers): number {
   // Moderate sentence: "The nurse is helping the patient in the hospital."
   if (answers.sentence_1_repetition_correct) score += 1; // 1 point
 
-  // Difficult sentence: "The little boy carried a basket of fresh flowers to his grandmother’s house."
+  // Difficult sentence: "The little boy brought a basket of flowers to his grandmother's house."
   if (answers.sentence_2_repetition_correct) score += 1; // 1 point
 
   if (answers.verbal_fluency_correct) score += 1; // 1 point
