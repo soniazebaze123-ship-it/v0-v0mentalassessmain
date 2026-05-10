@@ -281,7 +281,7 @@ export function Dashboard({
   return (
     <div className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.14),_transparent_24%),linear-gradient(135deg,_#f7fbff_0%,_#eefaf7_45%,_#f4f7ff_100%)] p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8 overflow-hidden rounded-[32px] border border-white/80 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.14),_transparent_24%),linear-gradient(135deg,_rgba(255,255,255,0.94),_rgba(247,250,255,0.96))] shadow-[0_24px_90px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+        <div className="mb-8 overflow-hidden rounded-[32px] border border-white/80 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.14),_transparent_24%),linear-gradient(135deg,_rgba(255,255,255,0.94),_rgba(247,250,255,0.96),_rgba(253,242,248,0.96))] shadow-[0_24px_90px_rgba(15,23,42,0.10)] backdrop-blur-xl">
           <div className="px-6 py-6 md:px-8 md:py-8">
             <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
               <div className="max-w-3xl">
@@ -324,9 +324,6 @@ export function Dashboard({
                 <ThemeToggle />
                 <Button asChild variant="outline" size="sm" className="touch-target rounded-xl border-rose-200 bg-white/80 text-rose-700 hover:bg-rose-50">
                   <Link href="/olfactory-preview">{localizeText("Odofin Preview", { zh: "Odofin预览", yue: "Odofin預覽", fr: "Aperçu Odofin" })}</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm" className="touch-target rounded-xl border-amber-200 bg-white/80 text-amber-700 hover:bg-amber-50">
-                  <Link href="/olfactory">{localizeText("Olfactory 14 Module", { zh: "嗅觉14项模块", yue: "嗅覺14項模組", fr: "Module olfactif 14 items" })}</Link>
                 </Button>
 
               </div>
