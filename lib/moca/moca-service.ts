@@ -16,7 +16,7 @@ export interface MoCAItemAnswers {
   clock_hands_correct: boolean; // 0 or 1
 
   // Naming (3 points)
-  naming_animal_1: string; // e.g., "lion"
+  naming_animal_1: string; // e.g., "tiger"
   naming_animal_2: string; // e.g., "rhinoceros"
   naming_animal_3: string; // e.g., "camel"
 
@@ -80,7 +80,7 @@ function scoreVisuospatialExecutive(answers: MoCAItemAnswers): number {
 
 function scoreNaming(answers: MoCAItemAnswers): number {
   let score = 0;
-  const expectedAnimals = ["lion", "rhinoceros", "camel"];
+  const expectedAnimals = ["tiger", "rhinoceros", "camel"];
   const provided = [answers.naming_animal_1, answers.naming_animal_2, answers.naming_animal_3];
 
   for (let i = 0; i < 3; i++) {
