@@ -450,8 +450,8 @@ const englishTranslations: TranslationMap = {
   "sensory.auditory.complete_message": "Thank you for completing the hearing test.",
 
   // Sensory Screening - Olfactory
-  "sensory.olfactory.title": "Smell Identification Test",
-  "sensory.olfactory.description": "Identify common smells to assess olfactory function",
+  "sensory.olfactory.title": "CogniScent™",
+  "sensory.olfactory.description": "14-item olfactory cognitive screening assessment",
   "sensory.olfactory.instruction":
     "You will be shown images of items. Select which smell they represent.",
   "sensory.olfactory.setup_title": "Test Instructions:",
@@ -826,8 +826,8 @@ const zhOverrides: TranslationMap = {
   "sensory.auditory.title": "听力筛查",
   "sensory.auditory.description": "通过噪声数字测试进行听力筛查",
   "sensory.auditory.instruction": "请听带有背景噪音的数字，并输入你听到的内容。",
-  "sensory.olfactory.title": "嗅觉识别测试",
-  "sensory.olfactory.description": "识别常见气味以评估嗅觉功能",
+  "sensory.olfactory.title": "CogniScent™",
+  "sensory.olfactory.description": "14项嗅觉认知筛查评估",
   "sensory.olfactory.smell.ginger": "生姜",
   "sensory.olfactory.smell.alcohol": "酒精",
 
@@ -1173,8 +1173,8 @@ const yueOverrides: TranslationMap = {
   "sensory.auditory.title": "聽力篩查",
   "sensory.auditory.description": "透過噪音數字測試進行聽力篩查",
   "sensory.auditory.instruction": "請聽帶有背景噪音嘅數字，然後輸入你聽到嘅內容。",
-  "sensory.olfactory.title": "嗅覺識別測試",
-  "sensory.olfactory.description": "識別常見氣味以評估嗅覺功能",
+  "sensory.olfactory.title": "CogniScent™",
+  "sensory.olfactory.description": "14項嗅覺認知篩查評估",
   "sensory.olfactory.smell.ginger": "生薑",
   "sensory.olfactory.smell.alcohol": "酒精",
 
@@ -1507,8 +1507,8 @@ const frOverrides: TranslationMap = {
   "sensory.auditory.title": "Dépistage auditif",
   "sensory.auditory.description": "Évaluez l'audition avec un test de chiffres dans le bruit",
   "sensory.auditory.instruction": "Écoutez les chiffres diffusés avec un bruit de fond et saisissez ce que vous entendez.",
-  "sensory.olfactory.title": "Test d'identification des odeurs",
-  "sensory.olfactory.description": "Identifiez des odeurs courantes pour évaluer la fonction olfactive",
+  "sensory.olfactory.title": "CogniScent™",
+  "sensory.olfactory.description": "Évaluation cognitive olfactive en 14 items",
   "sensory.olfactory.smell.ginger": "Gingembre",
   "sensory.olfactory.smell.alcohol": "Alcool",
 

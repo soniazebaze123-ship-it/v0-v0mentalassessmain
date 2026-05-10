@@ -647,7 +647,7 @@ export function Dashboard({
               {status.olfactory.completed ? (
                 <div className="space-y-3">
                   <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 text-center">
-                    <p className="text-3xl font-bold text-emerald-600">{status.olfactory.score}/12</p>
+                    <p className="text-3xl font-bold text-emerald-600">{status.olfactory.score}/14</p>
                     <p className="text-xs text-emerald-700 mt-1">
                       {status.olfactory.classification === "normal"
                         ? localizeText("Normal identification range", { zh: "识别结果正常", yue: "識別結果正常", fr: "Identification normale" })
