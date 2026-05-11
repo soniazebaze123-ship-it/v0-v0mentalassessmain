@@ -28,6 +28,20 @@ export async function POST(request: Request) {
       .limit(1)
 
     if (checkError) {
+      if (checkError.message.includes("password_hash")) {
+        return NextResponse.json(
+          { error: "Password registration is not ready yet. Run scripts/08-add-user-password-auth.sql in Supabase first." },
+          { status: 503 },
+        )
+      }
+
+      if (checkError.message.includes("national_id")) {
+        return NextResponse.json(
+          { error: "National ID registration is not ready yet. Run scripts/12-add-user-national-id.sql in Supabase first." },
+          { status: 503 },
+        )
+      }
+
       return NextResponse.json({ error: "Could not verify existing account." }, { status: 500 })
     }
 
