@@ -165,7 +165,6 @@ export function ObjectNaming({ assessmentMode = "MMSE", onComplete, onSkip }: Ob
           </Button>
           <Button
             onClick={checkAnswers}
-            disabled={!questions.length || selectedAnswers.some((answer) => answer === "")}
             className="w-full sm:w-auto sm:max-w-xs"
           >
             {t("common.submit")}

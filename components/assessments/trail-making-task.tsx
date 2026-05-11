@@ -430,7 +430,7 @@ export function TrailMakingTask({ onComplete, onSkip }: TrailMakingTaskProps) {
             <Button variant="outline" onClick={handleSkip}>
               {t("common.skip_task")}
             </Button>
-            <Button onClick={checkAnswer} disabled={connections.length < 7}>
+            <Button onClick={checkAnswer}>
               {t("common.submit")}
             </Button>
           </div>

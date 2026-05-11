@@ -247,7 +247,7 @@ export function OrientationTask({ onComplete, onSkip }: OrientationTaskProps) {
           <Button variant="outline" onClick={handleSkip}>
             {t("common.skip_task")}
           </Button>
-          <Button onClick={checkAnswers} disabled={!isFormComplete} className="w-full max-w-xs bg-gradient-to-r from-emerald-600 to-teal-600 shadow-md hover:from-emerald-700 hover:to-teal-700">
+          <Button onClick={checkAnswers} className="w-full max-w-xs bg-gradient-to-r from-emerald-600 to-teal-600 shadow-md hover:from-emerald-700 hover:to-teal-700">
             {t("common.submit")}
           </Button>
         </div>

@@ -308,7 +308,7 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
           <Button variant="outline" onClick={handleSkip}>
             {t("common.skip_task")}
           </Button>
-          <Button onClick={checkAnswers} disabled={!isFormComplete} className="w-full max-w-xs">
+          <Button onClick={checkAnswers} className="w-full max-w-xs">
             {t("common.submit")}
           </Button>
         </div>

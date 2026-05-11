@@ -102,7 +102,6 @@ export function AnimalNaming({ onComplete, onSkip }: AnimalNamingProps) {
           </Button>
           <Button
             onClick={checkAnswers}
-            disabled={!questions.length || selectedAnswers.some((answer) => answer === "")}
             className="w-full max-w-xs"
           >
             {t("common.submit")}

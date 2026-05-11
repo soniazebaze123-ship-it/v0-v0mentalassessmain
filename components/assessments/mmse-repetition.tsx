@@ -203,7 +203,6 @@ export function MMSERepetition({ onComplete, onSkip }: MMSERepetitionProps) {
 
           <Button
             onClick={checkAnswer}
-            disabled={!hasPlayedAudio || answer.trim() === ""}
             className="w-full max-w-xs"
           >
             {t("common.submit")}

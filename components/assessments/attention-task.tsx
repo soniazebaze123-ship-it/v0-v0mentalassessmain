@@ -144,7 +144,7 @@ export function AttentionTask({ onComplete, onSkip }: AttentionTaskProps) {
           <Button variant="outline" onClick={handleSkip}>
             {t("common.skip_task")}
           </Button>
-          <Button onClick={checkAnswer} disabled={answer.trim() === ""} className="w-full max-w-xs">
+          <Button onClick={checkAnswer} className="w-full max-w-xs">
             {t("common.submit")}
           </Button>
         </div>

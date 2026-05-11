@@ -227,7 +227,7 @@ export function CopyingDesign({
           <Button variant="outline" onClick={clearDrawing}>
             {t("common.reset")}
           </Button>
-          <Button onClick={handleSubmit} disabled={!hasDrawn} className="w-full max-w-xs">
+          <Button onClick={handleSubmit} className="w-full max-w-xs">
             {t("common.submit")}
           </Button>
         </div>

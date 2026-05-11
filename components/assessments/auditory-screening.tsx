@@ -509,7 +509,6 @@ export function AuditoryScreening({ onComplete, onSkip, enhanced = false }: Audi
             />
             <Button
               onClick={handleSubmitResponse}
-              disabled={userResponse.length !== 3 || isPlaying}
               className={primaryButton + " mt-4 w-full"}
               size="lg"
             >
