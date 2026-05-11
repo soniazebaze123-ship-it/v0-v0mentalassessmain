@@ -145,7 +145,7 @@ export async function POST(request: Request) {
 
         const { data: fallbackUsers, error: fallbackError } = await supabase
           .from("users")
-          .select("id, phone_number")
+          .select("id, phone_number, name")
           .in("phone_number", phoneLookupCandidates)
           .limit(1)
 

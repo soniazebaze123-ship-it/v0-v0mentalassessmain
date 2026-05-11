@@ -60,6 +60,23 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [progress, setProgress] = useState<Record<string, AssessmentProgress>>({})
   const getErrorMessage = (error: unknown) => (error instanceof Error ? error.message : "An unexpected error occurred.")
 
+  const normalizePhoneForKey = (value: string) => value.replace(/\D/g, "")
+
+  const getStoredNameByPhone = (phoneNumber: string) => {
+    const key = `mental_assess_name_${normalizePhoneForKey(phoneNumber)}`
+    const value = localStorage.getItem(key)
+    return value && value.trim().length > 0 ? value : null
+  }
+
+  const setStoredNameByPhone = (phoneNumber: string, name?: string | null) => {
+    if (!name || name.trim().length === 0) {
+      return
+    }
+
+    const key = `mental_assess_name_${normalizePhoneForKey(phoneNumber)}`
+    localStorage.setItem(key, name)
+  }
+
   useEffect(() => {
     const storedUser = localStorage.getItem("mental_assess_dummy_user")
     if (storedUser) {
@@ -113,11 +130,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const trimmedPhone = phoneNumber.trim()
       const digits = trimmedPhone.replace(/\D/g, "")
       const normalizedPhone = trimmedPhone.startsWith("+") ? `+${digits}` : trimmedPhone
+      const storedName = getStoredNameByPhone(normalizedPhone)
       const localUser = {
         id: crypto.randomUUID(),
         phone_number: normalizedPhone,
         email: `${digits || Date.now()}@mentalassess.app`,
-        name: digits ? `Patient ${digits.slice(-4)}` : "Patient",
+        name: storedName ?? (digits ? `Patient ${digits.slice(-4)}` : "Patient"),
       }
 
       setUser(localUser)
@@ -142,6 +160,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUser(payload.user)
+      setStoredNameByPhone(payload.user.phone_number || phoneNumber, payload.user.name)
       localStorage.setItem("mental_assess_dummy_user", JSON.stringify(payload.user))
       await loadUserProgress(payload.user.id)
       return { success: true }
@@ -188,6 +207,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUser(payload.user)
+      setStoredNameByPhone(payload.user.phone_number || phoneNumber, payload.user.name)
       localStorage.setItem("mental_assess_dummy_user", JSON.stringify(payload.user))
       await loadUserProgress(payload.user.id)
       return { success: true }
