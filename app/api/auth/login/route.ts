@@ -8,6 +8,12 @@ function buildGeneratedEmail(phoneNumber: string) {
   return `${digits || Date.now()}@mentalassess.app`
 }
 
+function buildGeneratedName(phoneNumber: string) {
+  const digits = phoneNumber.replace(/[^0-9]/g, "")
+  const suffix = digits.slice(-4)
+  return suffix ? `Patient ${suffix}` : "Patient"
+}
+
 async function createPatientOnLogin(
   supabase: Awaited<ReturnType<typeof createClient>>,
   phoneNumber: string,
@@ -19,6 +25,7 @@ async function createPatientOnLogin(
 
   const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber) || phoneNumber.trim()
   const generatedEmail = buildGeneratedEmail(normalizedPhoneNumber)
+  const generatedName = buildGeneratedName(normalizedPhoneNumber)
   const generatedId = crypto.randomUUID()
   const passwordHash = hashPassword(password)
 
@@ -28,6 +35,7 @@ async function createPatientOnLogin(
       id: generatedId,
       phone_number: normalizedPhoneNumber,
       email: generatedEmail,
+      name: generatedName,
       password_hash: passwordHash,
     })
     .select("id, email, phone_number, name, date_of_birth, gender")
@@ -43,6 +51,7 @@ async function createPatientOnLogin(
       id: generatedId,
       phone_number: normalizedPhoneNumber,
       email: generatedEmail,
+      name: generatedName,
     })
     .select("id, email, phone_number, name, date_of_birth, gender")
     .limit(1)
@@ -85,7 +94,7 @@ export async function POST(request: Request) {
       if (isSchemaIssue) {
         const { data: fallbackUsersWithPassword, error: fallbackWithPasswordError } = await supabase
           .from("users")
-          .select("id, phone_number, password_hash")
+          .select("id, email, phone_number, name, password_hash")
           .in("phone_number", phoneLookupCandidates)
           .limit(1)
 
@@ -142,7 +151,9 @@ export async function POST(request: Request) {
           return NextResponse.json({
             user: {
               id: fallbackUserWithPassword.id,
+              email: fallbackUserWithPassword.email,
               phone_number: fallbackUserWithPassword.phone_number,
+              name: fallbackUserWithPassword.name,
             },
           })
         }
