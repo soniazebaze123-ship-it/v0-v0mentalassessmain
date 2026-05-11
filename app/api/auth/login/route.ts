@@ -186,6 +186,18 @@ export async function POST(request: Request) {
       return await createPatientOnLogin(supabase, phoneNumber, password)
     }
 
+    if (!existingUser.name) {
+      const generatedName = buildGeneratedName(existingUser.phone_number || phoneNumber)
+      const { error: nameUpdateError } = await supabase
+        .from("users")
+        .update({ name: generatedName })
+        .eq("id", existingUser.id)
+
+      if (!nameUpdateError) {
+        existingUser.name = generatedName
+      }
+    }
+
     if (!existingUser.password_hash) {
       if (password.length < 8) {
         return NextResponse.json(
