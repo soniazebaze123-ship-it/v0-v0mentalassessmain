@@ -19,10 +19,6 @@ async function createPatientOnLogin(
   phoneNumber: string,
   password: string,
 ) {
-  if (password.length < 8) {
-    return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 })
-  }
-
   const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber) || phoneNumber.trim()
   const generatedEmail = buildGeneratedEmail(normalizedPhoneNumber)
   const generatedName = buildGeneratedName(normalizedPhoneNumber)
@@ -106,13 +102,6 @@ export async function POST(request: Request) {
           }
 
           if (!fallbackUserWithPassword.password_hash) {
-            if (password.length < 8) {
-              return NextResponse.json(
-                { error: "Set a password with at least 8 characters to reactivate this account." },
-                { status: 400 },
-              )
-            }
-
             const passwordHash = hashPassword(password)
             const { error: activationError } = await supabase
               .from("users")
@@ -130,10 +119,6 @@ export async function POST(request: Request) {
           }
 
           if (!verifyPassword(password, fallbackUserWithPassword.password_hash)) {
-            if (password.length < 8) {
-              return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 })
-            }
-
             const resetPasswordHash = hashPassword(password)
             const { error: resetError } = await supabase
               .from("users")
@@ -199,13 +184,6 @@ export async function POST(request: Request) {
     }
 
     if (!existingUser.password_hash) {
-      if (password.length < 8) {
-        return NextResponse.json(
-          { error: "Set a password with at least 8 characters to reactivate this account." },
-          { status: 400 },
-        )
-      }
-
       const passwordHash = hashPassword(password)
       const { error: activationError } = await supabase
         .from("users")
@@ -223,10 +201,6 @@ export async function POST(request: Request) {
     }
 
     if (!verifyPassword(password, existingUser.password_hash)) {
-      if (password.length < 8) {
-        return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 })
-      }
-
       const resetPasswordHash = hashPassword(password)
       const { error: resetError } = await supabase
         .from("users")
