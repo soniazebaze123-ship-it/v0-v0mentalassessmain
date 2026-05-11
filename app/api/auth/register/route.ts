@@ -9,21 +9,20 @@ export async function POST(request: Request) {
     const body = await request.json()
     const phoneNumber = typeof body.phoneNumber === "string" ? body.phoneNumber.trim() : ""
     const name = typeof body.name === "string" ? body.name.trim() : ""
-    const nationalId = typeof body.nationalId === "string" ? body.nationalId.trim() : ""
     const dateOfBirth = typeof body.dateOfBirth === "string" ? body.dateOfBirth : ""
     const gender = typeof body.gender === "string" ? body.gender : ""
     const password = typeof body.password === "string" ? body.password : ""
     const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber)
     const phoneLookupCandidates = getPhoneLookupCandidates(phoneNumber)
 
-    if (phoneNumber.length < 6 || name.length < 2 || nationalId.length < 3 || !dateOfBirth || !gender || password.length < 8) {
+    if (phoneNumber.length < 6 || name.length < 2 || !dateOfBirth || !gender || password.length < 8) {
       return NextResponse.json({ error: "Missing required registration fields." }, { status: 400 })
     }
 
     const supabase = await createClient()
     const { data: existingUsers, error: checkError } = await supabase
       .from("users")
-      .select("id, email, phone_number, name, national_id, date_of_birth, gender, password_hash")
+      .select("id, email, phone_number, name, date_of_birth, gender, password_hash")
       .in("phone_number", phoneLookupCandidates)
       .limit(1)
 
@@ -31,13 +30,6 @@ export async function POST(request: Request) {
       if (checkError.message.includes("password_hash")) {
         return NextResponse.json(
           { error: "Password registration is not ready yet. Run scripts/08-add-user-password-auth.sql in Supabase first." },
-          { status: 503 },
-        )
-      }
-
-      if (checkError.message.includes("national_id")) {
-        return NextResponse.json(
-          { error: "National ID registration is not ready yet. Run scripts/12-add-user-national-id.sql in Supabase first." },
           { status: 503 },
         )
       }
@@ -61,25 +53,17 @@ export async function POST(request: Request) {
           email: existingUser.email || generatedEmail,
           phone_number: normalizedPhoneNumber,
           name,
-          national_id: nationalId,
           date_of_birth: dateOfBirth,
           gender,
           password_hash: passwordHash,
         })
         .eq("id", existingUser.id)
-        .select("id, email, phone_number, name, national_id, date_of_birth, gender")
+        .select("id, email, phone_number, name, date_of_birth, gender")
 
       if (updateError) {
         if (updateError.message.includes("password_hash")) {
           return NextResponse.json(
             { error: "Password registration is not ready yet. Run scripts/08-add-user-password-auth.sql in Supabase first." },
-            { status: 503 },
-          )
-        }
-
-        if (updateError.message.includes("national_id")) {
-          return NextResponse.json(
-            { error: "National ID registration is not ready yet. Run scripts/12-add-user-national-id.sql in Supabase first." },
             { status: 503 },
           )
         }
@@ -97,24 +81,16 @@ export async function POST(request: Request) {
         phone_number: normalizedPhoneNumber,
         email: generatedEmail,
         name,
-        national_id: nationalId,
         date_of_birth: dateOfBirth,
         gender,
         password_hash: passwordHash,
       })
-      .select("id, email, phone_number, name, national_id, date_of_birth, gender")
+      .select("id, email, phone_number, name, date_of_birth, gender")
 
     if (insertError) {
       if (insertError.message.includes("password_hash")) {
         return NextResponse.json(
           { error: "Password registration is not ready yet. Run scripts/08-add-user-password-auth.sql in Supabase first." },
-          { status: 503 },
-        )
-      }
-
-      if (insertError.message.includes("national_id")) {
-        return NextResponse.json(
-          { error: "National ID registration is not ready yet. Run scripts/12-add-user-national-id.sql in Supabase first." },
           { status: 503 },
         )
       }
