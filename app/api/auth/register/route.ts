@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { v4 as uuidv4 } from "uuid"
 import { createClient } from "@/lib/supabase/server"
 import { getPhoneLookupCandidates, normalizePhoneNumber } from "@/lib/auth/phone"
-import { hashPassword } from "@/lib/auth/password"
+import { hashPassword, verifyPassword } from "@/lib/auth/password"
 
 export async function POST(request: Request) {
   try {
@@ -45,7 +45,41 @@ export async function POST(request: Request) {
 
     if (existingUser) {
       if (existingUser.password_hash) {
-        return NextResponse.json({ error: "Phone number already registered." }, { status: 409 })
+        if (!verifyPassword(password, existingUser.password_hash)) {
+          return NextResponse.json({ error: "Phone number already registered." }, { status: 409 })
+        }
+
+        const completeProfilePayload: Record<string, unknown> = {
+          email: existingUser.email || generatedEmail,
+          phone_number: normalizedPhoneNumber,
+          name,
+          date_of_birth: dateOfBirth,
+          gender,
+          password_hash: existingUser.password_hash,
+        }
+        if (nationalId) completeProfilePayload.national_id = nationalId
+
+        const { data: completedUsers, error: completeError } = await supabase
+          .from("users")
+          .update(completeProfilePayload)
+          .eq("id", existingUser.id)
+          .select("id, email, phone_number, name, date_of_birth, gender, national_id")
+
+        if (completeError) {
+          if (completeError.message.includes("national_id")) {
+            const { data: retryCompleted, error: retryCompleteError } = await supabase
+              .from("users")
+              .update({ ...completeProfilePayload, national_id: undefined })
+              .eq("id", existingUser.id)
+              .select("id, email, phone_number, name, date_of_birth, gender")
+            if (retryCompleteError) return NextResponse.json({ error: retryCompleteError.message }, { status: 500 })
+            return NextResponse.json({ user: retryCompleted?.[0] ?? null })
+          }
+
+          return NextResponse.json({ error: completeError.message }, { status: 500 })
+        }
+
+        return NextResponse.json({ user: completedUsers?.[0] ?? null })
       }
 
       const updatePayload: Record<string, unknown> = {
