@@ -285,7 +285,6 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!hasPlayedAudio || getCurrentAnswer().trim() === ""}
               className="w-full max-w-xs touch-manipulation min-h-[44px] order-1 sm:order-2"
             >
               {phase === "moderate"
@@ -381,7 +380,6 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={similarityAnswer === ""}
             className="w-full max-w-xs touch-manipulation min-h-[44px] order-1 sm:order-2"
           >
             {t("common.submit")}
