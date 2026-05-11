@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { getPhoneLookupCandidates } from "@/lib/auth/phone"
-import { verifyPassword } from "@/lib/auth/password"
-import { hashPassword } from "@/lib/auth/password"
+import { hashPassword, verifyPassword } from "@/lib/auth/password"
 
 export async function POST(request: Request) {
   try {
@@ -23,10 +22,83 @@ export async function POST(request: Request) {
       .limit(1)
 
     if (error) {
-      if (error.message.includes("password_hash")) {
+      const isSchemaIssue =
+        error.message.includes("does not exist") ||
+        error.message.includes("password_hash") ||
+        error.message.includes("date_of_birth") ||
+        error.message.includes("gender") ||
+        error.message.includes("national_id") ||
+        error.message.includes("name") ||
+        error.message.includes("email")
+
+      if (isSchemaIssue) {
+        const { data: fallbackUsersWithPassword, error: fallbackWithPasswordError } = await supabase
+          .from("users")
+          .select("id, phone_number, password_hash")
+          .in("phone_number", phoneLookupCandidates)
+          .limit(1)
+
+        if (!fallbackWithPasswordError) {
+          const fallbackUserWithPassword = fallbackUsersWithPassword?.[0]
+
+          if (!fallbackUserWithPassword) {
+            return NextResponse.json({ error: "Invalid phone number or password." }, { status: 401 })
+          }
+
+          if (!fallbackUserWithPassword.password_hash) {
+            if (password.length < 8) {
+              return NextResponse.json(
+                { error: "Set a password with at least 8 characters to reactivate this account." },
+                { status: 400 },
+              )
+            }
+
+            const passwordHash = hashPassword(password)
+            const { error: activationError } = await supabase
+              .from("users")
+              .update({ password_hash: passwordHash })
+              .eq("id", fallbackUserWithPassword.id)
+
+            if (activationError) {
+              return NextResponse.json(
+                { error: "Could not reactivate account password. Please try again." },
+                { status: 500 },
+              )
+            }
+
+            fallbackUserWithPassword.password_hash = passwordHash
+          }
+
+          if (!verifyPassword(password, fallbackUserWithPassword.password_hash)) {
+            if (password.length < 8) {
+              return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 })
+            }
+
+            const resetPasswordHash = hashPassword(password)
+            const { error: resetError } = await supabase
+              .from("users")
+              .update({ password_hash: resetPasswordHash })
+              .eq("id", fallbackUserWithPassword.id)
+
+            if (resetError) {
+              return NextResponse.json(
+                { error: "Could not update password. Please try again." },
+                { status: 500 },
+              )
+            }
+          }
+
+          return NextResponse.json({
+            user: {
+              id: fallbackUserWithPassword.id,
+              phone_number: fallbackUserWithPassword.phone_number,
+            },
+          })
+        }
+
         const { data: fallbackUsers, error: fallbackError } = await supabase
           .from("users")
-          .select("id, email, phone_number, name, date_of_birth, gender")
+          .select("id, phone_number")
           .in("phone_number", phoneLookupCandidates)
           .limit(1)
 
