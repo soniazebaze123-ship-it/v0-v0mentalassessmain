@@ -93,6 +93,7 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const optionalLabel = t("common.optional") === "common.optional" ? "optional" : t("common.optional")
   const currentYear = new Date().getFullYear()
   const yearOptions = Array.from({ length: DATE_OPTION_COUNT }, (_, index) => String(currentYear - index))
   const monthOptions = Array.from({ length: 12 }, (_, index) => index + 1)
@@ -156,19 +157,26 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold">{t("register.title")}</CardTitle>
-          <CardDescription>{t("registration.description")}</CardDescription>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.25),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(244,114,182,0.22),_transparent_40%),linear-gradient(145deg,_#f8fafc,_#e2e8f0_45%,_#f8fafc)] p-4 md:p-8">
+      <div className="pointer-events-none absolute -left-24 top-12 h-72 w-72 rounded-full bg-cyan-300/25 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-16 right-4 h-64 w-64 rounded-full bg-rose-300/25 blur-3xl" />
+
+      <Card className="relative z-10 w-full max-w-2xl border-white/70 bg-white/75 shadow-[0_28px_100px_rgba(15,23,42,0.16)] backdrop-blur-xl">
+        <CardHeader className="space-y-4 pb-4 text-center md:pb-6">
+          <div className="mx-auto w-fit rounded-full border border-cyan-200 bg-cyan-50/80 px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700">
+            Premium Patient Intake
+          </div>
+          <CardTitle className="text-balance text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">{t("register.title")}</CardTitle>
+          <CardDescription className="mx-auto max-w-xl text-pretty text-slate-600">{t("registration.description")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex justify-center mb-4 space-x-2 flex-wrap gap-2">
+
+        <CardContent className="space-y-6 md:space-y-8">
+          <div className="flex flex-wrap justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/80 p-2">
             <Button
               variant={language === "en" ? "default" : "outline"}
               size="sm"
               onClick={() => setLanguage("en")}
-              className="touch-target"
+              className={`touch-target rounded-xl ${language === "en" ? "bg-slate-900 text-white hover:bg-slate-800" : "border-white bg-white/80 hover:bg-white"}`}
             >
               English
             </Button>
@@ -176,7 +184,7 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
               variant={language === "zh" ? "default" : "outline"}
               size="sm"
               onClick={() => setLanguage("zh")}
-              className="touch-target"
+              className={`touch-target rounded-xl ${language === "zh" ? "bg-slate-900 text-white hover:bg-slate-800" : "border-white bg-white/80 hover:bg-white"}`}
             >
               中文
             </Button>
@@ -184,7 +192,7 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
               variant={language === "yue" ? "default" : "outline"}
               size="sm"
               onClick={() => setLanguage("yue")}
-              className="touch-target"
+              className={`touch-target rounded-xl ${language === "yue" ? "bg-slate-900 text-white hover:bg-slate-800" : "border-white bg-white/80 hover:bg-white"}`}
             >
               廣東話
             </Button>
@@ -192,15 +200,15 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
               variant={language === "fr" ? "default" : "outline"}
               size="sm"
               onClick={() => setLanguage("fr")}
-              className="touch-target"
+              className={`touch-target rounded-xl ${language === "fr" ? "bg-slate-900 text-white hover:bg-slate-800" : "border-white bg-white/80 hover:bg-white"}`}
             >
               Français
             </Button>
             <ThemeToggle />
           </div>
 
-          <form className="space-y-6" onSubmit={handleRegister} autoComplete="on">
-            <div className="space-y-2">
+          <form className="grid gap-5 md:grid-cols-2" onSubmit={handleRegister} autoComplete="on">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="name">{t("register.name")}</Label>
               <AssessmentInput
                 id="name"
@@ -229,6 +237,20 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="national-id">{t("register.national_id")} <span className="text-xs text-muted-foreground">({optionalLabel})</span></Label>
+              <AssessmentInput
+                id="national-id"
+                name="national-id"
+                type="text"
+                placeholder={t("register.national_id.placeholder")}
+                value={nationalId}
+                onChange={(e) => setNationalId(e.target.value)}
+                disabled={loading}
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="dob">{t("register.date_of_birth")}</Label>
               <div className="grid grid-cols-3 gap-2" id="dob">
                 {getDateFieldOrder(language).map((field) => {
@@ -304,20 +326,6 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="national-id">{t("register.national_id")} <span className="text-xs text-muted-foreground">({t("common.optional") || "optional"})</span></Label>
-              <AssessmentInput
-                id="national-id"
-                name="national-id"
-                type="text"
-                placeholder={t("register.national_id.placeholder")}
-                value={nationalId}
-                onChange={(e) => setNationalId(e.target.value)}
-                disabled={loading}
-                autoComplete="off"
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="password">{t("register.password")}</Label>
               <AssessmentInput
                 id="password"
@@ -347,7 +355,7 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
 
             <Button
               type="submit"
-              className="w-full touch-target"
+              className="touch-target md:col-span-2 h-11 rounded-xl bg-slate-900 text-white transition hover:bg-slate-800"
               disabled={
                 loading ||
                 phoneNumber.length < 6 ||
@@ -360,12 +368,12 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
             >
               {loading ? t("common.loading") : t("common.next")}
             </Button>
+
+            {error && <p className="md:col-span-2 text-center text-sm text-red-500">{error}</p>}
           </form>
 
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
           <div className="text-center text-sm">
-            <Button variant="link" onClick={onBackToLogin} className="px-0">
+            <Button variant="link" onClick={onBackToLogin} className="px-0 text-slate-700 hover:text-slate-900">
               {t("login.already_account")}
             </Button>
           </div>
