@@ -1,7 +1,58 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { getPhoneLookupCandidates } from "@/lib/auth/phone"
+import { getPhoneLookupCandidates, normalizePhoneNumber } from "@/lib/auth/phone"
 import { hashPassword, verifyPassword } from "@/lib/auth/password"
+
+function buildGeneratedEmail(phoneNumber: string) {
+  const digits = phoneNumber.replace(/[^0-9]/g, "")
+  return `${digits || Date.now()}@mentalassess.app`
+}
+
+async function createPatientOnLogin(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  phoneNumber: string,
+  password: string,
+) {
+  if (password.length < 8) {
+    return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 })
+  }
+
+  const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber) || phoneNumber.trim()
+  const generatedEmail = buildGeneratedEmail(normalizedPhoneNumber)
+  const generatedId = crypto.randomUUID()
+  const passwordHash = hashPassword(password)
+
+  const { data: createdWithPassword, error: createWithPasswordError } = await supabase
+    .from("users")
+    .insert({
+      id: generatedId,
+      phone_number: normalizedPhoneNumber,
+      email: generatedEmail,
+      password_hash: passwordHash,
+    })
+    .select("id, email, phone_number, name, date_of_birth, gender")
+    .limit(1)
+
+  if (!createWithPasswordError && createdWithPassword?.[0]) {
+    return NextResponse.json({ user: createdWithPassword[0] })
+  }
+
+  const { data: createdWithoutPassword, error: createWithoutPasswordError } = await supabase
+    .from("users")
+    .insert({
+      id: generatedId,
+      phone_number: normalizedPhoneNumber,
+      email: generatedEmail,
+    })
+    .select("id, email, phone_number, name, date_of_birth, gender")
+    .limit(1)
+
+  if (createWithoutPasswordError || !createdWithoutPassword?.[0]) {
+    return NextResponse.json({ error: "Could not create patient account. Please try again." }, { status: 500 })
+  }
+
+  return NextResponse.json({ user: createdWithoutPassword[0] })
+}
 
 export async function POST(request: Request) {
   try {
@@ -42,7 +93,7 @@ export async function POST(request: Request) {
           const fallbackUserWithPassword = fallbackUsersWithPassword?.[0]
 
           if (!fallbackUserWithPassword) {
-            return NextResponse.json({ error: "Invalid phone number or password." }, { status: 401 })
+            return await createPatientOnLogin(supabase, phoneNumber, password)
           }
 
           if (!fallbackUserWithPassword.password_hash) {
@@ -109,7 +160,7 @@ export async function POST(request: Request) {
         const fallbackUser = fallbackUsers?.[0]
 
         if (!fallbackUser) {
-          return NextResponse.json({ error: "Invalid phone number or password." }, { status: 401 })
+          return await createPatientOnLogin(supabase, phoneNumber, password)
         }
 
         return NextResponse.json({ user: fallbackUser })
@@ -121,7 +172,7 @@ export async function POST(request: Request) {
     const existingUser = data?.[0]
 
     if (!existingUser) {
-      return NextResponse.json({ error: "Invalid phone number or password." }, { status: 401 })
+      return await createPatientOnLogin(supabase, phoneNumber, password)
     }
 
     if (!existingUser.password_hash) {
