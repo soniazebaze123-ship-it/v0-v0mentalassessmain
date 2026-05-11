@@ -11,6 +11,7 @@ export async function POST(request: Request) {
     const name = typeof body.name === "string" ? body.name.trim() : ""
     const dateOfBirth = typeof body.dateOfBirth === "string" ? body.dateOfBirth : ""
     const gender = typeof body.gender === "string" ? body.gender : ""
+    const nationalId = typeof body.nationalId === "string" ? body.nationalId.trim() : ""
     const password = typeof body.password === "string" ? body.password : ""
     const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber)
     const phoneLookupCandidates = getPhoneLookupCandidates(phoneNumber)
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
     const supabase = await createClient()
     const { data: existingUsers, error: checkError } = await supabase
       .from("users")
-      .select("id, email, phone_number, name, date_of_birth, gender, password_hash")
+      .select("id, email, phone_number, name, date_of_birth, gender, password_hash, national_id")
       .in("phone_number", phoneLookupCandidates)
       .limit(1)
 
@@ -47,18 +48,24 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Phone number already registered." }, { status: 409 })
       }
 
+      const updateData: any = {
+        email: existingUser.email || generatedEmail,
+        phone_number: normalizedPhoneNumber,
+        name,
+        date_of_birth: dateOfBirth,
+        gender,
+        password_hash: passwordHash,
+      }
+
+      if (nationalId && nationalId.length > 0) {
+        updateData.national_id = nationalId
+      }
+
       const { data: updatedUsers, error: updateError } = await supabase
         .from("users")
-        .update({
-          email: existingUser.email || generatedEmail,
-          phone_number: normalizedPhoneNumber,
-          name,
-          date_of_birth: dateOfBirth,
-          gender,
-          password_hash: passwordHash,
-        })
+        .update(updateData)
         .eq("id", existingUser.id)
-        .select("id, email, phone_number, name, date_of_birth, gender")
+        .select("id, email, phone_number, name, date_of_birth, gender, national_id")
 
       if (updateError) {
         if (updateError.message.includes("password_hash")) {
@@ -74,18 +81,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ user: updatedUsers?.[0] ?? null })
     }
 
+    const insertData: any = {
+      id: uuidv4(),
+      phone_number: normalizedPhoneNumber,
+      email: generatedEmail,
+      name,
+      date_of_birth: dateOfBirth,
+      gender,
+      password_hash: passwordHash,
+    }
+
+    if (nationalId && nationalId.length > 0) {
+      insertData.national_id = nationalId
+    }
+
     const { data: newUsers, error: insertError } = await supabase
       .from("users")
-      .insert({
-        id: uuidv4(),
-        phone_number: normalizedPhoneNumber,
-        email: generatedEmail,
-        name,
-        date_of_birth: dateOfBirth,
-        gender,
-        password_hash: passwordHash,
-      })
-      .select("id, email, phone_number, name, date_of_birth, gender")
+      .insert(insertData)
+      .select("id, email, phone_number, name, date_of_birth, gender, national_id")
 
     if (insertError) {
       if (insertError.message.includes("password_hash")) {

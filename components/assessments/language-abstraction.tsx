@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Headphones, Languages, Repeat2, Shapes } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AssessmentInput } from "@/components/ui/assessment-input"
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useLanguage } from "@/contexts/language-context"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
+import { getInstructionAudioSources, playAudioSources, stopAudioPlayback } from "@/lib/instruction-audio"
 
 interface LanguageAbstractionProps {
   onComplete: (score: number) => void
@@ -23,6 +24,7 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
   const [similarityAnswer, setSimilarityAnswer] = useState("")
   const [isPlaying, setIsPlaying] = useState(false)
   const [hasPlayedAudio, setHasPlayedAudio] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const repetitionContent = {
     moderate: {
@@ -54,12 +56,27 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
     setModerateAnswer(value)
   }
 
-  const playAudio = () => {
+  const playAudio = async () => {
+    const playedFromFile = await playAudioSources({
+      sources: getInstructionAudioSources(language, phase === "difficult" ? "moca.language.difficult" : "moca.language.moderate"),
+      activeAudioRef: audioRef,
+      onStart: () => setIsPlaying(true),
+      onEnd: () => {
+        setIsPlaying(false)
+        setHasPlayedAudio(true)
+      },
+    })
+
+    if (playedFromFile) {
+      return
+    }
+
     if (!("speechSynthesis" in window)) {
       alert(t("audio.not_supported"))
       return
     }
 
+    stopAudioPlayback(audioRef)
     // Stop any currently playing speech
     window.speechSynthesis.cancel()
 
@@ -87,12 +104,28 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
     }
     utterance.onerror = (event) => {
       console.error("SpeechSynthesisUtterance.onerror", event)
-      alert(t("audio.error_playing") || "Error playing audio.")
       setIsPlaying(false)
+      alert(t("audio.error_playing") || "Error playing audio.")
     }
 
-    window.speechSynthesis.speak(utterance)
+    try {
+      window.speechSynthesis.speak(utterance)
+    } catch (error) {
+      console.error("Failed to start speech synthesis:", error)
+      setIsPlaying(false)
+      alert(t("audio.error_playing") || "Error playing audio.")
+    }
   }
+
+  useEffect(() => {
+    return () => {
+      stopAudioPlayback(audioRef)
+
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
 
   const checkRepetition = (userResponse: string, targetSentence: string) => {
     const userAnswer = userResponse.toLowerCase().trim()
@@ -194,7 +227,7 @@ export function LanguageAbstraction({ onComplete, onSkip }: LanguageAbstractionP
             </div>
             <div className="text-center space-y-4">
             <Button
-              onClick={playAudio}
+              onClick={() => void playAudio()}
               disabled={isPlaying}
               className="w-full max-w-xs touch-manipulation min-h-[48px] rounded-2xl bg-white"
               variant="outline"

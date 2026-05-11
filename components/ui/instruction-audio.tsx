@@ -1,9 +1,10 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Volume2, VolumeX } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
+import { getInstructionAudioSources, playAudioSources, stopAudioPlayback } from "@/lib/instruction-audio"
 
 interface InstructionAudioProps {
   instructionKey?: string
@@ -17,6 +18,7 @@ export function InstructionAudio({ instructionKey, text, textOverrides, autoPlay
   const { t, localizeText, getSpeechSettings, getBestVoice, language } = useLanguage()
   const [isPlaying, setIsPlaying] = useState(false)
   const [enhancedInstruction, setEnhancedInstruction] = useState<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const baseInstruction = instructionKey ? t(instructionKey) : text ? localizeText(text, textOverrides) : ""
 
@@ -62,6 +64,21 @@ export function InstructionAudio({ instructionKey, text, textOverrides, autoPlay
   }, [baseInstruction, enhancedInstruction, language])
 
   const playInstruction = useCallback(async (showAlerts = true) => {
+    const audioSources = instructionKey ? getInstructionAudioSources(language, instructionKey) : []
+
+    if (audioSources.length > 0) {
+      const playedFromFile = await playAudioSources({
+        sources: audioSources,
+        activeAudioRef: audioRef,
+        onStart: () => setIsPlaying(true),
+        onEnd: () => setIsPlaying(false),
+      })
+
+      if (playedFromFile) {
+        return
+      }
+    }
+
     if (!("speechSynthesis" in window)) {
       if (showAlerts) {
         alert(t("audio.not_supported"))
@@ -69,6 +86,7 @@ export function InstructionAudio({ instructionKey, text, textOverrides, autoPlay
       return
     }
 
+    stopAudioPlayback(audioRef)
     // Cancel any ongoing speech
     window.speechSynthesis.cancel()
 
@@ -91,6 +109,7 @@ export function InstructionAudio({ instructionKey, text, textOverrides, autoPlay
     utterance.onerror = (event) => {
       console.error("Speech synthesis error:", event)
       setIsPlaying(false)
+
       if (showAlerts) {
         alert(t("audio.error_playing"))
       }
@@ -101,11 +120,12 @@ export function InstructionAudio({ instructionKey, text, textOverrides, autoPlay
     } catch (error) {
       console.error("Failed to start speech synthesis:", error)
       setIsPlaying(false)
+
       if (showAlerts) {
         alert(t("audio.error_playing"))
       }
     }
-  }, [getBestVoice, getSpeechSettings, language, resolveInstructionText, t])
+  }, [getBestVoice, getSpeechSettings, instructionKey, language, resolveInstructionText, t])
 
   // Load voices when component mounts
   useEffect(() => {
@@ -134,6 +154,16 @@ export function InstructionAudio({ instructionKey, text, textOverrides, autoPlay
 
     void playInstruction(false)
   }, [autoPlay, baseInstruction, playInstruction])
+
+  useEffect(() => {
+    return () => {
+      stopAudioPlayback(audioRef)
+
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
 
   return (
     <Button onClick={() => void playInstruction()} disabled={isPlaying || !baseInstruction} variant="outline" size="sm" className={className}>

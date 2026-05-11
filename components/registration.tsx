@@ -88,6 +88,7 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
   const [birthMonth, setBirthMonth] = useState("")
   const [birthDay, setBirthDay] = useState("")
   const [gender, setGender] = useState("")
+  const [nationalId, setNationalId] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -146,7 +147,7 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
       return
     }
 
-    const registerResult = await register(phoneNumber, password, name, dateOfBirth, gender)
+    const registerResult = await register(phoneNumber, password, name, dateOfBirth, gender, nationalId)
     if (!registerResult.success) {
       setError(registerResult.error || t("register.error.invalid"))
     }
@@ -303,6 +304,19 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="national-id">{t("register.national_id")}</Label>
+              <AssessmentInput
+                id="national-id"
+                name="national-id"
+                type="text"
+                placeholder={t("register.national_id.placeholder")}
+                value={nationalId}
+                onChange={(e) => setNationalId(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="password">{t("register.password")}</Label>
               <AssessmentInput
                 id="password"
@@ -338,6 +352,7 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
                 phoneNumber.length < 6 ||
                 name.trim().length < 2 ||
                 !dateOfBirth ||
+                !gender ||
                 !gender ||
                 password.length < 8 ||
                 confirmPassword.length < 8

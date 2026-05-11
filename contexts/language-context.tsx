@@ -680,6 +680,8 @@ const zhOverrides: TranslationMap = {
   "question.animal_label": "动物 {index}：",
   "question.object_label": "物体 {index}：",
 
+  "upload.instruction": "上传您的医疗影像和文件。支持格式：PNG、JPEG、PDF（每个文件最大 10MB）",
+
   "common.animal": "动物",
   "common.object": "物体",
   "common.television": "电视",
@@ -832,6 +834,7 @@ const zhOverrides: TranslationMap = {
   "sensory.auditory.instruction": "请听带有背景噪音的数字，并输入你听到的内容。",
   "sensory.olfactory.title": "CogniScent™",
   "sensory.olfactory.description": "14项嗅觉认知筛查评估",
+  "sensory.olfactory.instruction": "系统会显示物品图片，请选择它对应的气味。",
   "sensory.olfactory.smell.ginger": "生姜",
   "sensory.olfactory.smell.alcohol": "酒精",
 
@@ -1029,6 +1032,8 @@ const yueOverrides: TranslationMap = {
   "question.animal_label": "動物 {index}：",
   "question.object_label": "物件 {index}：",
 
+  "upload.instruction": "上傳你嘅醫療影像同文件。支援格式：PNG、JPEG、PDF（每個檔案最多 10MB）",
+
   "common.animal": "動物",
   "common.object": "物件",
   "common.television": "電視",
@@ -1181,6 +1186,7 @@ const yueOverrides: TranslationMap = {
   "sensory.auditory.instruction": "請聽帶有背景噪音嘅數字，然後輸入你聽到嘅內容。",
   "sensory.olfactory.title": "CogniScent™",
   "sensory.olfactory.description": "14項嗅覺認知篩查評估",
+  "sensory.olfactory.instruction": "系統會顯示物品圖片，請揀選佢代表嘅氣味。",
   "sensory.olfactory.smell.ginger": "生薑",
   "sensory.olfactory.smell.alcohol": "酒精",
 
@@ -1377,6 +1383,8 @@ const frOverrides: TranslationMap = {
   "question.animal_label": "Animal {index} :",
   "question.object_label": "Objet {index} :",
 
+  "upload.instruction": "Téléversez vos images et documents médicaux. Formats pris en charge : PNG, JPEG, PDF (10 Mo max par fichier)",
+
   "common.animal": "Animal",
   "common.object": "Objet",
   "common.television": "télévision",
@@ -1517,6 +1525,7 @@ const frOverrides: TranslationMap = {
   "sensory.auditory.instruction": "Écoutez les chiffres diffusés avec un bruit de fond et saisissez ce que vous entendez.",
   "sensory.olfactory.title": "CogniScent™",
   "sensory.olfactory.description": "Évaluation cognitive olfactive en 14 items",
+  "sensory.olfactory.instruction": "Des images d'objets vous seront présentées. Sélectionnez l'odeur correspondante.",
   "sensory.olfactory.smell.ginger": "Gingembre",
   "sensory.olfactory.smell.alcohol": "Alcool",
 

@@ -6,6 +6,8 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
+    "generate:audio": "node scripts/generate-instruction-audio.mjs",
+    "generate:audio:dry": "node scripts/generate-instruction-audio.mjs --dry-run",
     "lint": "eslint .",
     "start": "next start"
   },

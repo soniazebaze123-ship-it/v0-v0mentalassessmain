@@ -1,12 +1,13 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { AudioLines, MessageSquareQuote, Repeat2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AssessmentInput } from "@/components/ui/assessment-input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { useLanguage } from "@/contexts/language-context"
+import { getInstructionAudioSources, playAudioSources, stopAudioPlayback } from "@/lib/instruction-audio"
 
 interface MMSERepetitionProps {
   onComplete: (score: number) => void
@@ -18,6 +19,7 @@ export function MMSERepetition({ onComplete, onSkip }: MMSERepetitionProps) {
   const [answer, setAnswer] = useState("")
   const [isPlaying, setIsPlaying] = useState(false)
   const [hasPlayedAudio, setHasPlayedAudio] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const targetSentence = useMemo(() => {
     switch (language) {
@@ -40,12 +42,27 @@ export function MMSERepetition({ onComplete, onSkip }: MMSERepetitionProps) {
       .replace(/\s+/g, " ")
   }
 
-  const playAudio = () => {
+  const playAudio = async () => {
+    const playedFromFile = await playAudioSources({
+      sources: getInstructionAudioSources(language, "mmse.repetition.target-sentence"),
+      activeAudioRef: audioRef,
+      onStart: () => setIsPlaying(true),
+      onEnd: () => {
+        setIsPlaying(false)
+        setHasPlayedAudio(true)
+      },
+    })
+
+    if (playedFromFile) {
+      return
+    }
+
     if (!("speechSynthesis" in window)) {
       alert(t("audio.not_supported"))
       return
     }
 
+    stopAudioPlayback(audioRef)
     window.speechSynthesis.cancel()
 
     const settings = getSpeechSettings(language)
@@ -80,6 +97,16 @@ export function MMSERepetition({ onComplete, onSkip }: MMSERepetitionProps) {
       alert(t("audio.error_playing"))
     }
   }
+
+  useEffect(() => {
+    return () => {
+      stopAudioPlayback(audioRef)
+
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
 
   const checkAnswer = () => {
     const normalizedAnswer = normalizeText(answer)
@@ -124,7 +151,7 @@ export function MMSERepetition({ onComplete, onSkip }: MMSERepetitionProps) {
             {localizeText("Listen first", { zh: "先聆听", yue: "先聆聽", fr: "Écoutez d’abord" })}
           </div>
           <Button
-            onClick={playAudio}
+            onClick={() => void playAudio()}
             disabled={isPlaying}
             className="w-full max-w-xs rounded-2xl bg-white"
             variant="outline"

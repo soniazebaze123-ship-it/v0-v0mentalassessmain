@@ -1,18 +1,32 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useLanguage } from "@/contexts/language-context"
+import { getInstructionAudioSources, playAudioSources, stopAudioPlayback } from "@/lib/instruction-audio"
 
-export default function InstructionAudio({ text }: { text: string }) {
+export default function InstructionAudio({ text, audioId }: { text: string; audioId?: string }) {
   const { language, getSpeechSettings, getBestVoice, t } = useLanguage()
   const [isPlaying, setIsPlaying] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  const playAudio = () => {
+  const playAudio = async () => {
+    const playedFromFile = await playAudioSources({
+      sources: getInstructionAudioSources(language, audioId),
+      activeAudioRef: audioRef,
+      onStart: () => setIsPlaying(true),
+      onEnd: () => setIsPlaying(false),
+    })
+
+    if (playedFromFile) {
+      return
+    }
+
     if (!("speechSynthesis" in window)) {
       alert(t("audio.not_supported"))
       return
     }
 
+    stopAudioPlayback(audioRef)
     const utterance = new SpeechSynthesisUtterance(text)
     const settings = getSpeechSettings(language)
     const voice = getBestVoice(language)
@@ -32,12 +46,28 @@ export default function InstructionAudio({ text }: { text: string }) {
     }
 
     window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(utterance)
+    try {
+      window.speechSynthesis.speak(utterance)
+    } catch (error) {
+      console.error("Speech synthesis error:", error)
+      setIsPlaying(false)
+      alert(t("audio.error_playing"))
+    }
   }
+
+  useEffect(() => {
+    return () => {
+      stopAudioPlayback(audioRef)
+
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
 
   return (
     <button
-      onClick={playAudio}
+      onClick={() => void playAudio()}
       className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700"
     >
       {isPlaying ? t("audio.playing") : t("audio.play")}
