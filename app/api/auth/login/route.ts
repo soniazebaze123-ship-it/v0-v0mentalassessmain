@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { getPhoneLookupCandidates } from "@/lib/auth/phone"
 import { verifyPassword } from "@/lib/auth/password"
+import { hashPassword } from "@/lib/auth/password"
 
 export async function POST(request: Request) {
   try {
@@ -39,10 +40,27 @@ export async function POST(request: Request) {
     }
 
     if (!existingUser.password_hash) {
-      return NextResponse.json(
-        { error: "This account does not have a password yet. Please register again or add a password migration first." },
-        { status: 409 },
-      )
+      if (password.length < 8) {
+        return NextResponse.json(
+          { error: "Set a password with at least 8 characters to reactivate this account." },
+          { status: 400 },
+        )
+      }
+
+      const passwordHash = hashPassword(password)
+      const { error: activationError } = await supabase
+        .from("users")
+        .update({ password_hash: passwordHash })
+        .eq("id", existingUser.id)
+
+      if (activationError) {
+        return NextResponse.json(
+          { error: "Could not reactivate account password. Please try again." },
+          { status: 500 },
+        )
+      }
+
+      existingUser.password_hash = passwordHash
     }
 
     if (!verifyPassword(password, existingUser.password_hash)) {
