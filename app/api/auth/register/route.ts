@@ -11,8 +11,8 @@ export async function POST(request: Request) {
     const name = typeof body.name === "string" ? body.name.trim() : ""
     const dateOfBirth = typeof body.dateOfBirth === "string" ? body.dateOfBirth : ""
     const gender = typeof body.gender === "string" ? body.gender : ""
-    const nationalId = typeof body.nationalId === "string" ? body.nationalId.trim() : ""
     const password = typeof body.password === "string" ? body.password : ""
+    const nationalId = typeof body.nationalId === "string" ? body.nationalId.trim() : ""
     const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber)
     const phoneLookupCandidates = getPhoneLookupCandidates(phoneNumber)
 
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     const supabase = await createClient()
     const { data: existingUsers, error: checkError } = await supabase
       .from("users")
-      .select("id, email, phone_number, name, date_of_birth, gender, password_hash, national_id")
+      .select("id, email, phone_number, name, date_of_birth, gender, password_hash")
       .in("phone_number", phoneLookupCandidates)
       .limit(1)
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Phone number already registered." }, { status: 409 })
       }
 
-      const updateData: any = {
+      const updatePayload: Record<string, unknown> = {
         email: existingUser.email || generatedEmail,
         phone_number: normalizedPhoneNumber,
         name,
@@ -56,18 +56,24 @@ export async function POST(request: Request) {
         gender,
         password_hash: passwordHash,
       }
-
-      if (nationalId && nationalId.length > 0) {
-        updateData.national_id = nationalId
-      }
+      if (nationalId) updatePayload.national_id = nationalId
 
       const { data: updatedUsers, error: updateError } = await supabase
         .from("users")
-        .update(updateData)
+        .update(updatePayload)
         .eq("id", existingUser.id)
         .select("id, email, phone_number, name, date_of_birth, gender, national_id")
 
       if (updateError) {
+        if (updateError.message.includes("national_id")) {
+          const { data: retryUpdated, error: retryUpdateError } = await supabase
+            .from("users")
+            .update({ ...updatePayload, national_id: undefined })
+            .eq("id", existingUser.id)
+            .select("id, email, phone_number, name, date_of_birth, gender")
+          if (retryUpdateError) return NextResponse.json({ error: retryUpdateError.message }, { status: 500 })
+          return NextResponse.json({ user: retryUpdated?.[0] ?? null })
+        }
         if (updateError.message.includes("password_hash")) {
           return NextResponse.json(
             { error: "Password registration is not ready yet. Run scripts/08-add-user-password-auth.sql in Supabase first." },
@@ -81,7 +87,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ user: updatedUsers?.[0] ?? null })
     }
 
-    const insertData: any = {
+    const insertPayload: Record<string, unknown> = {
       id: uuidv4(),
       phone_number: normalizedPhoneNumber,
       email: generatedEmail,
@@ -90,17 +96,22 @@ export async function POST(request: Request) {
       gender,
       password_hash: passwordHash,
     }
-
-    if (nationalId && nationalId.length > 0) {
-      insertData.national_id = nationalId
-    }
+    if (nationalId) insertPayload.national_id = nationalId
 
     const { data: newUsers, error: insertError } = await supabase
       .from("users")
-      .insert(insertData)
+      .insert(insertPayload)
       .select("id, email, phone_number, name, date_of_birth, gender, national_id")
 
     if (insertError) {
+      if (insertError.message.includes("national_id")) {
+        const { data: retryUsers, error: retryError } = await supabase
+          .from("users")
+          .insert({ ...insertPayload, national_id: undefined })
+          .select("id, email, phone_number, name, date_of_birth, gender")
+        if (retryError) return NextResponse.json({ error: retryError.message }, { status: 500 })
+        return NextResponse.json({ user: retryUsers?.[0] ?? null })
+      }
       if (insertError.message.includes("password_hash")) {
         return NextResponse.json(
           { error: "Password registration is not ready yet. Run scripts/08-add-user-password-auth.sql in Supabase first." },

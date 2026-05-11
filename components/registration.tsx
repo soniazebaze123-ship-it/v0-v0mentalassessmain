@@ -304,7 +304,7 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="national-id">{t("register.national_id")}</Label>
+              <Label htmlFor="national-id">{t("register.national_id")} <span className="text-xs text-muted-foreground">({t("common.optional") || "optional"})</span></Label>
               <AssessmentInput
                 id="national-id"
                 name="national-id"
@@ -313,6 +313,7 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
                 value={nationalId}
                 onChange={(e) => setNationalId(e.target.value)}
                 disabled={loading}
+                autoComplete="off"
               />
             </div>
 
@@ -352,7 +353,6 @@ export function Registration({ onBackToLogin }: RegistrationProps) {
                 phoneNumber.length < 6 ||
                 name.trim().length < 2 ||
                 !dateOfBirth ||
-                !gender ||
                 !gender ||
                 password.length < 8 ||
                 confirmPassword.length < 8

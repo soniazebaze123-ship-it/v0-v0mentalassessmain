@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     const supabase = await createClient()
     const { data, error } = await supabase
       .from("users")
-      .select("id, email, phone_number, name, date_of_birth, gender, password_hash, national_id")
+      .select("id, email, phone_number, name, date_of_birth, gender, national_id, password_hash")
       .in("phone_number", phoneLookupCandidates)
       .limit(1)
 
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
       if (isSchemaIssue) {
         const { data: fallbackUsersWithPassword, error: fallbackWithPasswordError } = await supabase
           .from("users")
-          .select("id, email, phone_number, name, password_hash, national_id")
+          .select("id, email, phone_number, name, password_hash")
           .in("phone_number", phoneLookupCandidates)
           .limit(1)
 
@@ -139,14 +139,13 @@ export async function POST(request: Request) {
               email: fallbackUserWithPassword.email,
               phone_number: fallbackUserWithPassword.phone_number,
               name: fallbackUserWithPassword.name,
-              national_id: fallbackUserWithPassword.national_id,
             },
           })
         }
 
         const { data: fallbackUsers, error: fallbackError } = await supabase
           .from("users")
-          .select("id, phone_number, name, national_id")
+          .select("id, phone_number, name")
           .in("phone_number", phoneLookupCandidates)
           .limit(1)
 
@@ -225,7 +224,7 @@ export async function POST(request: Request) {
       name: existingUser.name,
       date_of_birth: existingUser.date_of_birth,
       gender: existingUser.gender,
-      national_id: existingUser.national_id,
+      national_id: (existingUser as Record<string, unknown>).national_id as string | undefined,
     }
     return NextResponse.json({ user: safeUser })
   } catch (error) {

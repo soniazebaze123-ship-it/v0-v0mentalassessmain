@@ -67,7 +67,7 @@ export function Dashboard({
   const displayName = user?.name?.trim() || "-"
   const displayId = user?.id || "-"
   const displayPhone = user?.phone_number || "-"
-  const displayNationalId = user?.national_id?.trim() || "-"
+  const displayNationalId = user?.national_id?.trim() || null
   const uiText = useCallback(
     (englishText: string, chineseText: string, cantoneseText?: string, frenchText?: string) =>
       localizeText(englishText, {
@@ -312,10 +312,8 @@ export function Dashboard({
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t("dashboard.id")}</p>
                   <p className="mt-2 truncate font-mono text-sm text-slate-900 md:text-base">{displayId}</p>
                   <p className="mt-1 text-sm text-slate-600">{displayPhone}</p>
-                  {displayNationalId !== "-" && (
-                    <p className="mt-1 text-sm text-slate-600">
-                      <span className="font-semibold">National ID:</span> {displayNationalId}
-                    </p>
+                  {displayNationalId && (
+                    <p className="mt-1 text-xs text-slate-500">ID: {displayNationalId}</p>
                   )}
                 </div>
               </div>
