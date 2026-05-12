@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useUser } from "@/contexts/user-context"
 import { supabase } from "@/lib/supabase"
@@ -38,6 +37,15 @@ const SMELL_ICONS: Record<string, string> = {
   banana: "🍌",
 }
 
+function shuffleOptions(options: SmellItem[]) {
+  const shuffled = [...options]
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
+
 export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: OlfactoryScreeningProps) {
   const { t, localizeText } = useLanguage()
   const { user } = useUser()
@@ -61,14 +69,12 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
     const selectedSmells = selectRandomSmells(8)
     return selectedSmells.map((smell) => ({
       correct: smell,
-      options: [smell, ...generateDistractors(smell, 3)].sort(() => Math.random() - 0.5),
+      options: shuffleOptions([smell, ...generateDistractors(smell, 3)]),
     }))
   })
 
   const currentTrial = trials[currentTrialIndex]
-  const premiumShell =
-    "mx-auto w-full max-w-4xl overflow-hidden border border-white/70 bg-[radial-gradient(circle_at_top_left,_rgba(249,168,212,0.16),_transparent_28%),linear-gradient(135deg,_rgba(255,255,255,0.97),_rgba(255,251,235,0.98),_rgba(255,247,237,0.94))] shadow-[0_28px_90px_rgba(15,23,42,0.10)]"
-  const premiumHeader = "border-b border-white/70 bg-white/85 pb-6"
+  const panelClass = "mx-auto w-full max-w-4xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
   const primaryButton =
     "h-12 rounded-full bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 px-6 text-white shadow-lg shadow-rose-500/20 hover:from-rose-600 hover:via-orange-600 hover:to-amber-600"
   
@@ -190,16 +196,16 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
 
   if (!testStarted) {
     return (
-      <Card className={premiumShell}>
-        <CardHeader className={premiumHeader}>
-          <CardTitle className="flex items-center gap-2">
+      <div className={panelClass}>
+        <div className="space-y-2 border-b border-slate-200 pb-6">
+          <h2 className="flex items-center gap-2 text-xl font-semibold">
             <Flower2 className="h-6 w-6" />
             {t("sensory.olfactory.title")}
-          </CardTitle>
+          </h2>
           <p className="text-sm text-muted-foreground">{t("sensory.olfactory.description")}</p>
           <InstructionAudio instructionKey="sensory.olfactory.instruction" className="mt-2" />
-        </CardHeader>
-        <CardContent className="space-y-6 bg-white/75 p-6 sm:p-8">
+        </div>
+        <div className="space-y-6 pt-6">
           <div className="grid gap-4 sm:grid-cols-[1.3fr_0.9fr]">
             <div className="rounded-[28px] border border-rose-100 bg-gradient-to-br from-rose-50 via-orange-50 to-white p-6 shadow-sm">
               <h3 className="font-semibold text-slate-900">{t("sensory.olfactory.setup_title")}</h3>
@@ -238,8 +244,8 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
               {t("sensory.olfactory.start_test")}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     )
   }
 
@@ -260,11 +266,11 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
     const scoreCount = results.filter(r => r.correct).length
 
     return (
-      <Card className={premiumShell}>
-        <CardHeader className={premiumHeader}>
-          <CardTitle>{t("sensory.olfactory.complete_title")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6 bg-white/75 p-6 text-center sm:p-8">
+      <div className={panelClass}>
+        <div className="border-b border-slate-200 pb-6">
+          <h2 className="text-xl font-semibold">{t("sensory.olfactory.complete_title")}</h2>
+        </div>
+        <div className="space-y-6 pt-6 text-center">
           <div className="rounded-[28px] border border-emerald-100 bg-emerald-50/80 p-8 shadow-sm">
             <div className="text-5xl font-bold text-emerald-700">{scoreCount}/8</div>
             <p className="mt-4 text-lg font-semibold">{getClassificationLabel(classification)}</p>
@@ -279,19 +285,19 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
           <Button onClick={() => onComplete(normalizedScore)} className={primaryButton + " mt-4"}>
             {t("common.continue")}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card className={premiumShell}>
-      <CardHeader className={premiumHeader}>
+    <div className={panelClass}>
+      <div className="space-y-3 border-b border-slate-200 pb-6">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>
+            <h2 className="text-xl font-semibold">
               {t("sensory.olfactory.trial")} {currentTrialIndex + 1} / {trials.length}
-            </CardTitle>
+            </h2>
             <p className="text-sm text-muted-foreground">{t("sensory.olfactory.select_smell")}</p>
           </div>
           {/* Timer display */}
@@ -311,8 +317,8 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
             className={`h-1 ${timeRemaining <= 10 ? "[&>div]:bg-red-500" : "[&>div]:bg-blue-500"}`}
           />
         </div>
-      </CardHeader>
-      <CardContent className="space-y-6 bg-white/75 p-6 sm:p-8">
+      </div>
+      <div className="space-y-6 pt-6">
         {showFeedback && (
           <div
             className={`flex items-center justify-center gap-2 rounded-[22px] p-4 ${
@@ -353,7 +359,7 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
             </button>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
