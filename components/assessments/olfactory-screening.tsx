@@ -77,9 +77,10 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
   const panelClass = "mx-auto w-full max-w-4xl rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
   const primaryButton =
     "h-12 rounded-full bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 px-6 text-white shadow-lg shadow-rose-500/20 hover:from-rose-600 hover:via-orange-600 hover:to-amber-600"
-  
+
   // Timer state (15 seconds per item - clinical standard)
-  const [timeRemaining, setTimeRemaining] = useState(15)
+  const TIME_PER_ITEM_SECONDS = 15
+  const [timeRemaining, setTimeRemaining] = useState(TIME_PER_ITEM_SECONDS)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   
   const handleTimeUp = useCallback(() => {
@@ -102,7 +103,7 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
   // Start timer when test starts or question changes
   useEffect(() => {
     if (testStarted && !testComplete && !showFeedback) {
-      setTimeRemaining(15)
+      setTimeRemaining(TIME_PER_ITEM_SECONDS)
       timerRef.current = setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
@@ -119,7 +120,7 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [currentTrialIndex, handleTimeUp, showFeedback, testComplete, testStarted])
+  }, [currentTrialIndex, handleTimeUp, showFeedback, testComplete, testStarted, TIME_PER_ITEM_SECONDS])
 
   const handleStart = () => {
     setTestStarted(true)
@@ -183,7 +184,7 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
       }
     }
 
-    onComplete(Math.round(normalizedScore))
+    // Keep the completion screen visible and complete only when user taps Continue.
   }
 
   const handleSkip = () => {
@@ -313,7 +314,7 @@ export function OlfactoryScreening({ onComplete, onSkip, enhanced = false }: Olf
         {/* Timer progress */}
         <div className="mt-2">
           <Progress 
-            value={(timeRemaining / 30) * 100} 
+            value={(timeRemaining / TIME_PER_ITEM_SECONDS) * 100}
             className={`h-1 ${timeRemaining <= 10 ? "[&>div]:bg-red-500" : "[&>div]:bg-blue-500"}`}
           />
         </div>

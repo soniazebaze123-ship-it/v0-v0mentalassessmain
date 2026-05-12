@@ -20,15 +20,22 @@ export const SMELL_ITEMS: SmellItem[] = [
   { id: "tea_tree",   name: "Tea Tree",   image: "/images/olfactory-temp/tea-tree.svg",   category: "nature" },
 ]
 
+function shuffleItems<T>(items: T[]): T[] {
+  const shuffled = [...items]
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
+
 export function selectRandomSmells(count = 8): SmellItem[] {
-  const shuffled = [...SMELL_ITEMS].sort(() => Math.random() - 0.5)
-  return shuffled.slice(0, count)
+  return shuffleItems(SMELL_ITEMS).slice(0, count)
 }
 
 export function generateDistractors(correctSmell: SmellItem, count = 3): SmellItem[] {
   const others = SMELL_ITEMS.filter((item) => item.id !== correctSmell.id)
-  const shuffled = others.sort(() => Math.random() - 0.5)
-  return shuffled.slice(0, count)
+  return shuffleItems(others).slice(0, count)
 }
 
 export function calculateOlfactoryScore(results: { correct: boolean }[]): {
@@ -39,19 +46,23 @@ export function calculateOlfactoryScore(results: { correct: boolean }[]): {
 } {
   const totalCorrect = results.filter((r) => r.correct).length
   const total = results.length
-  const percentCorrect = (totalCorrect / total) * 100
+  const safeTotal = total > 0 ? total : 1
+  const percentCorrect = (totalCorrect / safeTotal) * 100
 
   // Classification based on clinical sheet:
   // 7-8 correct (out of 8-9): Normal cognition
   // 5-6 correct: Mild impairment
   // 0-4 correct: Severe dysfunction
+  // For variable test lengths, use equivalent percentage thresholds.
+  const normalThresholdPct = 87.5
+  const mildThresholdPct = 62.5
   let classification: "normal" | "mild_impairment" | "severe_dysfunction"
-  if (totalCorrect >= 7) classification = "normal"
-  else if (totalCorrect >= 5) classification = "mild_impairment"
+  if (percentCorrect >= normalThresholdPct) classification = "normal"
+  else if (percentCorrect >= mildThresholdPct) classification = "mild_impairment"
   else classification = "severe_dysfunction"
 
-  // Normalize to 0-100 scale based on correct count out of 8
-  const normalizedScore = Math.round((totalCorrect / 8) * 100)
+  // Normalize to 0-100 scale based on completed trials.
+  const normalizedScore = Math.max(0, Math.min(100, Math.round(percentCorrect)))
 
   return {
     totalCorrect,
