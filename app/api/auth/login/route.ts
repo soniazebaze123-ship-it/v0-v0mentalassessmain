@@ -3,78 +3,24 @@ import { createClient } from "@/lib/supabase/server"
 import { getPhoneLookupCandidates, normalizePhoneNumber } from "@/lib/auth/phone"
 import { hashPassword, verifyPassword } from "@/lib/auth/password"
 
-function buildGeneratedEmail(phoneNumber: string) {
-  const digits = phoneNumber.replace(/[^0-9]/g, "")
-  return `${digits || Date.now()}@mentalassess.app`
-}
-
-function buildGeneratedName(phoneNumber: string) {
-  const digits = phoneNumber.replace(/[^0-9]/g, "")
-  const suffix = digits.slice(-4)
-  return suffix ? `Patient ${suffix}` : "Patient"
-}
-
-async function createPatientOnLogin(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  phoneNumber: string,
-  password: string,
-) {
-  const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber) || phoneNumber.trim()
-  const generatedEmail = buildGeneratedEmail(normalizedPhoneNumber)
-  const generatedName = buildGeneratedName(normalizedPhoneNumber)
-  const generatedId = crypto.randomUUID()
-  const passwordHash = hashPassword(password)
-
-  const { data: createdWithPassword, error: createWithPasswordError } = await supabase
-    .from("users")
-    .insert({
-      id: generatedId,
-      phone_number: normalizedPhoneNumber,
-      email: generatedEmail,
-      name: generatedName,
-      password_hash: passwordHash,
-    })
-    .select("id, email, phone_number, name, date_of_birth, gender")
-    .limit(1)
-
-  if (!createWithPasswordError && createdWithPassword?.[0]) {
-    return NextResponse.json({ user: createdWithPassword[0] })
-  }
-
-  const { data: createdWithoutPassword, error: createWithoutPasswordError } = await supabase
-    .from("users")
-    .insert({
-      id: generatedId,
-      phone_number: normalizedPhoneNumber,
-      email: generatedEmail,
-      name: generatedName,
-    })
-    .select("id, email, phone_number, name, date_of_birth, gender")
-    .limit(1)
-
-  if (createWithoutPasswordError || !createdWithoutPassword?.[0]) {
-    return NextResponse.json({ error: "Could not create patient account. Please try again." }, { status: 500 })
-  }
-
-  return NextResponse.json({ user: createdWithoutPassword[0] })
-}
-
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const phoneNumber = typeof body.phoneNumber === "string" ? body.phoneNumber.trim() : ""
     const password = typeof body.password === "string" ? body.password : ""
-    const phoneLookupCandidates = getPhoneLookupCandidates(phoneNumber)
 
     if (phoneNumber.length < 6 || password.length === 0) {
       return NextResponse.json({ error: "Phone number and password are required." }, { status: 400 })
     }
 
+    const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber) || phoneNumber.trim()
+    const normalizedCandidates = getPhoneLookupCandidates(normalizedPhoneNumber)
+
     const supabase = await createClient()
     const { data, error } = await supabase
       .from("users")
       .select("id, email, phone_number, name, date_of_birth, gender, national_id, password_hash")
-      .in("phone_number", phoneLookupCandidates)
+      .in("phone_number", normalizedCandidates)
       .limit(1)
 
     if (error) {
@@ -91,14 +37,14 @@ export async function POST(request: Request) {
         const { data: fallbackUsersWithPassword, error: fallbackWithPasswordError } = await supabase
           .from("users")
           .select("id, email, phone_number, name, password_hash")
-          .in("phone_number", phoneLookupCandidates)
+          .in("phone_number", normalizedCandidates)
           .limit(1)
 
         if (!fallbackWithPasswordError) {
           const fallbackUserWithPassword = fallbackUsersWithPassword?.[0]
 
           if (!fallbackUserWithPassword) {
-            return await createPatientOnLogin(supabase, phoneNumber, password)
+            return NextResponse.json({ error: "No account found. Please register first." }, { status: 404 })
           }
 
           if (!fallbackUserWithPassword.password_hash) {
@@ -146,7 +92,7 @@ export async function POST(request: Request) {
         const { data: fallbackUsers, error: fallbackError } = await supabase
           .from("users")
           .select("id, phone_number, name")
-          .in("phone_number", phoneLookupCandidates)
+          .in("phone_number", normalizedCandidates)
           .limit(1)
 
         if (fallbackError) {
@@ -156,7 +102,7 @@ export async function POST(request: Request) {
         const fallbackUser = fallbackUsers?.[0]
 
         if (!fallbackUser) {
-          return await createPatientOnLogin(supabase, phoneNumber, password)
+          return NextResponse.json({ error: "No account found. Please register first." }, { status: 404 })
         }
 
         return NextResponse.json({ user: fallbackUser })
@@ -168,19 +114,7 @@ export async function POST(request: Request) {
     const existingUser = data?.[0]
 
     if (!existingUser) {
-      return await createPatientOnLogin(supabase, phoneNumber, password)
-    }
-
-    if (!existingUser.name) {
-      const generatedName = buildGeneratedName(existingUser.phone_number || phoneNumber)
-      const { error: nameUpdateError } = await supabase
-        .from("users")
-        .update({ name: generatedName })
-        .eq("id", existingUser.id)
-
-      if (!nameUpdateError) {
-        existingUser.name = generatedName
-      }
+      return NextResponse.json({ error: "No account found. Please register first." }, { status: 404 })
     }
 
     if (!existingUser.password_hash) {

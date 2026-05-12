@@ -153,31 +153,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (phoneNumber: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setLoading(true)
-
-    const grantLocalAccess = async () => {
+    const restoreStoredUser = () => {
       const trimmedPhone = phoneNumber.trim()
       const digits = trimmedPhone.replace(/\D/g, "")
       const normalizedPhone = trimmedPhone.startsWith("+") ? `+${digits}` : trimmedPhone
       const storedUser = getStoredUserByPhone(normalizedPhone)
 
-      if (storedUser) {
-        setUser(storedUser)
-        setProgress({})
-        localStorage.setItem("mental_assess_dummy_user", JSON.stringify(storedUser))
-        return { success: true as const }
+      if (!storedUser) {
+        return null
       }
 
-      const storedName = getStoredNameByPhone(normalizedPhone)
-      const localUser = {
-        id: crypto.randomUUID(),
-        phone_number: normalizedPhone,
-        email: `${digits || Date.now()}@mentalassess.app`,
-        name: storedName ?? (digits ? `Patient ${digits.slice(-4)}` : "Patient"),
-      }
-
-      setUser(localUser)
+      setUser(storedUser)
       setProgress({})
-      localStorage.setItem("mental_assess_dummy_user", JSON.stringify(localUser))
+      localStorage.setItem("mental_assess_dummy_user", JSON.stringify(storedUser))
       return { success: true as const }
     }
 
@@ -193,7 +181,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const payload = await response.json()
 
       if (!response.ok || !payload.user) {
-        return await grantLocalAccess()
+        const restoredUser = restoreStoredUser()
+        if (restoredUser) {
+          return restoredUser
+        }
+
+        return {
+          success: false,
+          error: payload.error || "Login failed. Please check the phone number and password.",
+        }
       }
 
       setUser(payload.user)
@@ -203,7 +199,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       await loadUserProgress(payload.user.id)
       return { success: true }
     } catch (error: unknown) {
-      return await grantLocalAccess()
+      const restoredUser = restoreStoredUser()
+      if (restoredUser) {
+        return restoredUser
+      }
+
+      const errorMessage = getErrorMessage(error)
+      if (errorMessage.includes("Failed to fetch") || errorMessage.includes("fetch")) {
+        return {
+          success: false,
+          error: "Network error. Please try again.",
+        }
+      }
+
+      return { success: false, error: errorMessage }
     } finally {
       setLoading(false)
     }

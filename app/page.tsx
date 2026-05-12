@@ -61,6 +61,53 @@ type CompletedAssessment = {
   completedAt: string
 }
 
+type AssessmentStep = {
+  component: React.ComponentType<any>
+  props: Record<string, unknown>
+  sectionKey: string
+}
+
+const MOCA_SECTION_MAX_SCORES: Record<string, number> = {
+  clock: 3,
+  trail_making: 1,
+  cube: 1,
+  animal_naming: 3,
+  object_naming: 3,
+  memory: 5,
+  attention: 6,
+  language: 3,
+  orientation: 5,
+}
+
+function clampSectionScore(sectionKey: string, score: number, assessmentType: "MOCA" | "MMSE") {
+  const normalizedScore = Number.isFinite(score) ? score : 0
+  const safeScore = Math.max(0, normalizedScore)
+
+  if (assessmentType !== "MOCA") {
+    return safeScore
+  }
+
+  const maxScore = MOCA_SECTION_MAX_SCORES[sectionKey]
+  if (typeof maxScore !== "number") {
+    return safeScore
+  }
+
+  return Math.min(safeScore, maxScore)
+}
+
+function getNumericScore(value: unknown) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  return 0
+}
+
 function AppContent() {
   const { user, loading, saveProgress, clearProgress } = useUser()
   const { t } = useLanguage()
@@ -84,29 +131,30 @@ function AppContent() {
   const [assessmentType, setAssessmentType] = useState<"MOCA" | "MMSE">("MOCA")
   const [completedAssessments, setCompletedAssessments] = useState<Record<string, CompletedAssessment>>({})
   const [riskResult, setRiskResult] = useState<RiskClassificationOutput | null>(null)
-  const mocaSteps = [
-    { component: InteractiveClock, props: { targetTime: { hour: 2, minute: 10 } } },
-    { component: TrailMakingTask, props: {} },
-    { component: CopyingDesign, props: { titleKey: "moca.cube", instructionKey: "moca.cube.instruction", imageSrc: "/images/cube.svg" } },
-    { component: AnimalNaming, props: {} },
-    { component: ObjectNaming, props: { assessmentMode: "MOCA" } },
+  const mocaSteps: AssessmentStep[] = [
+    { component: InteractiveClock, props: { targetTime: { hour: 2, minute: 10 } }, sectionKey: "clock" },
+    { component: TrailMakingTask, props: {}, sectionKey: "trail_making" },
+    { component: CopyingDesign, props: { titleKey: "moca.cube", instructionKey: "moca.cube.instruction", imageSrc: "/images/cube.svg" }, sectionKey: "cube" },
+    { component: AnimalNaming, props: {}, sectionKey: "animal_naming" },
+    { component: ObjectNaming, props: { assessmentMode: "MOCA" }, sectionKey: "object_naming" },
     {
       component: MemoryTask,
       props: { words: t("memory.moca.words"), title: t("moca.memory"), assessmentType: "MOCA" },
+      sectionKey: "memory",
     },
-    { component: AttentionTask, props: {} },
-    { component: LanguageAbstraction, props: {} },
-    { component: OrientationTask, props: {} },
+    { component: AttentionTask, props: {}, sectionKey: "attention" },
+    { component: LanguageAbstraction, props: {}, sectionKey: "language" },
+    { component: OrientationTask, props: {}, sectionKey: "orientation" },
   ]
 
-  const mmseSteps = [
-    { component: MMSEOrientation, props: {} },
-    { component: MemoryTask, props: { words: t("memory.mmse.words"), title: t("mmse.registration"), assessmentType: "MMSE" } },
-    { component: MMSEAttention, props: {} },
-    { component: ObjectNaming, props: { assessmentMode: "MMSE" } },
-    { component: MMSERepetition, props: {} },
-    { component: WritingTask, props: {} },
-    { component: CopyingDesign, props: {} },
+  const mmseSteps: AssessmentStep[] = [
+    { component: MMSEOrientation, props: {}, sectionKey: "orientation" },
+    { component: MemoryTask, props: { words: t("memory.mmse.words"), title: t("mmse.registration"), assessmentType: "MMSE" }, sectionKey: "registration" },
+    { component: MMSEAttention, props: {}, sectionKey: "attention" },
+    { component: ObjectNaming, props: { assessmentMode: "MMSE" }, sectionKey: "naming" },
+    { component: MMSERepetition, props: {}, sectionKey: "repetition" },
+    { component: WritingTask, props: {}, sectionKey: "writing" },
+    { component: CopyingDesign, props: {}, sectionKey: "copying" },
   ]
 
   // Load completed assessments on mount
@@ -126,9 +174,31 @@ function AppContent() {
             return
           }
 
-          completed[assessment.type] = {
-            totalScore: assessment.score,
-            sectionScores: assessment.data,
+          const assessmentKind = assessment.type as "MOCA" | "MMSE"
+          const stepsForAssessment = assessmentKind === "MOCA" ? mocaSteps : mmseSteps
+          const sectionKeys = stepsForAssessment.map((step) => step.sectionKey)
+          const sourceSectionScores =
+            assessment.data && typeof assessment.data === "object"
+              ? (assessment.data as Record<string, unknown>)
+              : {}
+
+          const normalizedSectionScores = sectionKeys.reduce(
+            (acc, sectionKey) => {
+              const rawScore = getNumericScore(sourceSectionScores[sectionKey])
+              acc[sectionKey] = clampSectionScore(sectionKey, rawScore, assessmentKind)
+              return acc
+            },
+            {} as Record<string, number>,
+          )
+
+          const normalizedTotalScore =
+            assessmentKind === "MOCA"
+              ? Math.min(30, Object.values(normalizedSectionScores).reduce((sum, value) => sum + value, 0))
+              : Math.min(30, Object.values(normalizedSectionScores).reduce((sum, value) => sum + value, 0))
+
+          completed[assessmentKind] = {
+            totalScore: normalizedTotalScore,
+            sectionScores: normalizedSectionScores,
             completedAt: assessment.completed_at,
           }
         })
@@ -216,31 +286,31 @@ function AppContent() {
   }
 
   const handleStepComplete = async (score: number) => {
-    console.log("[v0] Step complete - Score:", score, "Assessment:", assessmentType, "Step:", currentStep)
-    const newScores = [...scores, score]
-    setScores(newScores)
-
     const steps = assessmentType === "MOCA" ? mocaSteps : mmseSteps
+    const currentStepMeta = steps[currentStep]
+    const normalizedScore = currentStepMeta
+      ? clampSectionScore(currentStepMeta.sectionKey, score, assessmentType)
+      : Math.max(0, Number.isFinite(score) ? score : 0)
+
+    console.log("[v0] Step complete - Score:", normalizedScore, "Assessment:", assessmentType, "Step:", currentStep)
+    const newScores = [...scores, normalizedScore]
+    setScores(newScores)
 
     if (currentStep < steps.length - 1) {
       await saveProgress(assessmentType, currentStep + 1, newScores)
       setCurrentStep(currentStep + 1)
     } else {
-      const totalScore = newScores.reduce((sum, s) => sum + s, 0)
-      console.log("[v0] Assessment complete - Scores array:", newScores, "Total:", totalScore)
-
-      const sectionNames =
-        assessmentType === "MOCA"
-          ? ["visuospatial", "executive", "cube", "naming", "memory", "attention", "language", "orientation"]
-          : ["orientation", "registration", "attention", "naming", "repetition", "writing", "copying"]
-
-      const sectionScores = sectionNames.reduce(
-        (acc, name, index) => {
-          acc[name] = newScores[index] || 0
+      const sectionScores = steps.reduce(
+        (acc, step, index) => {
+          const rawScore = newScores[index] || 0
+          acc[step.sectionKey] = clampSectionScore(step.sectionKey, rawScore, assessmentType)
           return acc
         },
         {} as Record<string, number>,
       )
+
+      const totalScore = Object.values(sectionScores).reduce((sum, sectionScore) => sum + sectionScore, 0)
+      console.log("[v0] Assessment complete - Scores array:", newScores, "Total:", totalScore)
 
       const supabase = createClient()
 
@@ -375,29 +445,38 @@ function AppContent() {
 
   if (currentView === "results") {
     const assessmentData = completedAssessments[assessmentType]
-    const totalScore = assessmentData?.totalScore || scores.reduce((sum, s) => sum + s, 0)
-    const maxScore = assessmentType === "MOCA" ? 30 : 30
-    const sectionNames =
-      assessmentType === "MOCA"
-        ? ["visuospatial", "executive", "naming", "memory", "attention", "language", "orientation"]
-        : ["orientation", "registration", "attention", "naming", "repetition", "writing", "copying"]
+    const maxScore = 30
+    const steps = assessmentType === "MOCA" ? mocaSteps : mmseSteps
+    const sectionKeys = steps.map((step) => step.sectionKey)
 
-    const sectionScores =
+    const sourceSectionScores =
       assessmentData?.sectionScores ||
-      sectionNames.reduce(
-        (acc, name, index) => {
-          acc[name] = scores[index] || 0
+      sectionKeys.reduce(
+        (acc, sectionKey, index) => {
+          acc[sectionKey] = scores[index] || 0
           return acc
         },
         {} as Record<string, number>,
       )
+
+    const normalizedSectionScores = sectionKeys.reduce(
+      (acc, sectionKey) => {
+        const rawScore = getNumericScore(sourceSectionScores[sectionKey])
+        acc[sectionKey] = clampSectionScore(sectionKey, rawScore, assessmentType)
+        return acc
+      },
+      {} as Record<string, number>,
+    )
+
+    const computedTotal = Object.values(normalizedSectionScores).reduce((sum, value) => sum + value, 0)
+    const totalScore = assessmentType === "MOCA" ? Math.min(30, computedTotal) : Math.min(30, computedTotal)
 
     return (
       <ResultsDisplay
         assessmentType={assessmentType}
         totalScore={totalScore}
         maxScore={maxScore}
-        sectionScores={sectionScores}
+        sectionScores={normalizedSectionScores}
         riskResult={riskResult}
         onBackToDashboard={handleBackToDashboard}
       />
@@ -485,12 +564,7 @@ function AppContent() {
       onResetAssessmentSession={handleResetAssessmentSession}
       onViewResults={handleViewResults}
       onViewRiskProfile={handleViewRiskProfile}
-    >
-      <div className="space-y-8 w-full max-w-2xl">
-        <LanguageAbstraction onComplete={(score) => console.log("Language Abstraction Score:", score)} />
-        <MMSERepetition onComplete={(score) => console.log("MMSE Repetition Score:", score)} />
-      </div>
-    </Dashboard>
+    />
   )
 }
 

@@ -228,10 +228,14 @@ export function OrientationTask({ onComplete, onSkip }: OrientationTaskProps) {
         </div>
 
         <div className="flex justify-center space-x-4 pt-2">
-          <Button variant="outline" onClick={handleSkip}>
+          <Button type="button" variant="outline" onClick={handleSkip}>
             {t("common.skip_task")}
           </Button>
-          <Button onClick={checkAnswers} className="w-full max-w-xs bg-gradient-to-r from-emerald-600 to-teal-600 shadow-md hover:from-emerald-700 hover:to-teal-700">
+          <Button
+            type="button"
+            onClick={checkAnswers}
+            className="w-full max-w-xs touch-manipulation bg-gradient-to-r from-emerald-600 to-teal-600 shadow-md hover:from-emerald-700 hover:to-teal-700"
+          >
             {t("common.submit")}
           </Button>
         </div>

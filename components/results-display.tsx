@@ -25,7 +25,7 @@ export function ResultsDisplay({
   riskResult,
   onBackToDashboard,
 }: ResultsDisplayProps) {
-  const { t } = useLanguage()
+  const { t, localizeText } = useLanguage()
   const assessmentLabel = assessmentType === "MMSE" ? t("mmse.title") : t("moca.title")
 
   const getRiskRecommendationText = (result: RiskClassificationOutput) => {
@@ -72,10 +72,11 @@ export function ResultsDisplay({
   const getSectionNames = () => {
     if (assessmentType === "MOCA") {
       return {
-        visuospatial: t("moca.visuospatial"),
-        executive: t("moca.executive"),
+        clock: t("moca.visuospatial"),
+        trail_making: t("moca.executive"),
         cube: t("moca.cube"),
-        naming: t("moca.naming"),
+        animal_naming: t("moca.naming"),
+        object_naming: localizeText("Object Naming", { zh: "物体命名", yue: "物件命名", fr: "Dénomination d’objets" }),
         memory: t("moca.memory"),
         attention: t("moca.attention"),
         language: t("moca.language"),
@@ -165,7 +166,7 @@ export function ResultsDisplay({
             <div className="grid md:grid-cols-2 gap-4">
               {Object.entries(sectionScores).map(([key, score]) => (
                 <div key={key} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="font-medium">{sectionNames[key as keyof typeof sectionNames]}</span>
+                  <span className="font-medium">{sectionNames[key as keyof typeof sectionNames] ?? key}</span>
                   <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                     {t("results.points", { score })}
                   </Badge>
