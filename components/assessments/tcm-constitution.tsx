@@ -493,14 +493,14 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
     }
 
     setResults(resultData)
-    setPhase("pulse")
+    setPhase("results")
   }
 
   const getConstitutionInfo = (type: TCMConstitution) => {
     return TCM_CONSTITUTIONS.find(c => c.type === type)
   }
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (results) {
       // Calculate overall score (100 = perfectly balanced, lower = more imbalanced)
       const balancedScore = results.constitutionScores.balanced
@@ -509,6 +509,40 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
         .map(([, score]) => score)
       const avgImbalance = imbalanceScores.reduce((a, b) => a + b, 0) / imbalanceScores.length
       const overallScore = Math.round((balancedScore + (100 - avgImbalance)) / 2)
+
+      const tongueImage = uploadedImages.find((img) => img.type === "tongue")
+      const faceImage = uploadedImages.find((img) => img.type === "face")
+
+      // Persist full TCM result and uploaded image URLs so face/tongue photos are automatically saved with the assessment.
+      if (user?.id) {
+        try {
+          await supabase.from("tcm_assessments").insert({
+            user_id: user.id,
+            primary_constitution: results.primaryConstitution,
+            primary_score: results.constitutionScores[results.primaryConstitution],
+            balanced_score: results.constitutionScores.balanced,
+            qi_deficiency_score: results.constitutionScores.qi_deficiency,
+            yang_deficiency_score: results.constitutionScores.yang_deficiency,
+            yin_deficiency_score: results.constitutionScores.yin_deficiency,
+            phlegm_dampness_score: results.constitutionScores.phlegm_dampness,
+            damp_heat_score: results.constitutionScores.damp_heat,
+            blood_stasis_score: results.constitutionScores.blood_stasis,
+            qi_stagnation_score: results.constitutionScores.qi_stagnation,
+            special_constitution_score: results.constitutionScores.special_constitution,
+            answers: {
+              questionnaire: responses,
+              pulse_assessment: results.pulseAssessment,
+              tongue_image_url: tongueImage?.url || null,
+              face_image_url: faceImage?.url || null,
+              uploaded_image_ids: uploadedImages.map((img) => img.id),
+            },
+            recommendations: results.recommendations,
+            overall_score: overallScore,
+          })
+        } catch (error) {
+          console.error("Error saving TCM assessment:", error)
+        }
+      }
 
       onComplete(overallScore, results)
     }
