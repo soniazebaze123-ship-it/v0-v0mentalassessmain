@@ -108,6 +108,37 @@ function getNumericScore(value: unknown) {
   return 0
 }
 
+const LEGACY_MOCA_SECTION_MAP: Record<string, string[]> = {
+  clock: ["clock", "visuospatial"],
+  trail_making: ["trail_making", "executive"],
+  cube: ["cube"],
+  animal_naming: ["animal_naming", "naming"],
+  object_naming: ["object_naming"],
+  memory: ["memory"],
+  attention: ["attention"],
+  language: ["language"],
+  orientation: ["orientation"],
+}
+
+function getSourceSectionScore(
+  sectionKey: string,
+  sourceSectionScores: Record<string, unknown>,
+  assessmentType: "MOCA" | "MMSE",
+) {
+  if (assessmentType !== "MOCA") {
+    return getNumericScore(sourceSectionScores[sectionKey])
+  }
+
+  const candidateKeys = LEGACY_MOCA_SECTION_MAP[sectionKey] || [sectionKey]
+  for (const candidate of candidateKeys) {
+    if (candidate in sourceSectionScores) {
+      return getNumericScore(sourceSectionScores[candidate])
+    }
+  }
+
+  return 0
+}
+
 function AppContent() {
   const { user, loading, saveProgress, clearProgress } = useUser()
   const { t } = useLanguage()
@@ -184,7 +215,7 @@ function AppContent() {
 
           const normalizedSectionScores = sectionKeys.reduce(
             (acc, sectionKey) => {
-              const rawScore = getNumericScore(sourceSectionScores[sectionKey])
+              const rawScore = getSourceSectionScore(sectionKey, sourceSectionScores, assessmentKind)
               acc[sectionKey] = clampSectionScore(sectionKey, rawScore, assessmentKind)
               return acc
             },
@@ -461,7 +492,7 @@ function AppContent() {
 
     const normalizedSectionScores = sectionKeys.reduce(
       (acc, sectionKey) => {
-        const rawScore = getNumericScore(sourceSectionScores[sectionKey])
+        const rawScore = getSourceSectionScore(sectionKey, sourceSectionScores, assessmentType)
         acc[sectionKey] = clampSectionScore(sectionKey, rawScore, assessmentType)
         return acc
       },
