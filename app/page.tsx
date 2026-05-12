@@ -67,6 +67,9 @@ type AssessmentStep = {
   sectionKey: string
 }
 
+// ============================================================================
+// ASSESSMENT TYPE MAX SCORES - Per-Section and Per-Type Caps
+// ============================================================================
 const MOCA_SECTION_MAX_SCORES: Record<string, number> = {
   clock: 3,
   trail_making: 1,
@@ -79,20 +82,46 @@ const MOCA_SECTION_MAX_SCORES: Record<string, number> = {
   orientation: 5,
 }
 
-function clampSectionScore(sectionKey: string, score: number, assessmentType: "MOCA" | "MMSE") {
+const MMSE_SECTION_MAX_SCORES: Record<string, number> = {
+  orientation: 8, // 5 time + 3 place (but collected as single score in current implementation)
+  registration: 3,
+  attention: 5,
+  naming: 1,
+  repetition: 2,
+  writing: 2,
+  copying: 1,
+}
+
+// Standalone assessment type max scores (normalized to 0-100)
+const ASSESSMENT_TYPE_MAX_SCORES: Record<string, number> = {
+  MOCA: 30,
+  MMSE: 30,
+  VISUAL: 100, // logMAR-based, normalized to 0-100
+  AUDITORY: 100, // SRT-based, normalized to 0-100
+  OLFACTORY: 100, // 8-item test, already normalized to 0-100
+  TCM: 100, // Multi-constitution, normalized to 0-100
+}
+
+function clampSectionScore(sectionKey: string, score: number, assessmentType: "MOCA" | "MMSE" | "VISUAL" | "AUDITORY" | "OLFACTORY" | "TCM") {
   const normalizedScore = Number.isFinite(score) ? score : 0
   const safeScore = Math.max(0, normalizedScore)
 
-  if (assessmentType !== "MOCA") {
-    return safeScore
+  if (assessmentType === "MOCA") {
+    const maxScore = MOCA_SECTION_MAX_SCORES[sectionKey]
+    if (typeof maxScore !== "number") {
+      return safeScore
+    }
+    return Math.min(safeScore, maxScore)
+  } else if (assessmentType === "MMSE") {
+    const maxScore = MMSE_SECTION_MAX_SCORES[sectionKey]
+    if (typeof maxScore !== "number") {
+      return safeScore
+    }
+    return Math.min(safeScore, maxScore)
   }
 
-  const maxScore = MOCA_SECTION_MAX_SCORES[sectionKey]
-  if (typeof maxScore !== "number") {
-    return safeScore
-  }
-
-  return Math.min(safeScore, maxScore)
+  // For standalone types (VISUAL, AUDITORY, OLFACTORY, TCM), cap at 100
+  return Math.min(safeScore, 100)
 }
 
 function getNumericScore(value: unknown) {
@@ -120,23 +149,41 @@ const LEGACY_MOCA_SECTION_MAP: Record<string, string[]> = {
   orientation: ["orientation"],
 }
 
+const LEGACY_MMSE_SECTION_MAP: Record<string, string[]> = {
+  orientation: ["orientation", "orientation_time", "orientation_place"],
+  registration: ["registration", "memory_registration"],
+  attention: ["attention", "attention_calc"],
+  naming: ["naming", "object_naming"],
+  repetition: ["repetition"],
+  writing: ["writing", "writing_task"],
+  copying: ["copying", "copying_design"],
+}
+
 function getSourceSectionScore(
   sectionKey: string,
   sourceSectionScores: Record<string, unknown>,
-  assessmentType: "MOCA" | "MMSE",
+  assessmentType: "MOCA" | "MMSE" | "VISUAL" | "AUDITORY" | "OLFACTORY" | "TCM",
 ) {
-  if (assessmentType !== "MOCA") {
-    return getNumericScore(sourceSectionScores[sectionKey])
-  }
-
-  const candidateKeys = LEGACY_MOCA_SECTION_MAP[sectionKey] || [sectionKey]
-  for (const candidate of candidateKeys) {
-    if (candidate in sourceSectionScores) {
-      return getNumericScore(sourceSectionScores[candidate])
+  if (assessmentType === "MOCA") {
+    const candidateKeys = LEGACY_MOCA_SECTION_MAP[sectionKey] || [sectionKey]
+    for (const candidate of candidateKeys) {
+      if (candidate in sourceSectionScores) {
+        return getNumericScore(sourceSectionScores[candidate])
+      }
     }
+    return 0
+  } else if (assessmentType === "MMSE") {
+    const candidateKeys = LEGACY_MMSE_SECTION_MAP[sectionKey] || [sectionKey]
+    for (const candidate of candidateKeys) {
+      if (candidate in sourceSectionScores) {
+        return getNumericScore(sourceSectionScores[candidate])
+      }
+    }
+    return 0
   }
 
-  return 0
+  // For standalone types, attempt direct lookup or return 0
+  return getNumericScore(sourceSectionScores[sectionKey] || 0)
 }
 
 function AppContent() {
