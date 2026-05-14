@@ -15,7 +15,6 @@ import type {
 import { saveOlfactoryResult } from "@/app/actions/olfactory-actions"
 import { useLanguage } from "@/contexts/language-context"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -220,8 +219,8 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
-      <Card className="overflow-hidden border-white/80 bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.10),_transparent_36%),linear-gradient(135deg,_rgba(255,255,255,0.97),_rgba(255,251,235,0.95),_rgba(255,247,237,0.92))] shadow-[0_22px_80px_rgba(15,23,42,0.10)]">
-        <CardHeader>
+      <div className="overflow-hidden rounded-xl border border-white/80 bg-[radial-gradient(circle_at_top_left,_rgba(251,191,36,0.18),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.10),_transparent_36%),linear-gradient(135deg,_rgba(255,255,255,0.97),_rgba(255,251,235,0.95),_rgba(255,247,237,0.92))] shadow-[0_22px_80px_rgba(15,23,42,0.10)]">
+        <div className="space-y-2 p-6 pb-4">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <Badge className="border-0 bg-amber-600 text-white hover:bg-amber-600">
               <FlaskConical className="mr-1.5 h-3.5 w-3.5" />
@@ -234,13 +233,13 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
                     : "Olfactory Task 14 Module"}
             </Badge>
           </div>
-          <CardTitle>{copy.title[activeLanguage]}</CardTitle>
-          <CardDescription>{copy.subtitle[activeLanguage]}</CardDescription>
+          <h2 className="text-2xl font-semibold tracking-tight">{copy.title[activeLanguage]}</h2>
+          <p className="text-sm text-muted-foreground">{copy.subtitle[activeLanguage]}</p>
           <p className="text-xs font-medium text-slate-500">
             {copy.activeProtocolLabel[activeLanguage]}: {copy.protocolName[protocolVersion][activeLanguage]}
           </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        </div>
+        <div className="space-y-4 px-6 pb-6">
           <div className="flex items-center justify-between gap-3">
             <Progress value={progress} className="h-2" />
             <Button asChild variant="outline" className="rounded-full">
@@ -272,15 +271,15 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
               <div className="rounded-md border bg-white/80 px-3 py-2 text-sm">{questions.length} items</div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {phase === "intro" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{copy.instructionsTitle[activeLanguage]}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="rounded-xl border bg-white p-6 shadow-sm">
+          <div className="mb-4">
+            <h3 className="text-xl font-semibold">{copy.instructionsTitle[activeLanguage]}</h3>
+          </div>
+          <div className="space-y-4">
             <ul className="list-disc space-y-2 pl-5 text-sm">
               {copy.instructions[activeLanguage].map((item) => (
                 <li key={item}>{item}</li>
@@ -306,13 +305,13 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
             </div>
 
             <Button onClick={beginTest}>{copy.start[activeLanguage]}</Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {phase === "testing" && (
-        <Card className="overflow-hidden rounded-[28px] border border-white/80 bg-[radial-gradient(circle_at_top_left,_rgba(244,114,182,0.12),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(251,191,36,0.12),_transparent_38%),linear-gradient(140deg,_rgba(255,255,255,0.98),_rgba(255,251,235,0.96),_rgba(255,247,237,0.94))] shadow-[0_24px_90px_rgba(15,23,42,0.12)]">
-          <CardHeader className="border-b border-white/80 bg-[linear-gradient(120deg,_rgba(255,255,255,0.92),_rgba(255,250,245,0.94))]">
+        <div className="overflow-hidden rounded-[28px] border border-white/80 bg-[radial-gradient(circle_at_top_left,_rgba(244,114,182,0.12),_transparent_35%),radial-gradient(circle_at_top_right,_rgba(251,191,36,0.12),_transparent_38%),linear-gradient(140deg,_rgba(255,255,255,0.98),_rgba(255,251,235,0.96),_rgba(255,247,237,0.94))] shadow-[0_24px_90px_rgba(15,23,42,0.12)]">
+          <div className="space-y-2 border-b border-white/80 bg-[linear-gradient(120deg,_rgba(255,255,255,0.92),_rgba(255,250,245,0.94))] p-6">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <Badge className="rounded-full border-0 bg-rose-600 px-3 py-1 text-white">
                 <Sparkles className="mr-1.5 h-3.5 w-3.5" />
@@ -334,7 +333,7 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
                       : "Blinded Patient Mode"}
               </Badge>
             </div>
-            <CardTitle>
+              <h3 className="text-xl font-semibold">
               {activeLanguage === "zh"
                 ? `第 ${currentIndex + 1} 题 / 共 ${questions.length} 题`
                 : activeLanguage === "yue"
@@ -342,8 +341,8 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
                   : activeLanguage === "fr"
                     ? `Question ${currentIndex + 1} / ${questions.length}`
                     : `Question ${currentIndex + 1} / ${questions.length}`}
-            </CardTitle>
-            <CardDescription>
+              </h3>
+              <p className="text-sm text-muted-foreground">
               {activeLanguage === "zh"
                 ? `编码：${currentQuestion.questionCode}`
                 : activeLanguage === "yue"
@@ -351,10 +350,10 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
                   : activeLanguage === "fr"
                     ? `Code : ${currentQuestion.questionCode}`
                     : `Code: ${currentQuestion.questionCode}`}
-            </CardDescription>
-          </CardHeader>
+              </p>
+            </div>
 
-          <CardContent className="space-y-6">
+            <div className="space-y-6 p-6">
             <div className="rounded-[22px] border border-rose-100 bg-[linear-gradient(155deg,rgba(255,241,242,0.9),rgba(255,255,255,0.96),rgba(255,247,237,0.94))] p-5 text-center shadow-sm">
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">
                 {activeLanguage === "zh"
@@ -484,18 +483,18 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
                 </Button>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {phase === "results" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{copy.results[activeLanguage]}</CardTitle>
-            <CardDescription>{copy.testNameByProtocol[protocolVersion][activeLanguage]}</CardDescription>
-          </CardHeader>
+        <div className="rounded-xl border bg-white p-6 shadow-sm">
+          <div className="mb-4 space-y-1">
+            <h3 className="text-xl font-semibold">{copy.results[activeLanguage]}</h3>
+            <p className="text-sm text-muted-foreground">{copy.testNameByProtocol[protocolVersion][activeLanguage]}</p>
+          </div>
 
-          <CardContent className="space-y-6">
+          <div className="space-y-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <div className="rounded-lg border p-4">
                 <div className="text-sm text-muted-foreground">Total items</div>
@@ -590,8 +589,8 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
             </div>
 
             {saveMessage ? <p className="text-sm">{saveMessage}</p> : null}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
     </div>
   )
