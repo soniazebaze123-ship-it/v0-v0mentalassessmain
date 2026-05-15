@@ -33,7 +33,7 @@ import { CopyingDesign } from "@/components/assessments/copying-design"
 // Sensory Screening Components
 import { VisualScreening } from "@/components/assessments/visual-screening"
 import { AuditoryScreening } from "@/components/assessments/auditory-screening"
-import { OlfactoryScreening } from "@/components/assessments/olfactory-screening"
+import { OlfactoryModule } from "@/components/olfactory/olfactory-module"
 import { TCMConstitution } from "@/components/assessments/tcm-constitution"
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
 
@@ -511,7 +511,7 @@ function AppContent() {
   }
 
   if (currentView === "olfactory") {
-    return <OlfactoryScreening enhanced onComplete={() => handleBackToDashboard()} />
+    return <OlfactoryModule protocolVersion="sat_v3_14" />
   }
 
   if (currentView === "tcm") {
