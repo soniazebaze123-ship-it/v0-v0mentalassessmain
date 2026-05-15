@@ -99,6 +99,11 @@ interface TCMAssessment {
   }
 }
 
+function clampCognitiveScore(score: number | null | undefined) {
+  const numericScore = typeof score === "number" && Number.isFinite(score) ? score : 0
+  return Math.min(30, Math.max(0, numericScore))
+}
+
 export function AdminPanel() {
   const { t } = useLanguage()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -176,7 +181,7 @@ export function AdminPanel() {
         id: assessment.id,
         user_id: assessment.user_id,
         assessment_type: assessment.type as "MOCA" | "MMSE",
-        total_score: assessment.score,
+        total_score: clampCognitiveScore(assessment.score),
         section_scores: assessment.data?.sections || {},
         completed_at: assessment.completed_at,
         laboratory_analysis: assessment.data?.laboratory_analysis,

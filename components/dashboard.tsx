@@ -26,6 +26,11 @@ function isSameCalendarDay(value?: string | null) {
   return date.toDateString() === new Date().toDateString()
 }
 
+function clampCognitiveScore(score: number | null | undefined) {
+  const numericScore = typeof score === "number" && Number.isFinite(score) ? score : 0
+  return Math.min(30, Math.max(0, numericScore))
+}
+
 interface AssessmentStatus {
   moca: { completed: boolean; score?: number }
   mmse: { completed: boolean; score?: number }
@@ -112,13 +117,13 @@ export function Dashboard({
 
           if (assessment.type === "MOCA" || assessment.type === "MoCA") {
             if (completedToday) {
-              newStatus.moca = { completed: true, score: assessment.score }
+              newStatus.moca = { completed: true, score: clampCognitiveScore(assessment.score) }
             }
             hasCompleted = true
             console.log("[v0] Dashboard: MoCA completed with score:", assessment.score)
           } else if (assessment.type === "MMSE") {
             if (completedToday) {
-              newStatus.mmse = { completed: true, score: assessment.score }
+              newStatus.mmse = { completed: true, score: clampCognitiveScore(assessment.score) }
             }
             hasCompleted = true
             console.log("[v0] Dashboard: MMSE completed with score:", assessment.score)

@@ -43,23 +43,30 @@ const WEIGHTS = {
   },
 }
 
+function clampCognitiveScore(score: number) {
+  const normalizedScore = Number.isFinite(score) ? score : 0
+  return Math.min(30, Math.max(0, normalizedScore))
+}
+
 export function calculateCognitiveScore(scores: CognitiveScores): number {
   // Normalize cognitive scores to 0-100 scale (higher = worse)
   let cognitiveScore = 0
   let count = 0
 
   if (scores.moca !== undefined) {
+    const safeMoca = clampCognitiveScore(scores.moca)
     // MoCA: 26-30 = normal, <26 = impairment
     // Convert to 0-100 scale where 30 = 0, 0 = 100
-    const mocaImpairment = ((30 - scores.moca) / 30) * 100
+    const mocaImpairment = ((30 - safeMoca) / 30) * 100
     cognitiveScore += mocaImpairment
     count++
   }
 
   if (scores.mmse !== undefined) {
+    const safeMmse = clampCognitiveScore(scores.mmse)
     // MMSE: 24-30 = normal, <24 = impairment
     // Convert to 0-100 scale where 30 = 0, 0 = 100
-    const mmseImpairment = ((30 - scores.mmse) / 30) * 100
+    const mmseImpairment = ((30 - safeMmse) / 30) * 100
     cognitiveScore += mmseImpairment
     count++
   }
@@ -258,11 +265,11 @@ export async function fetchAndCalculateRiskProfile(userId: string, supabase: Sup
       const mmse = cognitiveData.find((a) => a.type === "MMSE")
 
       if (moca) {
-        cognitive.moca = moca.score
+        cognitive.moca = clampCognitiveScore(moca.score)
         console.log("[v0] Found MOCA score:", moca.score)
       }
       if (mmse) {
-        cognitive.mmse = mmse.score
+        cognitive.mmse = clampCognitiveScore(mmse.score)
         console.log("[v0] Found MMSE score:", mmse.score)
       }
     }

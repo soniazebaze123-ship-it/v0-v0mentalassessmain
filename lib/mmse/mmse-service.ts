@@ -258,6 +258,8 @@ export function calculateMMSEScores(
     .slice(0, -1)
     .reduce((a, b) => a + b, 0);
 
+  scores.total_score = Math.min(30, Math.max(0, scores.total_score));
+
   return scores;
 }
 

@@ -196,8 +196,10 @@ export function calculateMoCAScores(
     delayed_recall_score +
     orientation_score;
 
+  const cappedTotalScoreRaw = Math.min(total_score_raw, 30);
+
   const { education_adjustment, total_score_final } = applyEducationAdjustment(
-    total_score_raw,
+    cappedTotalScoreRaw,
     educationYears
   );
 
@@ -209,9 +211,9 @@ export function calculateMoCAScores(
     abstraction_score,
     delayed_recall_score,
     orientation_score,
-    total_score_raw,
+    total_score_raw: cappedTotalScoreRaw,
     education_adjustment,
-    total_score_final,
+    total_score_final: Math.min(total_score_final, 30),
   };
 }
 

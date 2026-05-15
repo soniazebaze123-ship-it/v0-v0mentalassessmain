@@ -102,6 +102,12 @@ const ASSESSMENT_TYPE_MAX_SCORES: Record<string, number> = {
   TCM: 100, // Multi-constitution, normalized to 0-100
 }
 
+function clampAssessmentTotal(assessmentType: "MOCA" | "MMSE", score: number) {
+  const normalizedScore = Number.isFinite(score) ? score : 0
+  const safeScore = Math.max(0, normalizedScore)
+  return Math.min(safeScore, ASSESSMENT_TYPE_MAX_SCORES[assessmentType])
+}
+
 function clampSectionScore(sectionKey: string, score: number, assessmentType: "MOCA" | "MMSE" | "VISUAL" | "AUDITORY" | "OLFACTORY" | "TCM") {
   const normalizedScore = Number.isFinite(score) ? score : 0
   const safeScore = Math.max(0, normalizedScore)
@@ -387,7 +393,10 @@ function AppContent() {
         {} as Record<string, number>,
       )
 
-      const totalScore = Object.values(sectionScores).reduce((sum, sectionScore) => sum + sectionScore, 0)
+      const totalScore = clampAssessmentTotal(
+        assessmentType,
+        Object.values(sectionScores).reduce((sum, sectionScore) => sum + sectionScore, 0),
+      )
       console.log("[v0] Assessment complete - Scores array:", newScores, "Total:", totalScore)
 
       const supabase = createClient()

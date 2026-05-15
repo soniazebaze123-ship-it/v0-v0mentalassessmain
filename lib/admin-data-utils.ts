@@ -54,13 +54,22 @@ const MMSE_SCORE_BANDS = [
   { name: "<14 (Severe Impairment)", min: 0, max: 14, color: "#ef4444" }, // red-500
 ]
 
+function clampCognitiveScore(score: number) {
+  const normalizedScore = Number.isFinite(score) ? score : 0
+  return Math.min(30, Math.max(0, normalizedScore))
+}
+
 export function calculateAverageScores(assessments: Assessment[]): AverageScores {
   if (!assessments || assessments.length === 0) {
     return { moca: 0, mmse: 0 }
   }
 
-  const mocaScores = assessments.filter((a) => a.assessment_type === "MOCA").map((a) => a.total_score)
-  const mmseScores = assessments.filter((a) => a.assessment_type === "MMSE").map((a) => a.total_score)
+  const mocaScores = assessments
+    .filter((a) => a.assessment_type === "MOCA")
+    .map((a) => clampCognitiveScore(a.total_score))
+  const mmseScores = assessments
+    .filter((a) => a.assessment_type === "MMSE")
+    .map((a) => clampCognitiveScore(a.total_score))
 
   const avgMoca = mocaScores.length > 0 ? mocaScores.reduce((sum, score) => sum + score, 0) / mocaScores.length : 0
   const avgMmse = mmseScores.length > 0 ? mmseScores.reduce((sum, score) => sum + score, 0) / mmseScores.length : 0
@@ -87,7 +96,7 @@ export function getScoreDistribution(assessments: Assessment[], type: "MOCA" | "
   })
 
   filteredAssessments.forEach((assessment) => {
-    const score = assessment.total_score
+    const score = clampCognitiveScore(assessment.total_score)
     for (const band of bands) {
       if (score >= band.min && score <= band.max) {
         scoreCounts[band.name]++
@@ -127,7 +136,7 @@ export function getScoreTrends(
 
   return filteredAssessments.map((a) => ({
     date: new Date(a.completed_at).toLocaleDateString(), // Format date for display
-    score: a.total_score,
+    score: clampCognitiveScore(a.total_score),
     type: a.assessment_type, // Include type for potential multi-line chart
   }))
 }
@@ -171,13 +180,15 @@ export function getPatientTrajectories(assessments: Assessment[]): PatientTrajec
 
     const baseline = sorted[0]
     const latest = sorted[sorted.length - 1]
-    const delta = latest.total_score - baseline.total_score
+    const baselineScore = clampCognitiveScore(baseline.total_score)
+    const latestScore = clampCognitiveScore(latest.total_score)
+    const delta = latestScore - baselineScore
 
     trajectories.push({
       userId: latest.user_id,
       assessmentType: latest.assessment_type,
-      baselineScore: baseline.total_score,
-      latestScore: latest.total_score,
+      baselineScore,
+      latestScore,
       delta,
       baselineDate: baseline.completed_at,
       latestDate: latest.completed_at,
