@@ -8,7 +8,6 @@ import {
   type CognitiveContext,
 } from "@/lib/olfactory/clinical-interpretation"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -69,9 +68,9 @@ export function NormReferralPanel({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
+    <div className="space-y-5 rounded-lg border p-4">
+      <div className="space-y-1">
+        <h4 className="text-base font-semibold">
           {language === "zh"
             ? "常模参考分层与转诊建议"
             : language === "yue"
@@ -79,8 +78,8 @@ export function NormReferralPanel({
               : language === "fr"
                 ? "Bandes de reference et recommandation d'orientation"
                 : "Norm-Referenced Bands and Referral Recommendation"}
-        </CardTitle>
-        <CardDescription>
+        </h4>
+        <p className="text-sm text-muted-foreground">
           {language === "zh"
             ? "用于临床筛查解释，不作为单独诊断依据。"
             : language === "yue"
@@ -88,10 +87,10 @@ export function NormReferralPanel({
               : language === "fr"
                 ? "Pour l'interpretation du depistage clinique, sans diagnostic autonome."
                 : "For clinical screening interpretation, not standalone diagnosis."}
-        </CardDescription>
-      </CardHeader>
+        </p>
+      </div>
 
-      <CardContent className="space-y-5">
+      <div className="space-y-5">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>
@@ -192,7 +191,7 @@ export function NormReferralPanel({
           <p className="mt-2 text-sm">{output.clinicianRecommendation[language]}</p>
           <p className="mt-3 text-xs text-muted-foreground">{output.caveat[language]}</p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
