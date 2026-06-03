@@ -1,6 +1,7 @@
 export type AudioLanguage = "en" | "zh" | "yue" | "fr"
 
 const AUDIO_EXTENSIONS = ["mp3", "wav", "m4a"] as const
+const sourceAvailabilityCache = new Map<string, boolean>()
 
 function sanitizeAudioId(value: string) {
   return value
@@ -73,6 +74,50 @@ function loadAudio(source: string): Promise<HTMLAudioElement> {
   })
 }
 
+async function isAudioSourceAvailable(source: string) {
+  const cached = sourceAvailabilityCache.get(source)
+  if (typeof cached === "boolean") {
+    return cached
+  }
+
+  try {
+    const headResponse = await fetch(source, {
+      method: "HEAD",
+      cache: "no-store",
+    })
+
+    if (headResponse.ok) {
+      sourceAvailabilityCache.set(source, true)
+      return true
+    }
+
+    if (headResponse.status !== 405) {
+      sourceAvailabilityCache.set(source, false)
+      return false
+    }
+  } catch {
+    sourceAvailabilityCache.set(source, false)
+    return false
+  }
+
+  try {
+    const getResponse = await fetch(source, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Range: "bytes=0-0",
+      },
+    })
+
+    const available = getResponse.ok || getResponse.status === 206
+    sourceAvailabilityCache.set(source, available)
+    return available
+  } catch {
+    sourceAvailabilityCache.set(source, false)
+    return false
+  }
+}
+
 interface PlayAudioSourcesOptions {
   sources: string[]
   activeAudioRef: { current: HTMLAudioElement | null }
@@ -84,6 +129,11 @@ export async function playAudioSources({ sources, activeAudioRef, onStart, onEnd
   stopAudioPlayback(activeAudioRef)
 
   for (const source of sources) {
+    const available = await isAudioSourceAvailable(source)
+    if (!available) {
+      continue
+    }
+
     try {
       const audio = await loadAudio(source)
       activeAudioRef.current = audio

@@ -37,6 +37,38 @@ export interface Assessment {
   assessment_type: "MOCA" | "MMSE"
   total_score: number
   section_scores: Record<string, number>
+  scoring_version?: string
+  scoring_framework?: string
+  max_score?: number
+  legacy_score?: number
+  legacy_max_score?: number
+  score_percent?: number
+  reconstruction_applied?: boolean
+  recalculated_at?: string
+  orientation_audit?: {
+    location?: {
+      source?: string
+      confirmed?: boolean
+      sitePresetUsed?: boolean
+      testedSite?: string
+      geocodeProvider?: string | null
+      coordinates?: {
+        latitude?: number
+        longitude?: number
+        accuracyMeters?: number
+      } | null
+      suggestedPlace?: {
+        country?: string
+        president?: string
+        sea?: string
+        province?: string
+        city?: string
+        building?: string
+        place?: string
+        room?: string
+      }
+    }
+  }
   completed_at: string
   laboratory_analysis?: string
 }
@@ -105,7 +137,7 @@ function clampCognitiveScore(score: number | null | undefined) {
 }
 
 export function AdminPanel() {
-  const { t } = useLanguage()
+  const { t, localizeText } = useLanguage()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
@@ -136,7 +168,13 @@ export function AdminPanel() {
     if (username === "admin" && password === "admin123") {
       setIsAuthenticated(true)
     } else {
-      alert("Invalid credentials")
+      alert(
+        localizeText("Invalid credentials", {
+          zh: "凭据无效",
+          yue: "憑證無效",
+          fr: "Identifiants invalides",
+        }),
+      )
     }
   }
 
@@ -177,15 +215,57 @@ export function AdminPanel() {
         .select("*")
         .order("completed_at", { ascending: false })
 
-      const mappedAssessments = (assessmentsData || []).map((assessment) => ({
-        id: assessment.id,
-        user_id: assessment.user_id,
-        assessment_type: assessment.type as "MOCA" | "MMSE",
-        total_score: clampCognitiveScore(assessment.score),
-        section_scores: assessment.data?.sections || {},
-        completed_at: assessment.completed_at,
-        laboratory_analysis: assessment.data?.laboratory_analysis,
-      }))
+      const mappedAssessments = (assessmentsData || []).map((assessment) => {
+        const sourceData = assessment.data && typeof assessment.data === "object" ? assessment.data : {}
+        const parsedScorePercent =
+          typeof assessment.score_percent === "number" && Number.isFinite(assessment.score_percent)
+            ? assessment.score_percent
+            : typeof sourceData.score_percent === "number" && Number.isFinite(sourceData.score_percent)
+              ? sourceData.score_percent
+              : undefined
+        const parsedLegacyScore =
+          typeof assessment.score_legacy === "number" && Number.isFinite(assessment.score_legacy)
+            ? assessment.score_legacy
+            : typeof sourceData.legacy_mmse_score === "number" && Number.isFinite(sourceData.legacy_mmse_score)
+              ? sourceData.legacy_mmse_score
+              : undefined
+        const parsedLegacyMaxScore =
+          typeof sourceData.legacy_mmse_max_score === "number" && Number.isFinite(sourceData.legacy_mmse_max_score)
+            ? sourceData.legacy_mmse_max_score
+            : assessment.type === "MMSE"
+              ? 22
+              : undefined
+        const sectionScores = Object.fromEntries(
+          Object.entries(sourceData).filter(([, value]) => typeof value === "number" && Number.isFinite(value)),
+        ) as Record<string, number>
+        const sectionMetadata =
+          sourceData.section_metadata && typeof sourceData.section_metadata === "object"
+            ? (sourceData.section_metadata as Record<string, unknown>)
+            : {}
+        const orientationAudit =
+          sectionMetadata.orientation && typeof sectionMetadata.orientation === "object"
+            ? (sectionMetadata.orientation as Assessment["orientation_audit"])
+            : undefined
+
+        return {
+          id: assessment.id,
+          user_id: assessment.user_id,
+          assessment_type: assessment.type as "MOCA" | "MMSE",
+          total_score: clampCognitiveScore(assessment.score),
+          section_scores: sectionScores,
+          scoring_version: assessment.scoring_version || assessment.data?.scoring_version,
+          scoring_framework: assessment.scoring_framework,
+          max_score: assessment.max_score || assessment.data?.max_score,
+          legacy_score: parsedLegacyScore,
+          legacy_max_score: parsedLegacyMaxScore,
+          score_percent: parsedScorePercent,
+          reconstruction_applied: Boolean(assessment.reconstruction_applied),
+          recalculated_at: assessment.recalculated_at,
+          orientation_audit: orientationAudit,
+          completed_at: assessment.completed_at,
+          laboratory_analysis: assessment.data?.laboratory_analysis,
+        }
+      })
 
       setUsers(usersData || [])
       setAssessments(mappedAssessments)
@@ -215,10 +295,22 @@ export function AdminPanel() {
         prev.map((a) => (a.id === assessmentId ? { ...a, laboratory_analysis: labAnalysis } : a)),
       )
       setLabAnalysis("")
-      alert("Laboratory analysis updated successfully")
+      alert(
+        localizeText("Laboratory analysis updated successfully", {
+          zh: "实验室分析更新成功",
+          yue: "化驗分析更新成功",
+          fr: "Analyse de laboratoire mise a jour avec succes",
+        }),
+      )
     } catch (error) {
       console.error("Error updating lab analysis:", error)
-      alert("Failed to update laboratory analysis")
+      alert(
+        localizeText("Failed to update laboratory analysis", {
+          zh: "更新实验室分析失败",
+          yue: "更新化驗分析失敗",
+          fr: "Echec de la mise a jour de l'analyse de laboratoire",
+        }),
+      )
     }
   }
 
@@ -229,6 +321,17 @@ export function AdminPanel() {
         phone_number: user?.phone_number || "",
         assessment_type: assessment.assessment_type,
         total_score: assessment.total_score,
+        legacy_score:
+          assessment.assessment_type === "MMSE"
+            ? typeof assessment.legacy_score === "number"
+              ? assessment.legacy_score
+              : ""
+            : "",
+        reconstructed_score:
+          assessment.assessment_type === "MMSE"
+            ? assessment.total_score
+            : "",
+        score_version: assessment.scoring_version || "",
         section_scores: JSON.stringify(assessment.section_scores),
         completed_at: assessment.completed_at,
         laboratory_analysis: assessment.laboratory_analysis || "",
@@ -236,11 +339,24 @@ export function AdminPanel() {
     })
 
     const csv = [
-      ["Phone Number", "Assessment Type", "Total Score", "Section Scores", "Completed At", "Laboratory Analysis"],
+      [
+        "Phone Number",
+        "Assessment Type",
+        "Total Score",
+        "Legacy Score",
+        "Reconstructed Score",
+        "Score Version",
+        "Section Scores",
+        "Completed At",
+        "Laboratory Analysis",
+      ],
       ...csvData.map((row) => [
         row.phone_number,
         row.assessment_type,
         row.total_score.toString(),
+        row.legacy_score.toString(),
+        row.reconstructed_score.toString(),
+        row.score_version,
         row.section_scores,
         row.completed_at,
         row.laboratory_analysis,
@@ -287,7 +403,13 @@ export function AdminPanel() {
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter username"
+                placeholder={
+                  localizeText("Enter username", {
+                    zh: "输入用户名",
+                    yue: "輸入用戶名",
+                    fr: "Saisir le nom d'utilisateur",
+                  })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -297,7 +419,13 @@ export function AdminPanel() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
+                placeholder={
+                  localizeText("Enter password", {
+                    zh: "输入密码",
+                    yue: "輸入密碼",
+                    fr: "Saisir le mot de passe",
+                  })
+                }
               />
             </div>
             <Button onClick={handleLogin} className="w-full">
@@ -340,6 +468,10 @@ export function AdminPanel() {
     return pulse ? `${pulse.char} · ${pulse.pinyin} · ${pulse.label}` : pulseId
   }
 
+  const formatCoordinate = (value?: number) => {
+    return typeof value === "number" && Number.isFinite(value) ? value.toFixed(6) : "-"
+  }
+
   const getAverageScores = () => {
     const mocaScores = assessments.filter((a) => a.assessment_type === "MOCA").map((a) => a.total_score)
     const mmseScores = assessments.filter((a) => a.assessment_type === "MMSE").map((a) => a.total_score)
@@ -366,8 +498,11 @@ export function AdminPanel() {
         orientation: t("mmse.orientation"),
         registration: t("mmse.registration"),
         attention: t("mmse.attention"),
+        recall: t("mmse.recall"),
         naming: t("mmse.naming"),
         repetition: t("mmse.repetition"),
+        three_stage_command: t("mmse.three_stage_command"),
+        reading_command: t("mmse.reading_command"),
         writing: t("mmse.writing"),
         copying: t("mmse.copying"),
       }
@@ -463,15 +598,28 @@ export function AdminPanel() {
         <Card className="mb-8 border-cyan-200 bg-[linear-gradient(135deg,rgba(236,254,255,0.98),rgba(255,255,255,0.98),rgba(239,246,255,0.92))]">
           <CardHeader>
             <CardTitle className="flex items-center gap-3">
-              Olfactory Examiner Key
+              {localizeText("Olfactory Examiner Key", {
+                zh: "嗅觉评估员参考键",
+                yue: "嗅覺評估員參考鍵",
+                fr: "Cle examinateur olfactif",
+              })}
               <Badge className="bg-cyan-600 text-white hover:bg-cyan-600 text-xs font-normal">
-                Active: {activeOlfactoryProtocol === "sat_v3_14" ? "14-item" : activeOlfactoryProtocol === "sat_v2" ? "12-item" : "8-item"} ({activeOlfactoryProtocol})
+                {localizeText("Active", {
+                  zh: "当前",
+                  yue: "當前",
+                  fr: "Actif",
+                })}
+                : {activeOlfactoryProtocol === "sat_v3_14" ? "14-item" : activeOlfactoryProtocol === "sat_v2" ? "12-item" : "8-item"} ({activeOlfactoryProtocol})
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-slate-600">
-              This key is only for examiners. Scents are shown in the order they are presented to the patient. Patients should not be shown the correct mapping.
+              {localizeText("This key is only for examiners. Scents are shown in the order they are presented to the patient. Patients should not be shown the correct mapping.", {
+                zh: "此参考键仅供评估员使用。气味按向患者呈现的顺序显示。请勿向患者显示正确对应关系。",
+                yue: "呢個參考鍵只供評估員使用。氣味會按向患者呈現嘅次序顯示。請勿向患者顯示正確對應。",
+                fr: "Cette cle est reservee aux examinateurs. Les odeurs sont affichees dans l'ordre de presentation au patient. Ne montrez pas la correspondance correcte au patient.",
+              })}
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {OLFACTORY_PROTOCOL_QUESTION_SET[activeOlfactoryProtocol].map((question) => (
@@ -480,9 +628,9 @@ export function AdminPanel() {
                     <Badge className="bg-cyan-600 text-white hover:bg-cyan-600">{question.questionCode}</Badge>
                     <span className="text-sm font-semibold text-slate-700">{SCENT_LABELS[question.correctAnswer].en}</span>
                   </div>
-                  <p className="mt-2 text-xs text-slate-500">Correct: {SCENT_LABELS[question.correctAnswer].zh}</p>
-                  <p className="mt-1 text-xs text-slate-500">Code description: {question.codeDescription.en}</p>
-                  <p className="mt-1 text-xs text-slate-500">Options: {question.options.map((option) => SCENT_LABELS[option.key].en).join(", ")}</p>
+                  <p className="mt-2 text-xs text-slate-500">{localizeText("Correct", { zh: "正确", yue: "正確", fr: "Correct" })}: {SCENT_LABELS[question.correctAnswer].zh}</p>
+                  <p className="mt-1 text-xs text-slate-500">{localizeText("Code description", { zh: "编码说明", yue: "編碼說明", fr: "Description du code" })}: {question.codeDescription.en}</p>
+                  <p className="mt-1 text-xs text-slate-500">{localizeText("Options", { zh: "选项", yue: "選項", fr: "Options" })}: {question.options.map((option) => SCENT_LABELS[option.key].en).join(", ")}</p>
                 </div>
               ))}
             </div>
@@ -616,6 +764,11 @@ export function AdminPanel() {
                             <Badge variant={assessment.assessment_type === "MOCA" ? "default" : "secondary"}>
                               {assessment.assessment_type}
                             </Badge>
+                            {assessment.assessment_type === "MMSE" && (
+                              <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
+                                {assessment.scoring_version || t("mmse.v2_badge")}
+                              </Badge>
+                            )}
                             <span className="text-sm text-gray-600">
                               {new Date(assessment.completed_at).toLocaleDateString()}
                             </span>
@@ -625,6 +778,83 @@ export function AdminPanel() {
                             <p className="font-medium">
                               {t("admin.total_score")}: {assessment.total_score}/30
                             </p>
+                            {assessment.assessment_type === "MMSE" && (
+                              <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-sm text-slate-700">
+                                <p className="font-semibold text-blue-900">
+                                  {localizeText("MMSE Score Provenance", {
+                                    zh: "MMSE 评分来源",
+                                    yue: "MMSE 評分來源",
+                                    fr: "Provenance du score MMSE",
+                                  })}
+                                </p>
+                                <div className="mt-1 grid grid-cols-1 gap-1">
+                                  <p>
+                                    {localizeText("Reconstructed", {
+                                      zh: "重建分数",
+                                      yue: "重建分數",
+                                      fr: "Score reconstruit",
+                                    })}
+                                    : <span className="font-semibold">{assessment.total_score}/30</span>
+                                  </p>
+                                  {typeof assessment.legacy_score === "number" && (
+                                    <p>
+                                      {localizeText("Legacy", {
+                                        zh: "旧版分数",
+                                        yue: "舊版分數",
+                                        fr: "Score hérité",
+                                      })}
+                                      : <span className="font-semibold">{assessment.legacy_score}/{assessment.legacy_max_score || 22}</span>
+                                    </p>
+                                  )}
+                                  <p>
+                                    {localizeText("Version", {
+                                      zh: "版本",
+                                      yue: "版本",
+                                      fr: "Version",
+                                    })}
+                                    : <span className="font-semibold">{assessment.scoring_version || "-"}</span>
+                                  </p>
+                                  {assessment.scoring_framework && (
+                                    <p>
+                                      {localizeText("Framework", {
+                                        zh: "评分框架",
+                                        yue: "評分框架",
+                                        fr: "Cadre",
+                                      })}
+                                      : <span className="font-semibold">{assessment.scoring_framework}</span>
+                                    </p>
+                                  )}
+                                  <p>
+                                    {localizeText("Reconstruction Applied", {
+                                      zh: "已应用重建",
+                                      yue: "已套用重建",
+                                      fr: "Reconstruction appliquée",
+                                    })}
+                                    : <span className="font-semibold">{assessment.reconstruction_applied ? localizeText("Yes", { zh: "是", yue: "是", fr: "Oui" }) : localizeText("No", { zh: "否", yue: "否", fr: "Non" })}</span>
+                                  </p>
+                                  {typeof assessment.score_percent === "number" && (
+                                    <p>
+                                      {localizeText("Normalized Percent", {
+                                        zh: "标准化百分比",
+                                        yue: "標準化百分比",
+                                        fr: "Pourcentage normalisé",
+                                      })}
+                                      : <span className="font-semibold">{assessment.score_percent.toFixed(2)}%</span>
+                                    </p>
+                                  )}
+                                  {assessment.recalculated_at && (
+                                    <p>
+                                      {localizeText("Recalculated At", {
+                                        zh: "重算时间",
+                                        yue: "重算時間",
+                                        fr: "Recalculé le",
+                                      })}
+                                      : <span className="font-semibold">{new Date(assessment.recalculated_at).toLocaleString()}</span>
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                             <div className="text-sm text-gray-600 mt-2">
                               <p className="font-medium">{t("admin.section_scores")}:</p>
                               <div className="grid grid-cols-1 gap-1 mt-1">
@@ -640,6 +870,49 @@ export function AdminPanel() {
                                 })}
                               </div>
                             </div>
+
+                            {assessment.assessment_type === "MMSE" && assessment.orientation_audit?.location && (
+                              <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-sm text-slate-700">
+                                <p className="font-medium text-blue-900">
+                                  {localizeText("MMSE Orientation Location Audit", {
+                                    zh: "MMSE 定向地点审计",
+                                    yue: "MMSE 定向地點審核",
+                                    fr: "Audit de localisation MMSE",
+                                  })}
+                                </p>
+                                {(() => {
+                                  const coords = assessment.orientation_audit?.location?.coordinates
+                                  const hasCoordinates =
+                                    typeof coords?.latitude === "number" && Number.isFinite(coords.latitude) &&
+                                    typeof coords?.longitude === "number" && Number.isFinite(coords.longitude)
+
+                                  return (
+                                <div className="mt-1 grid grid-cols-1 gap-1">
+                                  <p>
+                                    {localizeText("Source", { zh: "来源", yue: "來源", fr: "Source" })}: <span className="font-semibold">{assessment.orientation_audit.location.source || "manual"}</span>
+                                    {" • "}
+                                    {localizeText("Confirmed", { zh: "已确认", yue: "已確認", fr: "Confirme" })}: <span className="font-semibold">{assessment.orientation_audit.location.confirmed ? localizeText("Yes", { zh: "是", yue: "是", fr: "Oui" }) : localizeText("No", { zh: "否", yue: "否", fr: "Non" })}</span>
+                                  </p>
+                                  <p>
+                                    {localizeText("Site", { zh: "地点", yue: "地點", fr: "Site" })}: <span className="font-semibold">{assessment.orientation_audit.location.testedSite || "china_guangzhou_hospital"}</span>
+                                    {" • "}
+                                    {localizeText("Preset used", { zh: "使用预设", yue: "使用預設", fr: "Preconfiguration utilisee" })}: <span className="font-semibold">{assessment.orientation_audit.location.sitePresetUsed ? localizeText("Yes", { zh: "是", yue: "是", fr: "Oui" }) : localizeText("No", { zh: "否", yue: "否", fr: "Non" })}</span>
+                                  </p>
+                                  {hasCoordinates && (
+                                    <p>
+                                      {localizeText("Coordinates", { zh: "坐标", yue: "座標", fr: "Coordonnees" })}: <span className="font-semibold">{formatCoordinate(assessment.orientation_audit.location.coordinates?.latitude)}</span>, <span className="font-semibold">{formatCoordinate(assessment.orientation_audit.location.coordinates?.longitude)}</span>
+                                      {" • "}
+                                      {localizeText("Accuracy (m)", { zh: "精度（米）", yue: "精度（米）", fr: "Precision (m)" })}: <span className="font-semibold">{assessment.orientation_audit.location.coordinates?.accuracyMeters ?? "-"}</span>
+                                    </p>
+                                  )}
+                                  <p>
+                                    {localizeText("Place", { zh: "地点层级", yue: "地點層級", fr: "Lieu" })}: <span className="font-semibold">{assessment.orientation_audit.location.suggestedPlace?.country || "-"}</span> / <span className="font-semibold">{assessment.orientation_audit.location.suggestedPlace?.province || "-"}</span> / <span className="font-semibold">{assessment.orientation_audit.location.suggestedPlace?.city || "-"}</span> / <span className="font-semibold">{assessment.orientation_audit.location.suggestedPlace?.building || "-"}</span> / <span className="font-semibold">{assessment.orientation_audit.location.suggestedPlace?.place || assessment.orientation_audit.location.suggestedPlace?.room || "-"}</span>
+                                  </p>
+                                </div>
+                                  )
+                                })()}
+                              </div>
+                            )}
                           </div>
 
                           <div className="space-y-2">

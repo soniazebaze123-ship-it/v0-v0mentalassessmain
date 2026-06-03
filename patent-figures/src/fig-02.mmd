@@ -1,0 +1,17 @@
+stateDiagram-v2
+  [*] --> Login
+  Login --> Dashboard: authenticated
+  Dashboard --> MOCA: select cognitive test
+  Dashboard --> MMSE: select cognitive test
+  Dashboard --> Visual: select sensory test
+  Dashboard --> Auditory: select sensory test
+  Dashboard --> Olfactory: select sensory test
+  Dashboard --> TCM: select sensory test
+  MOCA --> Results: all steps complete
+  MMSE --> Results: all steps complete
+  Visual --> Dashboard: submit
+  Auditory --> Dashboard: submit
+  Olfactory --> Dashboard: submit
+  TCM --> Dashboard: submit
+  Results --> RiskProfile: view risk profile
+  RiskProfile --> Dashboard: return

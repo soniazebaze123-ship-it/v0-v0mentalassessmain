@@ -1,0 +1,9 @@
+flowchart LR
+  Start[Select MOCA or MMSE] --> Steps[Load step array and section keys]
+  Steps --> Input[Capture raw score per step]
+  Input --> Clamp[Clamp section score to valid bounds]
+  Clamp --> Aggregate[Build section scores and total score]
+  Aggregate --> Save[Save progress and assessment row]
+  Save --> Classify[Run risk classification]
+  Classify --> Update[Update saved assessment with risk data]
+  Update --> Results[Show results screen]

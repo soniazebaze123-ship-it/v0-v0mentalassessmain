@@ -27,6 +27,10 @@ import { MMSEOrientation } from "@/components/assessments/mmse-orientation"
 import { MMSEAttention } from "@/components/assessments/mmse-attention"
 import { ObjectNaming } from "@/components/assessments/object-naming"
 import { MMSERepetition } from "@/components/assessments/mmse-repetition"
+import { MMSERegistration } from "@/components/assessments/mmse-registration"
+import { MMSEDelayedRecall } from "@/components/assessments/mmse-delayed-recall"
+import { MMSEThreeStageCommand } from "@/components/assessments/mmse-three-stage-command"
+import { MMSEReadingCommand } from "@/components/assessments/mmse-reading-command"
 import { WritingTask } from "@/components/assessments/writing-task"
 import { CopyingDesign } from "@/components/assessments/copying-design"
 
@@ -61,6 +65,8 @@ type CompletedAssessment = {
   completedAt: string
 }
 
+type SectionMetadata = Record<string, Record<string, unknown>>
+
 type AssessmentStep = {
   component: React.ComponentType<any>
   props: Record<string, unknown>
@@ -83,14 +89,19 @@ const MOCA_SECTION_MAX_SCORES: Record<string, number> = {
 }
 
 const MMSE_SECTION_MAX_SCORES: Record<string, number> = {
-  orientation: 8, // 5 time + 3 place (but collected as single score in current implementation)
+  orientation: 10,
   registration: 3,
   attention: 5,
-  naming: 1,
-  repetition: 2,
-  writing: 2,
+  recall: 3,
+  naming: 2,
+  repetition: 1,
+  three_stage_command: 3,
+  reading_command: 1,
+  writing: 1,
   copying: 1,
 }
+
+const MMSE_SCORING_VERSION = "MMSE_v2_standard_30"
 
 // Standalone assessment type max scores (normalized to 0-100)
 const ASSESSMENT_TYPE_MAX_SCORES: Record<string, number> = {
@@ -159,8 +170,11 @@ const LEGACY_MMSE_SECTION_MAP: Record<string, string[]> = {
   orientation: ["orientation", "orientation_time", "orientation_place"],
   registration: ["registration", "memory_registration"],
   attention: ["attention", "attention_calc"],
+  recall: ["recall", "delayed_recall", "memory_recall"],
   naming: ["naming", "object_naming"],
   repetition: ["repetition"],
+  three_stage_command: ["three_stage_command", "three_stage", "three_step_command"],
+  reading_command: ["reading_command", "reading"],
   writing: ["writing", "writing_task"],
   copying: ["copying", "copying_design"],
 }
@@ -194,7 +208,7 @@ function getSourceSectionScore(
 
 function AppContent() {
   const { user, loading, saveProgress, clearProgress } = useUser()
-  const { t } = useLanguage()
+  const { t, localizeText } = useLanguage()
   const [currentView, setCurrentView] = useState<
     | "login"
     | "register"
@@ -215,6 +229,7 @@ function AppContent() {
   const [assessmentType, setAssessmentType] = useState<"MOCA" | "MMSE">("MOCA")
   const [completedAssessments, setCompletedAssessments] = useState<Record<string, CompletedAssessment>>({})
   const [riskResult, setRiskResult] = useState<RiskClassificationOutput | null>(null)
+  const [sectionMetadata, setSectionMetadata] = useState<SectionMetadata>({})
   const mocaSteps: AssessmentStep[] = [
     { component: InteractiveClock, props: { targetTime: { hour: 2, minute: 10 } }, sectionKey: "clock" },
     { component: TrailMakingTask, props: {}, sectionKey: "trail_making" },
@@ -233,10 +248,13 @@ function AppContent() {
 
   const mmseSteps: AssessmentStep[] = [
     { component: MMSEOrientation, props: {}, sectionKey: "orientation" },
-    { component: MemoryTask, props: { words: t("memory.mmse.words"), title: t("mmse.registration"), assessmentType: "MMSE" }, sectionKey: "registration" },
+    { component: MMSERegistration, props: {}, sectionKey: "registration" },
     { component: MMSEAttention, props: {}, sectionKey: "attention" },
+    { component: MMSEDelayedRecall, props: {}, sectionKey: "recall" },
     { component: ObjectNaming, props: { assessmentMode: "MMSE" }, sectionKey: "naming" },
     { component: MMSERepetition, props: {}, sectionKey: "repetition" },
+    { component: MMSEThreeStageCommand, props: {}, sectionKey: "three_stage_command" },
+    { component: MMSEReadingCommand, props: {}, sectionKey: "reading_command" },
     { component: WritingTask, props: {}, sectionKey: "writing" },
     { component: CopyingDesign, props: {}, sectionKey: "copying" },
   ]
@@ -332,6 +350,7 @@ function AppContent() {
       setAssessmentType(assessmentKey)
       setCurrentStep(0)
       setScores([])
+      setSectionMetadata({})
       saveProgress(assessmentKey, 0, [])
     }
   }
@@ -355,6 +374,7 @@ function AppContent() {
     setAssessmentType(assessmentKey)
     setCurrentStep(0)
     setScores([])
+    setSectionMetadata({})
     setCurrentView(type)
     await saveProgress(assessmentKey, 0, [])
   }
@@ -369,16 +389,21 @@ function AppContent() {
     setCurrentView("risk_profile")
   }
 
-  const handleStepComplete = async (score: number) => {
+  const handleStepComplete = async (score: number, metadata?: Record<string, unknown>) => {
     const steps = assessmentType === "MOCA" ? mocaSteps : mmseSteps
     const currentStepMeta = steps[currentStep]
     const normalizedScore = currentStepMeta
       ? clampSectionScore(currentStepMeta.sectionKey, score, assessmentType)
       : Math.max(0, Number.isFinite(score) ? score : 0)
+    const mergedSectionMetadata =
+      currentStepMeta && metadata
+        ? { ...sectionMetadata, [currentStepMeta.sectionKey]: metadata }
+        : sectionMetadata
 
     console.log("[v0] Step complete - Score:", normalizedScore, "Assessment:", assessmentType, "Step:", currentStep)
     const newScores = [...scores, normalizedScore]
     setScores(newScores)
+    setSectionMetadata(mergedSectionMetadata)
 
     if (currentStep < steps.length - 1) {
       await saveProgress(assessmentType, currentStep + 1, newScores)
@@ -397,6 +422,15 @@ function AppContent() {
         assessmentType,
         Object.values(sectionScores).reduce((sum, sectionScore) => sum + sectionScore, 0),
       )
+      const scoringMetadata =
+        assessmentType === "MMSE"
+          ? { scoring_version: MMSE_SCORING_VERSION, max_score: 30 }
+          : { max_score: 30 }
+      const metadataPayload =
+        Object.keys(mergedSectionMetadata).length > 0
+          ? { section_metadata: mergedSectionMetadata }
+          : {}
+      const assessmentPayloadData = { ...sectionScores, ...scoringMetadata, ...metadataPayload }
       console.log("[v0] Assessment complete - Scores array:", newScores, "Total:", totalScore)
 
       const supabase = createClient()
@@ -406,7 +440,7 @@ function AppContent() {
           user_id: user!.id,
           type: assessmentType,
           score: totalScore,
-          data: sectionScores,
+          data: assessmentPayloadData,
         })
 
         const { data, error } = await supabase
@@ -415,7 +449,7 @@ function AppContent() {
             user_id: user!.id,
             type: assessmentType,
             score: totalScore,
-            data: sectionScores,
+            data: assessmentPayloadData,
           })
           .select()
 
@@ -443,7 +477,14 @@ function AppContent() {
         if (data?.[0]?.id) {
           await supabase
             .from("assessments")
-            .update({ data: { ...sectionScores, risk_classification: risk.risk_classification, recommendation: risk.recommendation_text, referral_needed: risk.referral_needed } })
+            .update({
+              data: {
+                ...assessmentPayloadData,
+                risk_classification: risk.risk_classification,
+                recommendation: risk.recommendation_text,
+                referral_needed: risk.referral_needed,
+              },
+            })
             .eq("id", data[0].id)
         }
 
@@ -477,6 +518,7 @@ function AppContent() {
     setCurrentView("dashboard")
     setCurrentStep(0)
     setScores([])
+    setSectionMetadata({})
     void loadCompletedAssessments()
   }
 
@@ -584,21 +626,36 @@ function AppContent() {
             ring: "ring-emerald-100",
             badge: "bg-emerald-100 text-emerald-800",
             panel: "from-white/95 to-emerald-50/90",
-            eyebrow: "Cognitive Navigation",
+            eyebrow: localizeText("Cognitive Navigation", {
+              zh: "认知导航",
+              yue: "認知導航",
+              fr: "Navigation cognitive",
+            }),
           }
         : {
-            page: "from-blue-50 via-slate-50 to-indigo-100",
-            accent: "from-blue-500 via-sky-500 to-indigo-500",
-            ring: "ring-blue-100",
-            badge: "bg-blue-100 text-blue-800",
-            panel: "from-white/95 to-blue-50/90",
-            eyebrow: "Clinical Orientation",
+            page: "from-[#f7fbff] via-[#eef6ff] to-[#e5edff]",
+            accent: "from-[#2563eb] via-[#0ea5e9] to-[#1d4ed8]",
+            ring: "ring-blue-200/80",
+            badge: "bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-[0_10px_30px_rgba(37,99,235,0.28)]",
+            panel: "from-white/95 via-[#f3f8ff]/95 to-[#e8f1ff]/95",
+            eyebrow: localizeText("Clinical Signature Edition", {
+              zh: "临床签名版",
+              yue: "臨床簽名版",
+              fr: "Édition signature clinique",
+            }),
           }
 
     return (
-      <div className={`min-h-screen bg-gradient-to-br ${shellTheme.page} p-4 md:p-6`}>
+      <div className={`relative min-h-screen overflow-hidden bg-gradient-to-br ${shellTheme.page} p-4 md:p-6`}>
+        {assessmentType === "MMSE" && (
+          <>
+            <div className="pointer-events-none absolute -left-24 -top-20 h-64 w-64 rounded-full bg-blue-300/25 blur-3xl" />
+            <div className="pointer-events-none absolute -right-16 top-28 h-72 w-72 rounded-full bg-sky-300/30 blur-3xl" />
+            <div className="pointer-events-none absolute bottom-0 left-1/3 h-56 w-56 rounded-full bg-indigo-300/25 blur-3xl" />
+          </>
+        )}
         <div className="mx-auto max-w-5xl">
-          <div className={`mb-6 overflow-hidden rounded-[28px] border border-white/70 bg-gradient-to-br ${shellTheme.panel} shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur ring-1 ${shellTheme.ring}`}>
+          <div className={`mb-6 overflow-hidden rounded-[28px] border border-white/80 bg-gradient-to-br ${shellTheme.panel} shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-xl ring-1 ${shellTheme.ring}`}>
             <div className="relative px-6 py-6 md:px-8 md:py-7">
               <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${shellTheme.accent}`} />
               <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
@@ -613,13 +670,18 @@ function AppContent() {
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-4xl">
                       {assessmentTitle}
                     </h1>
+                    {assessmentType === "MMSE" && (
+                      <div className="mt-2 inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+                        {t("mmse.v2_badge")}
+                      </div>
+                    )}
                     <p className="mt-2 text-sm text-slate-600 md:text-base">
                       {t("common.step")} {currentStep + 1} {t("common.of")} {steps.length}
                     </p>
                   </div>
                 </div>
 
-                <div className="min-w-44 rounded-2xl border border-white/80 bg-white/80 px-4 py-3 shadow-sm backdrop-blur">
+                <div className="min-w-44 rounded-2xl border border-white/80 bg-white/85 px-4 py-3 shadow-[0_14px_28px_rgba(15,23,42,0.08)] backdrop-blur">
                   <div className="flex items-center justify-between text-xs uppercase tracking-[0.16em] text-slate-500">
                     <span>{t("common.progress")}</span>
                     <span>{currentStep + 1}/{steps.length}</span>
@@ -638,7 +700,9 @@ function AppContent() {
             </div>
           </div>
 
-          <CurrentComponent onComplete={handleStepComplete} onSkip={handleSkipTask} {...props} />
+          <div className="rounded-[30px] border border-white/80 bg-white/55 p-3 shadow-[0_18px_60px_rgba(15,23,42,0.10)] backdrop-blur-lg md:p-4">
+            <CurrentComponent onComplete={handleStepComplete} onSkip={handleSkipTask} {...props} />
+          </div>
         </div>
       </div>
     )

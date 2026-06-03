@@ -1,0 +1,11 @@
+flowchart TB
+  Language[Language selector] --> I18N[Translation context]
+  I18N --> Login[Login / register screen]
+  Login --> UserCtx[User context]
+  UserCtx --> Restore[Restore cached profile if present]
+  UserCtx --> Save[Save progress]
+  UserCtx --> Clear[Clear progress]
+  Middleware[Session middleware] --> UserCtx
+  Restore --> Dashboard[Dashboard]
+  Save --> Dashboard
+  Clear --> Login

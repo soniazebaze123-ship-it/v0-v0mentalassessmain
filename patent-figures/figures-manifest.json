@@ -1,0 +1,66 @@
+[
+  {
+    "figure": "FIG. 1",
+    "number": "01",
+    "title": "Overall system architecture and deployment boundaries",
+    "mmdPath": "patent-figures/src/fig-01.mmd",
+    "svgPath": "patent-figures/svg/fig-01.svg",
+    "pngPath": "patent-figures/png/fig-01.png"
+  },
+  {
+    "figure": "FIG. 2",
+    "number": "02",
+    "title": "Patient-side application state machine and workflow",
+    "mmdPath": "patent-figures/src/fig-02.mmd",
+    "svgPath": "patent-figures/svg/fig-02.svg",
+    "pngPath": "patent-figures/png/fig-02.png"
+  },
+  {
+    "figure": "FIG. 3",
+    "number": "03",
+    "title": "Cognitive assessment engine, score normalization, and persistence flow",
+    "mmdPath": "patent-figures/src/fig-03.mmd",
+    "svgPath": "patent-figures/svg/fig-03.svg",
+    "pngPath": "patent-figures/png/fig-03.png"
+  },
+  {
+    "figure": "FIG. 4",
+    "number": "04",
+    "title": "Sensory module workflow, including olfactory protocol branching",
+    "mmdPath": "patent-figures/src/fig-04.mmd",
+    "svgPath": "patent-figures/svg/fig-04.svg",
+    "pngPath": "patent-figures/png/fig-04.png"
+  },
+  {
+    "figure": "FIG. 5",
+    "number": "05",
+    "title": "Risk scoring and recommendation pipeline",
+    "mmdPath": "patent-figures/src/fig-05.mmd",
+    "svgPath": "patent-figures/svg/fig-05.svg",
+    "pngPath": "patent-figures/png/fig-05.png"
+  },
+  {
+    "figure": "FIG. 6",
+    "number": "06",
+    "title": "Multilingual authentication and session persistence flow",
+    "mmdPath": "patent-figures/src/fig-06.mmd",
+    "svgPath": "patent-figures/svg/fig-06.svg",
+    "pngPath": "patent-figures/png/fig-06.png"
+  },
+  {
+    "figure": "FIG. 7",
+    "number": "07",
+    "title": "Admin dashboard and analytics console workflow",
+    "mmdPath": "patent-figures/src/fig-07.mmd",
+    "svgPath": "patent-figures/svg/fig-07.svg",
+    "pngPath": "patent-figures/png/fig-07.png"
+  },
+  {
+    "figure": "FIG. 8",
+    "number": "08",
+    "title": "Optional multimodal extension for EEG and biomarker inputs",
+    "mmdPath": "patent-figures/src/fig-08.mmd",
+    "svgPath": "patent-figures/svg/fig-08.svg",
+    "pngPath": "patent-figures/png/fig-08.png"
+  }
+]

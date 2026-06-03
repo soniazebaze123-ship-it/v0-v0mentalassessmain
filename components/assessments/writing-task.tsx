@@ -47,7 +47,7 @@ export function WritingTask({ onComplete, onSkip }: WritingTaskProps) {
     }
 
     const score =
-      selectedParts[0] === sentenceTemplate.subjectKey && selectedParts[1] === sentenceTemplate.predicateKey ? 2 : 0
+      selectedParts[0] === sentenceTemplate.subjectKey && selectedParts[1] === sentenceTemplate.predicateKey ? 1 : 0
 
     onComplete(score)
   }
@@ -61,21 +61,21 @@ export function WritingTask({ onComplete, onSkip }: WritingTaskProps) {
   }
 
   return (
-    <Card className="mx-auto w-full max-w-3xl overflow-hidden border border-indigo-100/80 shadow-[0_24px_70px_rgba(99,102,241,0.12)]">
-      <CardHeader className="bg-[radial-gradient(circle_at_top_left,_rgba(129,140,248,0.18),_transparent_32%),linear-gradient(135deg,_rgba(238,242,255,0.98),_rgba(255,255,255,0.98),_rgba(224,231,255,0.96))] pb-6">
-        <div className="mb-3 flex items-center gap-2 text-indigo-700">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 shadow-sm">
+    <Card className="mx-auto w-full max-w-3xl overflow-hidden border border-blue-100/80 shadow-[0_24px_70px_rgba(37,99,235,0.12)]">
+      <CardHeader className="bg-[radial-gradient(circle_at_top_left,_rgba(96,165,250,0.20),_transparent_32%),linear-gradient(135deg,_rgba(239,246,255,0.98),_rgba(255,255,255,0.98),_rgba(224,242,254,0.96))] pb-6">
+        <div className="mb-3 flex items-center gap-2 text-blue-700">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-100 shadow-sm">
             <PenLine className="h-5 w-5" />
           </span>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600/80">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600/80">
               {localizeText("Premium sentence builder", {
                 zh: "高级造句任务",
                 yue: "高級造句任務",
                 fr: "Construction de phrase premium",
               })}
             </p>
-            <CardTitle className="text-indigo-950">{t("mmse.writing")}</CardTitle>
+            <CardTitle className="text-blue-950">{t("mmse.writing")}</CardTitle>
           </div>
         </div>
         <p className="max-w-2xl text-sm text-slate-600">{t("mmse.writing.instruction")}</p>
@@ -83,8 +83,8 @@ export function WritingTask({ onComplete, onSkip }: WritingTaskProps) {
       </CardHeader>
       <CardContent className="space-y-6 pt-6">
         <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="space-y-4 rounded-[26px] border border-indigo-100 bg-indigo-50/70 p-5 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-indigo-700">
+          <div className="space-y-4 rounded-[26px] border border-blue-100 bg-blue-50/70 p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-blue-700">
               <SpellCheck2 className="h-4 w-4" />
               {localizeText("Compose the sentence", {
                 zh: "组成句子",
@@ -114,7 +114,7 @@ export function WritingTask({ onComplete, onSkip }: WritingTaskProps) {
               <p className="text-sm font-medium text-muted-foreground">{t("question.built_sentence")}</p>
               <p className="mt-3 min-h-20 text-2xl font-semibold text-slate-900">{selectedParts.map((partKey) => t(partKey)).join(" ")}</p>
             </div>
-            <div className="rounded-2xl border border-indigo-100 bg-indigo-50/80 p-4 text-sm text-indigo-900">
+            <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4 text-sm text-blue-900">
               {localizeText(
                 "Tap the subject first, then the matching predicate to form one complete sentence.",
                 {
@@ -134,7 +134,7 @@ export function WritingTask({ onComplete, onSkip }: WritingTaskProps) {
           <Button variant="outline" onClick={resetSelection}>
             {t("common.reset")}
           </Button>
-          <Button onClick={checkAnswer} className="w-full max-w-xs">
+          <Button onClick={checkAnswer} className="w-full max-w-xs bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600">
             {t("common.submit")}
           </Button>
         </div>

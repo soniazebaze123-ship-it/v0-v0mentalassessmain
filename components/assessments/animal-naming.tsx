@@ -19,9 +19,9 @@ interface AnimalQuestion {
 }
 
 const ANIMAL_POOL = [
-  { image: "/images/moca-tiger.jpeg?v=20260510b", labelKey: "common.tiger" },
-  { image: "/images/moca-rhinoceros.jpeg?v=20260510b", labelKey: "common.rhinoceros" },
-  { image: "/images/moca-camel.webp?v=20260510b", labelKey: "common.camel" },
+  { image: "/images/moca-tiger.jpeg", labelKey: "common.tiger" },
+  { image: "/images/moca-rhinoceros.jpeg", labelKey: "common.rhinoceros" },
+  { image: "/images/moca-camel.webp", labelKey: "common.camel" },
 ]
 
 function buildAnimalQuestions(): AnimalQuestion[] {

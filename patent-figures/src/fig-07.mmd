@@ -1,0 +1,12 @@
+flowchart LR
+  AdminLogin[Admin login] --> Panel[Admin panel]
+  Panel --> Users[User records]
+  Panel --> Assessments[Assessment records]
+  Panel --> Files[Uploaded files]
+  Panel --> Trends[Trend charts]
+  Panel --> Sensory[Sensory data review]
+  Panel --> TCM[TCM data review]
+  Assessments --> Trends
+  Files --> Trends
+  Sensory --> Trends
+  TCM --> Trends

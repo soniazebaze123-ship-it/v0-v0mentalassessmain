@@ -1,0 +1,5 @@
+case_id,cognitive_contribution,olfactory_contribution,auditory_contribution,visual_contribution,optional_eeg_contribution,optional_biomarker_contribution,composite_risk_score
+CASE-001,0.42,0.19,0.12,0.10,0.09,0.08,0.68
+CASE-002,0.36,0.22,0.15,0.11,0.10,0.06,0.64
+CASE-003,0.48,0.14,0.13,0.09,0.08,0.08,0.71
+CASE-004,0.33,0.24,0.14,0.12,0.10,0.07,0.66

@@ -1,0 +1,40 @@
+flowchart LR
+  subgraph Patient[Patient application]
+    Login[Login / Register]
+    Dashboard[Dashboard]
+    Cognitive[Cognitive assessments\n(MOCA / MMSE)]
+    Sensory[Sensory assessments\n(visual / auditory / olfactory / TCM)]
+    Results[Results and risk profile]
+  end
+
+  subgraph Cloud[Cloud backend and database]
+    Auth[Session / auth]
+    DB[(Assessments and progress data)]
+    Rules[Risk classification service]
+  end
+
+  subgraph Admin[Admin / clinician console]
+    AdminPanel[Admin panel]
+    Analytics[Trend views and review tools]
+  end
+
+  subgraph Optional[Optional multimodal extension]
+    Multimodal[/multimodal preview surface/]
+    EEG[EEG / ERP input]
+    Biomarker[Biomarker input]
+    Fusion[Multimodal fusion engine]
+  end
+
+  Login --> Dashboard
+  Dashboard --> Cognitive
+  Dashboard --> Sensory
+  Cognitive --> Results
+  Sensory --> Results
+  Results --> Rules
+  Rules --> DB
+  DB --> AdminPanel
+  AdminPanel --> Analytics
+  Multimodal --> EEG
+  Multimodal --> Biomarker
+  EEG --> Fusion
+  Biomarker --> Fusion

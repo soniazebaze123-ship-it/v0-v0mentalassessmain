@@ -1,0 +1,17 @@
+flowchart TB
+  Dashboard[Dashboard sensory selection] --> Visual[Visual module]
+  Dashboard --> Auditory[Auditory module]
+  Dashboard --> TCM[TCM module]
+  Dashboard --> Olfactory[Olfactory module]
+
+  Olfactory --> Protocol{Protocol variant?}
+  Protocol -->|Item set A| VersionA[Olfactory item set A]
+  Protocol -->|Item set B| VersionB[Olfactory item set B]
+  Protocol -->|Item set C| VersionC[Olfactory item set C]
+
+  Visual --> Output[Structured sensory output]
+  Auditory --> Output
+  TCM --> Output
+  VersionA --> Output
+  VersionB --> Output
+  VersionC --> Output

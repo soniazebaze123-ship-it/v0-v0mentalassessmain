@@ -46,21 +46,21 @@ export function MMSEAttention({ onComplete, onSkip }: MMSEAttentionProps) {
   }
 
   return (
-    <Card className="mx-auto w-full max-w-4xl overflow-hidden border border-teal-100/80 shadow-[0_24px_70px_rgba(20,184,166,0.12)]">
-      <CardHeader className="bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.18),_transparent_32%),linear-gradient(135deg,_rgba(240,253,250,0.98),_rgba(255,255,255,0.98),_rgba(236,254,255,0.96))]">
-        <div className="mb-3 flex items-center gap-2 text-teal-700">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-100 shadow-sm">
+    <Card className="mx-auto w-full max-w-4xl overflow-hidden border border-emerald-100/80 shadow-[0_24px_70px_rgba(16,185,129,0.12)]">
+      <CardHeader className="bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.20),_transparent_32%),linear-gradient(135deg,_rgba(236,253,245,0.98),_rgba(255,255,255,0.98),_rgba(236,253,250,0.96))]">
+        <div className="mb-3 flex items-center gap-2 text-emerald-700">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 shadow-sm">
             <Calculator className="h-5 w-5" />
           </span>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-600/80">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600/80">
               {localizeText("Premium serial subtraction", {
                 zh: "高级连续减法",
                 yue: "高級連續減法",
                 fr: "Soustraction sérielle premium",
               })}
             </p>
-            <CardTitle className="text-teal-900">{t("mmse.attention")}</CardTitle>
+            <CardTitle className="text-emerald-900">{t("mmse.attention")}</CardTitle>
           </div>
         </div>
         <p className="max-w-2xl text-sm text-slate-600">{t("mmse.attention.instruction")}</p>
@@ -68,8 +68,8 @@ export function MMSEAttention({ onComplete, onSkip }: MMSEAttentionProps) {
       </CardHeader>
       <CardContent className="space-y-6 pt-6">
         <div className="space-y-6">
-          <div className="rounded-[26px] border border-teal-100 bg-[linear-gradient(135deg,rgba(240,253,250,1),rgba(255,255,255,1))] p-5 text-center shadow-sm">
-            <div className="mb-3 inline-flex items-center rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-teal-700 shadow-sm">
+          <div className="rounded-[26px] border border-emerald-100 bg-[linear-gradient(135deg,rgba(236,253,245,1),rgba(255,255,255,1))] p-5 text-center shadow-sm">
+            <div className="mb-3 inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700 shadow-sm">
               <Sigma className="mr-2 h-3.5 w-3.5" />
               {localizeText("5 calculation steps", {
                 zh: "5 个计算步骤",
@@ -77,12 +77,12 @@ export function MMSEAttention({ onComplete, onSkip }: MMSEAttentionProps) {
                 fr: "5 étapes de calcul",
               })}
             </div>
-            <h3 className="mb-2 text-xl font-medium text-teal-900">{t("question.subtract_series")}</h3>
+            <h3 className="mb-2 text-xl font-medium text-emerald-900">{t("question.subtract_series")}</h3>
             <p className="text-sm text-slate-600">100 - 7 = ?</p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-            <div className="space-y-2 rounded-2xl border border-teal-100 bg-white p-4 shadow-sm">
+            <div className="space-y-2 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
               <Label>100 - 7 =</Label>
               <AssessmentInput
                 type="number"
@@ -91,7 +91,7 @@ export function MMSEAttention({ onComplete, onSkip }: MMSEAttentionProps) {
                 className="h-12"
               />
             </div>
-            <div className="space-y-2 rounded-2xl border border-teal-100 bg-white p-4 shadow-sm">
+            <div className="space-y-2 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
               <Label>- 7 =</Label>
               <AssessmentInput
                 type="number"
@@ -100,7 +100,7 @@ export function MMSEAttention({ onComplete, onSkip }: MMSEAttentionProps) {
                 className="h-12"
               />
             </div>
-            <div className="space-y-2 rounded-2xl border border-teal-100 bg-white p-4 shadow-sm">
+            <div className="space-y-2 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
               <Label>- 7 =</Label>
               <AssessmentInput
                 type="number"
@@ -109,7 +109,7 @@ export function MMSEAttention({ onComplete, onSkip }: MMSEAttentionProps) {
                 className="h-12"
               />
             </div>
-            <div className="space-y-2 rounded-2xl border border-teal-100 bg-white p-4 shadow-sm">
+            <div className="space-y-2 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
               <Label>- 7 =</Label>
               <AssessmentInput
                 type="number"
@@ -118,7 +118,7 @@ export function MMSEAttention({ onComplete, onSkip }: MMSEAttentionProps) {
                 className="h-12"
               />
             </div>
-            <div className="space-y-2 rounded-2xl border border-teal-100 bg-white p-4 shadow-sm">
+            <div className="space-y-2 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
               <Label>- 7 =</Label>
               <AssessmentInput
                 type="number"
@@ -129,7 +129,7 @@ export function MMSEAttention({ onComplete, onSkip }: MMSEAttentionProps) {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-teal-100 bg-teal-50/80 p-4 text-sm text-teal-900">
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4 text-sm text-emerald-900">
             {localizeText(
               "Enter each answer in sequence. Each correct step adds one point to the final score.",
               {
@@ -145,7 +145,7 @@ export function MMSEAttention({ onComplete, onSkip }: MMSEAttentionProps) {
           <Button variant="outline" onClick={handleSkip}>
             {t("common.skip_task")}
           </Button>
-          <Button onClick={handleSubmit} className="w-full max-w-xs bg-teal-600 hover:bg-teal-700">
+          <Button onClick={handleSubmit} className="w-full max-w-xs bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600">
             {t("common.submit")}
           </Button>
         </div>

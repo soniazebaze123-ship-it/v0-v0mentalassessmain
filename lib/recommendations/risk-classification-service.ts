@@ -33,14 +33,16 @@ export interface RiskClassificationOutput {
 
 const THRESHOLDS = {
   MMSE: {
-    NORMAL: { min: 24, max: 30 }, // 24-30 = normal cognition
-    MILD: { min: 18, max: 23 }, // 18-23 = mild cognitive impairment
-    MODERATE: { min: 10, max: 17 }, // 10-17 = moderate impairment
+    NORMAL: { min: 28, max: 30 }, // 28-30 = normal cognition
+    BORDERLINE: { min: 25, max: 27 }, // 25-27 = borderline decline
+    MILD: { min: 21, max: 24 }, // 21-24 = mild impairment
+    MODERATE: { min: 10, max: 20 }, // 10-20 = moderate impairment
     SEVERE: { min: 0, max: 9 }, // 0-9 = severe impairment
   },
   MOCA: {
-    NORMAL: { min: 26, max: 30 }, // 26-30 = normal cognition
-    MILD: { min: 18, max: 25 }, // 18-25 = mild cognitive impairment
+    NORMAL: { min: 27, max: 30 }, // 27-30 = normal cognition
+    SUBTLE: { min: 24, max: 26 }, // 24-26 = subtle decline
+    MILD: { min: 18, max: 23 }, // 18-23 = mild impairment
     MODERATE: { min: 10, max: 17 }, // 10-17 = moderate impairment
     SEVERE: { min: 0, max: 9 }, // 0-9 = severe impairment
   },
@@ -58,9 +60,12 @@ export function classifyRisk(input: RiskClassificationInput): RiskClassification
   if (input.mmse_score !== undefined) {
     if (input.mmse_score >= THRESHOLDS.MMSE.NORMAL.min) {
       riskFactors.push("MMSE: Normal");
+    } else if (input.mmse_score >= THRESHOLDS.MMSE.BORDERLINE.min) {
+      riskLevel = "mild_risk";
+      riskFactors.push("MMSE: Borderline decline");
     } else if (input.mmse_score >= THRESHOLDS.MMSE.MILD.min) {
       riskLevel = "mild_risk";
-      riskFactors.push("MMSE: Borderline/Mild impairment");
+      riskFactors.push("MMSE: Mild impairment");
     } else if (input.mmse_score >= THRESHOLDS.MMSE.MODERATE.min) {
       riskLevel = "moderate_risk";
       riskFactors.push("MMSE: Moderate impairment");
@@ -74,9 +79,12 @@ export function classifyRisk(input: RiskClassificationInput): RiskClassification
   if (input.moca_score !== undefined) {
     if (input.moca_score >= THRESHOLDS.MOCA.NORMAL.min) {
       riskFactors.push("MoCA: Normal");
+    } else if (input.moca_score >= THRESHOLDS.MOCA.SUBTLE.min) {
+      riskLevel = riskLevel === "high_risk" ? "high_risk" : "mild_risk";
+      riskFactors.push("MoCA: Subtle decline");
     } else if (input.moca_score >= THRESHOLDS.MOCA.MILD.min) {
       riskLevel = riskLevel === "high_risk" ? "high_risk" : "mild_risk";
-      riskFactors.push("MoCA: Borderline/Mild impairment");
+      riskFactors.push("MoCA: Mild impairment");
     } else if (input.moca_score >= THRESHOLDS.MOCA.MODERATE.min) {
       riskLevel = "moderate_risk";
       riskFactors.push("MoCA: Moderate impairment");

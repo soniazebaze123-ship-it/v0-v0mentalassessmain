@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from "react"
 import { useLanguage } from "@/contexts/language-context"
 import { getInstructionAudioSources, playAudioSources, stopAudioPlayback } from "@/lib/instruction-audio"
 
+function isIgnorableSpeechError(error?: string) {
+  return error === "interrupted" || error === "canceled" || error === "aborted" || error === "not-allowed"
+}
+
 export default function InstructionAudio({ text, audioId }: { text: string; audioId?: string }) {
   const { language, getSpeechSettings, getBestVoice, t } = useLanguage()
   const [isPlaying, setIsPlaying] = useState(false)
@@ -40,9 +44,11 @@ export default function InstructionAudio({ text, audioId }: { text: string; audi
 
     utterance.onstart = () => setIsPlaying(true)
     utterance.onend = () => setIsPlaying(false)
-    utterance.onerror = () => {
+    utterance.onerror = (event) => {
       setIsPlaying(false)
-      alert(t("audio.error_playing"))
+      if (!isIgnorableSpeechError(event.error)) {
+        alert(t("audio.error_playing"))
+      }
     }
 
     window.speechSynthesis.cancel()

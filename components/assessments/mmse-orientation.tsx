@@ -8,7 +8,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
 
 interface MMSEOrientationProps {
-  onComplete: (score: number) => void
+  onComplete: (score: number, metadata?: Record<string, unknown>) => void
   onSkip?: () => void
 }
 
@@ -23,6 +23,10 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
     country: "",
     president: "",
     sea: "",
+    province: "",
+    city: "",
+    building: "",
+    place: "",
   })
   const unknownOption = {
     value: "unknown",
@@ -51,25 +55,40 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
     { value: "france", label: localizeText("France", { zh: "法国", yue: "法國", fr: "France" }) },
     { value: "usa", label: localizeText("United States", { zh: "美国", yue: "美國", fr: "États-Unis" }) },
   ]
+  const provinceOptions = [
+    { value: "guangdong", label: localizeText("Guangdong", { zh: "广东", yue: "廣東", fr: "Guangdong" }) },
+    { value: "beijing", label: localizeText("Beijing", { zh: "北京", yue: "北京", fr: "Pekin" }) },
+    { value: "shanghai", label: localizeText("Shanghai", { zh: "上海", yue: "上海", fr: "Shanghai" }) },
+    { value: "sichuan", label: localizeText("Sichuan", { zh: "四川", yue: "四川", fr: "Sichuan" }) },
+  ]
+  const cityOptions = [
+    { value: "guangzhou", label: localizeText("Guangzhou", { zh: "广州", yue: "廣州", fr: "Canton" }) },
+    { value: "shenzhen", label: localizeText("Shenzhen", { zh: "深圳", yue: "深圳", fr: "Shenzhen" }) },
+    { value: "beijing", label: localizeText("Beijing", { zh: "北京", yue: "北京", fr: "Pekin" }) },
+    { value: "shanghai", label: localizeText("Shanghai", { zh: "上海", yue: "上海", fr: "Shanghai" }) },
+  ]
+  const buildingOptions = [
+    { value: "hospital", label: localizeText("Hospital", { zh: "医院", yue: "醫院", fr: "Hopital" }) },
+    { value: "meseum", label: localizeText("Meseum", { zh: "博物馆", yue: "博物館", fr: "Musee" }) },
+    { value: "home", label: localizeText("Home", { zh: "家中", yue: "屋企", fr: "Domicile" }) },
+    { value: "stadium", label: localizeText("Stadium", { zh: "体育场", yue: "體育場", fr: "Stade" }) },
+  ]
+  const placeOptions = [
+    { value: "consultation_room", label: localizeText("Consultation room", { zh: "诊室", yue: "診症室", fr: "Salle de consultation" }) },
+    { value: "ward", label: localizeText("Ward", { zh: "病房", yue: "病房", fr: "Salle" }) },
+    { value: "office", label: localizeText("Office", { zh: "办公室", yue: "辦公室", fr: "Bureau" }) },
+    { value: "reception", label: localizeText("Reception", { zh: "接待区", yue: "接待處", fr: "Accueil" }) },
+  ]
   const presidentOptions = [
-    { value: "xi", label: t("common.president_name") },
-    { value: "trump", label: localizeText("Donald Trump", { zh: "唐纳德·特朗普", yue: "當勞·特朗普", fr: "Donald Trump" }) },
-    { value: "macron", label: localizeText("Emmanuel Macron", { zh: "埃马纽埃尔·马克龙", yue: "馬克龍", fr: "Emmanuel Macron" }) },
-    { value: "kishida", label: localizeText("Fumio Kishida", { zh: "岸田文雄", yue: "岸田文雄", fr: "Fumio Kishida" }) },
+    { value: "xi_jinping", label: localizeText("Xi Jinping", { zh: "习近平", yue: "習近平", fr: "Xi Jinping" }) },
+    { value: "donald_trump", label: localizeText("Donald Trump", { zh: "唐纳德·特朗普", yue: "當勞·特朗普", fr: "Donald Trump" }) },
+    { value: "emmanuel_macron", label: localizeText("Emmanuel Macron", { zh: "埃马纽埃尔·马克龙", yue: "馬克龍", fr: "Emmanuel Macron" }) },
+    { value: "fumio_kishida", label: localizeText("Fumio Kishida", { zh: "岸田文雄", yue: "岸田文雄", fr: "Fumio Kishida" }) },
   ]
   const seaOptions = [
-    {
-      value: "south_china_sea",
-      label: localizeText("South China Sea", { zh: "南海", yue: "南海", fr: "Mer de Chine méridionale" }),
-    },
-    {
-      value: "pacific_ocean",
-      label: localizeText("Pacific Ocean", { zh: "太平洋", yue: "太平洋", fr: "Océan Pacifique" }),
-    },
-    {
-      value: "atlantic_ocean",
-      label: localizeText("Atlantic Ocean", { zh: "大西洋", yue: "大西洋", fr: "Océan Atlantique" }),
-    },
+    { value: "south_china_sea", label: localizeText("South China Sea", { zh: "南海", yue: "南海", fr: "Mer de Chine méridionale" }) },
+    { value: "pacific_ocean", label: localizeText("Pacific Ocean", { zh: "太平洋", yue: "太平洋", fr: "Océan Pacifique" }) },
+    { value: "atlantic_ocean", label: localizeText("Atlantic Ocean", { zh: "大西洋", yue: "大西洋", fr: "Océan Atlantique" }) },
   ]
 
   const selectClassName =
@@ -104,12 +123,32 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
     if (answers.day === currentDay) score += 1
     if (Number.parseInt(answers.month) === currentMonth) score += 1
 
-    // Place questions (3 points)
+    // Place questions: score the 5 core location answers as whole points.
     if (answers.country === "china") score += 1
-    if (answers.president === "xi") score += 1
+    if (answers.president === "xi_jinping") score += 1
     if (answers.sea === "south_china_sea") score += 1
+    if (answers.province === "guangdong") score += 1
+    if (answers.city === "guangzhou") score += 1
 
-    onComplete(score)
+    onComplete(score, {
+      location: {
+        source: "manual",
+        confirmed: true,
+        sitePresetUsed: false,
+        testedSite: "china_guangzhou_hospital",
+        geocodeProvider: null,
+        coordinates: null,
+        suggestedPlace: {
+          country: answers.country,
+          president: answers.president,
+          sea: answers.sea,
+          province: answers.province,
+          city: answers.city,
+          building: answers.building,
+          place: answers.place,
+        },
+      },
+    })
   }
 
   const handleSkip = () => {
@@ -119,8 +158,6 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
       onComplete(0)
     }
   }
-
-  const isFormComplete = Object.values(answers).every((value) => value !== "")
 
   return (
     <Card className="w-full max-w-3xl mx-auto border-t-4 border-blue-500 shadow-lg">
@@ -287,7 +324,7 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                 </Label>
                 <InstructionAudio text={t("question.sea")} />
               </div>
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className="grid gap-2 sm:grid-cols-2">
                 {[...seaOptions, unknownOption].map((option) => (
                   <Button
                     key={option.value}
@@ -295,6 +332,94 @@ export function MMSEOrientation({ onComplete, onSkip }: MMSEOrientationProps) {
                     variant={answers.sea === option.value ? "default" : "outline"}
                     className="h-11 justify-center text-sm"
                     onClick={() => handleAnswerChange("sea", option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="province" className="text-base">
+                  {localizeText("Province / State", { zh: "省份 / 州", yue: "省份 / 州", fr: "Province / Etat" })}
+                </Label>
+                <InstructionAudio text={localizeText("Province / State", { zh: "省份 / 州", yue: "省份 / 州", fr: "Province / Etat" })} />
+              </div>
+              <div className="grid gap-2">
+                {[...provinceOptions, unknownOption].map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={answers.province === option.value ? "default" : "outline"}
+                    className="h-11 justify-start text-sm"
+                    onClick={() => handleAnswerChange("province", option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="city" className="text-base">
+                  {localizeText("City", { zh: "城市", yue: "城市", fr: "Ville" })}
+                </Label>
+                <InstructionAudio text={localizeText("City", { zh: "城市", yue: "城市", fr: "Ville" })} />
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {[...cityOptions, unknownOption].map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={answers.city === option.value ? "default" : "outline"}
+                    className="h-11 justify-center text-sm"
+                    onClick={() => handleAnswerChange("city", option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="building" className="text-base">
+                  {localizeText("Building / Place", { zh: "建筑 / 场所", yue: "建築 / 場所", fr: "Batiment / Lieu" })}
+                </Label>
+                <InstructionAudio text={localizeText("Building / Place", { zh: "建筑 / 场所", yue: "建築 / 場所", fr: "Batiment / Lieu" })} />
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {[...buildingOptions, unknownOption].map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={answers.building === option.value ? "default" : "outline"}
+                    className="h-11 justify-center text-sm"
+                    onClick={() => handleAnswerChange("building", option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="place" className="text-base">
+                  {localizeText("Place / Unit", { zh: "地点 / 单元", yue: "地點 / 單位", fr: "Lieu / Unite" })}
+                </Label>
+                <InstructionAudio text={localizeText("Place / Unit", { zh: "地点 / 单元", yue: "地點 / 單位", fr: "Lieu / Unite" })} />
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {[...placeOptions, unknownOption].map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={answers.place === option.value ? "default" : "outline"}
+                    className="h-11 justify-center text-sm"
+                    onClick={() => handleAnswerChange("place", option.value)}
                   >
                     {option.label}
                   </Button>

@@ -1,0 +1,9 @@
+flowchart LR
+  Assessment[Completed assessment score] --> Input[Build risk input payload]
+  Input --> Classify[Risk classification service]
+  Classify --> RiskClass[Risk class]
+  Classify --> Recommendation[Recommendation text]
+  Classify --> Referral[Referral needed flag]
+  RiskClass --> Display[Risk profile display]
+  Recommendation --> Display
+  Referral --> Display

@@ -1,0 +1,9 @@
+flowchart TB
+  Multimodal[/multimodal preview route/] --> EEG[EEG / ERP panel]
+  Multimodal --> Biomarker[Blood biomarker panel]
+  Multimodal --> SensoryIntelligence[Sensory intelligence panel]
+  EEG --> Stage[Staging and calculations]
+  Biomarker --> Stage
+  SensoryIntelligence --> Stage
+  Stage --> Fusion[Fusion engine]
+  Fusion --> Draft[Draft output / local fallback]

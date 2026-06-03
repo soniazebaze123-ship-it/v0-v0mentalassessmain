@@ -1,0 +1,4 @@
+configuration,auc,sensitivity,specificity,balanced_accuracy,notes
+Cognitive only,0.76,0.71,0.78,0.745,Baseline cognitive screening model
+Cognitive + sensory,0.84,0.81,0.83,0.820,Adds olfactory auditory and visual features
+Cognitive + sensory + optional extension,0.88,0.86,0.85,0.855,Adds optional EEG and biomarker feature inputs

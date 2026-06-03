@@ -14,6 +14,10 @@ interface InstructionAudioProps {
   className?: string
 }
 
+function isIgnorableSpeechError(error?: string) {
+  return error === "interrupted" || error === "canceled" || error === "aborted" || error === "not-allowed"
+}
+
 export function InstructionAudio({ instructionKey, text, textOverrides, autoPlay = false, className }: InstructionAudioProps) {
   const { t, localizeText, getSpeechSettings, getBestVoice, language } = useLanguage()
   const [isPlaying, setIsPlaying] = useState(false)
@@ -89,8 +93,12 @@ export function InstructionAudio({ instructionKey, text, textOverrides, autoPlay
     stopAudioPlayback(audioRef)
     // Cancel any ongoing speech
     window.speechSynthesis.cancel()
+    await new Promise((resolve) => window.setTimeout(resolve, 80))
 
     const instructionText = await resolveInstructionText()
+    if (!instructionText.trim()) {
+      return
+    }
     const speechSettings = getSpeechSettings(language)
     const utterance = new SpeechSynthesisUtterance(instructionText)
     utterance.lang = speechSettings.lang
@@ -107,10 +115,12 @@ export function InstructionAudio({ instructionKey, text, textOverrides, autoPlay
     utterance.onstart = () => setIsPlaying(true)
     utterance.onend = () => setIsPlaying(false)
     utterance.onerror = (event) => {
-      console.error("Speech synthesis error:", event)
+      if (!isIgnorableSpeechError(event.error)) {
+        console.error("Speech synthesis error:", event)
+      }
       setIsPlaying(false)
 
-      if (showAlerts) {
+      if (showAlerts && !isIgnorableSpeechError(event.error)) {
         alert(t("audio.error_playing"))
       }
     }
