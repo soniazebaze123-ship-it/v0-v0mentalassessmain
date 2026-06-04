@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { AssessmentTextarea } from "@/components/ui/assessment-textarea"
 import { supabase } from "@/lib/supabase"
-import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp } from "lucide-react"
+import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp, Printer, Sparkles } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 
 // Add imports for new chart components and data utilities
@@ -28,7 +28,120 @@ import type { OlfactoryProtocolVersion } from "@/lib/olfactory/types"
 interface User {
   id: string
   phone_number: string
+  name?: string | null
+  chinese_name?: string | null
+  national_id?: string | null
+  gender?: string | null
+  date_of_birth?: string | null
+  city?: string | null
+  province?: string | null
   created_at: string
+}
+
+type ReportLanguage = "en" | "zh-CN" | "zh-HK" | "fr"
+
+type ReportLabels = {
+  reportTitle: string
+  patientInfo: string
+  cognitive: string
+  sensory: string
+  tcm: string
+  finalPlan: string
+  doctorInputs: string
+  treatmentPlan: string
+  diagnosis: string
+  finalSummary: string
+  reportDate: string
+  name: string
+  chineseName: string
+  idNumber: string
+  sex: string
+  dateOfBirth: string
+  cityProvince: string
+  unknown: string
+}
+
+const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
+  en: {
+    reportTitle: "Integrated Medical Report",
+    patientInfo: "Section 1: Patient Information",
+    cognitive: "Section 2: Cognitive Assessment",
+    sensory: "Section 3: Sensory Assessment",
+    tcm: "Section 4: TCM Assessment",
+    finalPlan: "Section 5: Final Recommendation",
+    doctorInputs: "Doctor Inputs",
+    treatmentPlan: "Treatment Plan",
+    diagnosis: "TCM Diagnosis",
+    finalSummary: "Final Clinical Summary",
+    reportDate: "Report Date",
+    name: "Name",
+    chineseName: "Chinese Name",
+    idNumber: "National ID",
+    sex: "Sex",
+    dateOfBirth: "Date of Birth",
+    cityProvince: "City/Province",
+    unknown: "Not provided",
+  },
+  "zh-CN": {
+    reportTitle: "综合医学报告",
+    patientInfo: "第一部分：患者信息",
+    cognitive: "第二部分：认知评估",
+    sensory: "第三部分：感觉评估",
+    tcm: "第四部分：中医评估",
+    finalPlan: "第五部分：最终建议",
+    doctorInputs: "医生补充",
+    treatmentPlan: "治疗方案",
+    diagnosis: "中医诊断",
+    finalSummary: "临床总结",
+    reportDate: "报告日期",
+    name: "姓名",
+    chineseName: "中文姓名",
+    idNumber: "身份证号",
+    sex: "性别",
+    dateOfBirth: "出生日期",
+    cityProvince: "城市/省份",
+    unknown: "未提供",
+  },
+  "zh-HK": {
+    reportTitle: "綜合醫療報告",
+    patientInfo: "第一部分：病人資料",
+    cognitive: "第二部分：認知評估",
+    sensory: "第三部分：感官評估",
+    tcm: "第四部分：中醫評估",
+    finalPlan: "第五部分：最終建議",
+    doctorInputs: "醫生補充",
+    treatmentPlan: "治療方案",
+    diagnosis: "中醫診斷",
+    finalSummary: "臨床總結",
+    reportDate: "報告日期",
+    name: "姓名",
+    chineseName: "中文姓名",
+    idNumber: "身份證號",
+    sex: "性別",
+    dateOfBirth: "出生日期",
+    cityProvince: "城市/省份",
+    unknown: "未提供",
+  },
+  fr: {
+    reportTitle: "Rapport medical integre",
+    patientInfo: "Section 1: Informations patient",
+    cognitive: "Section 2: Evaluation cognitive",
+    sensory: "Section 3: Evaluation sensorielle",
+    tcm: "Section 4: Evaluation MTC",
+    finalPlan: "Section 5: Recommandation finale",
+    doctorInputs: "Saisie medecin",
+    treatmentPlan: "Plan therapeutique",
+    diagnosis: "Diagnostic MTC",
+    finalSummary: "Synthese clinique finale",
+    reportDate: "Date du rapport",
+    name: "Nom",
+    chineseName: "Nom chinois",
+    idNumber: "Identifiant national",
+    sex: "Sexe",
+    dateOfBirth: "Date de naissance",
+    cityProvince: "Ville/Province",
+    unknown: "Non renseigne",
+  },
 }
 
 export interface Assessment {
@@ -156,12 +269,26 @@ export function AdminPanel() {
   const [selectedTrendUser, setSelectedTrendUser] = useState<string | null>(null)
   const [selectedTrendAssessmentType, setSelectedTrendAssessmentType] = useState<"MOCA" | "MMSE" | "ALL">("ALL")
   const [activeOlfactoryProtocol, setActiveOlfactoryProtocol] = useState<OlfactoryProtocolVersion>("sat_v3_14")
+  const [reportLanguage, setReportLanguage] = useState<ReportLanguage>("en")
+  const [tcmDiagnosisInput, setTcmDiagnosisInput] = useState("")
+  const [tcmTherapyPlanInput, setTcmTherapyPlanInput] = useState("")
+  const [finalSummaryInput, setFinalSummaryInput] = useState("")
+  const [generatedReport, setGeneratedReport] = useState("")
+  const [generatedAllReports, setGeneratedAllReports] = useState("")
 
   useEffect(() => {
     if (isAuthenticated) {
       loadData()
     }
   }, [isAuthenticated])
+
+  useEffect(() => {
+    setGeneratedReport("")
+    setGeneratedAllReports("")
+    setTcmDiagnosisInput("")
+    setTcmTherapyPlanInput("")
+    setFinalSummaryInput("")
+  }, [selectedUser])
 
   const handleLogin = async () => {
     // Simple authentication - in production, use proper authentication
@@ -510,6 +637,141 @@ export function AdminPanel() {
   }
 
   const averageScores = getAverageScores()
+
+  const getUserDisplayName = (user?: User) => {
+    if (!user) return "-"
+    return user.chinese_name || user.name || user.phone_number || user.id
+  }
+
+  const buildMedicalReport = (userId: string, language: ReportLanguage) => {
+    const labels = REPORT_LABELS[language]
+    const user = users.find((entry) => entry.id === userId)
+    const userAssessments = getUserAssessments(userId)
+    const userSensory = getUserSensoryAssessments(userId)
+    const userTcm = getUserTcmAssessments(userId)
+
+    const latestMoca = userAssessments
+      .filter((assessment) => assessment.assessment_type === "MOCA")
+      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
+    const latestMmse = userAssessments
+      .filter((assessment) => assessment.assessment_type === "MMSE")
+      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
+    const latestOlfactory = userSensory
+      .filter((assessment) => assessment.test_type === "olfactory")
+      .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
+    const latestAuditory = userSensory
+      .filter((assessment) => assessment.test_type === "auditory")
+      .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
+    const latestVisual = userSensory
+      .filter((assessment) => assessment.test_type === "visual")
+      .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
+    const latestTcm = userTcm
+      .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime())[0]
+
+    const mocaRisk = latestMoca && latestMoca.total_score <= 25
+    const mmseRisk = latestMmse && latestMmse.total_score <= 24
+    const olfactoryRisk = latestOlfactory?.classification?.toLowerCase().includes("severe")
+    const riskFlagCount = [mocaRisk, mmseRisk, olfactoryRisk].filter(Boolean).length
+    const finalRisk = riskFlagCount >= 2 ? "HIGH" : riskFlagCount === 1 ? "MODERATE" : "LOW"
+
+    return [
+      labels.reportTitle,
+      `${labels.reportDate}: ${new Date().toLocaleDateString()}`,
+      "",
+      labels.patientInfo,
+      `${labels.name}: ${getUserDisplayName(user)}`,
+      `${labels.chineseName}: ${user?.chinese_name || labels.unknown}`,
+      `${labels.idNumber}: ${user?.national_id || labels.unknown}`,
+      `${labels.sex}: ${user?.gender || labels.unknown}`,
+      `${labels.dateOfBirth}: ${user?.date_of_birth || labels.unknown}`,
+      `${labels.cityProvince}: ${user?.city || labels.unknown} / ${user?.province || labels.unknown}`,
+      "",
+      labels.cognitive,
+      `MMSE: ${latestMmse ? `${latestMmse.total_score}/30` : labels.unknown}`,
+      `MoCA: ${latestMoca ? `${latestMoca.total_score}/30` : labels.unknown}`,
+      `Latest Lab Note: ${latestMmse?.laboratory_analysis || latestMoca?.laboratory_analysis || labels.unknown}`,
+      "",
+      labels.sensory,
+      `Olfactory: ${latestOlfactory ? `${latestOlfactory.raw_score ?? "-"} (${latestOlfactory.classification || "-"})` : labels.unknown}`,
+      `Auditory: ${latestAuditory ? `${latestAuditory.normalized_score ?? "-"} (${latestAuditory.classification || "-"})` : labels.unknown}`,
+      `Visual: ${latestVisual ? `${latestVisual.normalized_score ?? "-"} (${latestVisual.classification || "-"})` : labels.unknown}`,
+      "",
+      labels.tcm,
+      `Primary Constitution: ${latestTcm?.primary_constitution || labels.unknown}`,
+      `TCM Score: ${latestTcm?.overall_score ?? labels.unknown}`,
+      `${labels.diagnosis}: ${tcmDiagnosisInput || labels.unknown}`,
+      `${labels.treatmentPlan}: ${tcmTherapyPlanInput || labels.unknown}`,
+      "",
+      labels.finalPlan,
+      `Risk Tier: ${finalRisk}`,
+      `${labels.finalSummary}: ${finalSummaryInput || labels.unknown}`,
+      "",
+      `-- ${labels.doctorInputs} --`,
+    ].join("\n")
+  }
+
+  const handleGenerateReport = () => {
+    if (!selectedUser) return
+    const reportText = buildMedicalReport(selectedUser, reportLanguage)
+    setGeneratedReport(reportText)
+  }
+
+  const handleDownloadReport = () => {
+    if (!selectedUser || !generatedReport) return
+    const user = users.find((entry) => entry.id === selectedUser)
+    const filePrefix = getUserDisplayName(user).replace(/\s+/g, "_")
+    const blob = new Blob([generatedReport], { type: "text/markdown" })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement("a")
+    anchor.href = url
+    anchor.download = `MA_${filePrefix}_${reportLanguage}_report.md`
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handlePrintReport = () => {
+    if (!generatedReport) return
+    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=900,height=700")
+    if (!printWindow) return
+    printWindow.document.write(`<pre style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; padding: 24px; line-height: 1.6;">${generatedReport.replace(/</g, "&lt;")}</pre>`)
+    printWindow.document.close()
+    printWindow.focus()
+    printWindow.print()
+  }
+
+  const buildAllMedicalReports = (language: ReportLanguage) => {
+    const sections = users.map((user, index) => {
+      const report = buildMedicalReport(user.id, language)
+      return [`===== Patient ${index + 1} / ${users.length} =====`, report].join("\n")
+    })
+    return sections.join("\n\n")
+  }
+
+  const handleGenerateAllReports = () => {
+    const compiledReports = buildAllMedicalReports(reportLanguage)
+    setGeneratedAllReports(compiledReports)
+  }
+
+  const handleDownloadAllReports = () => {
+    if (!generatedAllReports) return
+    const blob = new Blob([generatedAllReports], { type: "text/markdown" })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement("a")
+    anchor.href = url
+    anchor.download = `MA_all_patients_${reportLanguage}_reports.md`
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handlePrintAllReports = () => {
+    if (!generatedAllReports) return
+    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=1000,height=800")
+    if (!printWindow) return
+    printWindow.document.write(`<pre style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; padding: 24px; line-height: 1.6;">${generatedAllReports.replace(/</g, "&lt;")}</pre>`)
+    printWindow.document.close()
+    printWindow.focus()
+    printWindow.print()
+  }
 
   // Inside the `AdminPanel` component, after `averageScores` calculation, add the following data preparations:
   const mocaDistributionData = getScoreDistribution(assessments, "MOCA")
@@ -1023,6 +1285,113 @@ export function AdminPanel() {
                       {getUserSensoryAssessments(selectedUser).length === 0 && (
                         <p className="text-gray-600">No sensory screenings recorded for this user</p>
                       )}
+
+                      <div className="mt-6 rounded-2xl border border-sky-200 bg-[linear-gradient(135deg,rgba(240,249,255,0.96),rgba(255,255,255,0.98),rgba(238,242,255,0.94))] p-5 shadow-sm">
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <h3 className="text-lg font-semibold flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-sky-600" />
+                            Medical Report Studio
+                          </h3>
+                          <Badge className="bg-sky-600 text-white hover:bg-sky-600">Premium</Badge>
+                        </div>
+                        <p className="mt-2 text-sm text-slate-600">
+                          Generate a unified multilingual report from cognitive, sensory, and TCM data with doctor final plan.
+                        </p>
+
+                        <div className="mt-4 grid gap-4 md:grid-cols-3">
+                          <div className="space-y-2 md:col-span-1">
+                            <Label htmlFor="report-language">Report language</Label>
+                            <select
+                              id="report-language"
+                              value={reportLanguage}
+                              onChange={(event) => setReportLanguage(event.target.value as ReportLanguage)}
+                              className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-sky-300"
+                            >
+                              <option value="en">English</option>
+                              <option value="zh-CN">简体中文</option>
+                              <option value="zh-HK">繁體中文</option>
+                              <option value="fr">Français</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-2 md:col-span-2">
+                            <Label htmlFor="tcm-diagnosis">TCM diagnosis</Label>
+                            <AssessmentTextarea
+                              id="tcm-diagnosis"
+                              value={tcmDiagnosisInput}
+                              onChange={(event) => setTcmDiagnosisInput(event.target.value)}
+                              placeholder="Enter TCM diagnosis"
+                              rows={2}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-4 space-y-2">
+                          <Label htmlFor="tcm-therapy-plan">TCM therapy and regimen plan</Label>
+                          <AssessmentTextarea
+                            id="tcm-therapy-plan"
+                            value={tcmTherapyPlanInput}
+                            onChange={(event) => setTcmTherapyPlanInput(event.target.value)}
+                            placeholder="Herbs, acupuncture frequency, lifestyle, follow-up interval"
+                            rows={3}
+                          />
+                        </div>
+
+                        <div className="mt-4 space-y-2">
+                          <Label htmlFor="final-summary">Final clinical summary</Label>
+                          <AssessmentTextarea
+                            id="final-summary"
+                            value={finalSummaryInput}
+                            onChange={(event) => setFinalSummaryInput(event.target.value)}
+                            placeholder="Integrated recommendation combining neurology + TCM"
+                            rows={3}
+                          />
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Button onClick={handleGenerateReport}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Generate report draft
+                          </Button>
+                          <Button onClick={handleDownloadReport} variant="outline" disabled={!generatedReport}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download report
+                          </Button>
+                          <Button onClick={handlePrintReport} variant="outline" disabled={!generatedReport}>
+                            <Printer className="mr-2 h-4 w-4" />
+                            Print
+                          </Button>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Button onClick={handleGenerateAllReports} variant="secondary">
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Generate all patient reports
+                          </Button>
+                          <Button onClick={handleDownloadAllReports} variant="outline" disabled={!generatedAllReports}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download all reports
+                          </Button>
+                          <Button onClick={handlePrintAllReports} variant="outline" disabled={!generatedAllReports}>
+                            <Printer className="mr-2 h-4 w-4" />
+                            Print all reports
+                          </Button>
+                        </div>
+
+                        {generatedReport && (
+                          <div className="mt-4 rounded-xl border border-sky-100 bg-white p-4">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Generated Preview</p>
+                            <pre className="max-h-96 overflow-auto whitespace-pre-wrap text-xs leading-6 text-slate-700">{generatedReport}</pre>
+                          </div>
+                        )}
+
+                        {generatedAllReports && (
+                          <div className="mt-4 rounded-xl border border-indigo-100 bg-white p-4">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">All Patients Preview</p>
+                            <pre className="max-h-96 overflow-auto whitespace-pre-wrap text-xs leading-6 text-slate-700">{generatedAllReports}</pre>
+                          </div>
+                        )}
+                      </div>
 
                       <h3 className="text-lg font-semibold mt-6">{t("admin.assessments_in_progress")}</h3>
                       {getUserProgress(selectedUser).map((progress) => (
