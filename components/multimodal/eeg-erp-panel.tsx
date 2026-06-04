@@ -42,6 +42,9 @@ export function EegErpPanel({ value, onChange }: Props) {
             "Les indicateurs EEG au repos et ERP (P300) aident à repérer un dysfonctionnement cognitif précoce.",
           )}
         </CardDescription>
+        <div className="mt-2 inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
+          {text("Still in process", "仍在处理中", "仍在處理中", "En cours de traitement")}
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
