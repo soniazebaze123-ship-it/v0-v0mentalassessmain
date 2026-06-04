@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { AssessmentTextarea } from "@/components/ui/assessment-textarea"
 import { supabase } from "@/lib/supabase"
-import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp, Leaf } from "lucide-react"
+import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp, Leaf, ChevronDown, ChevronUp, Phone, Calendar } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 
 // Add imports for new chart components and data utilities
@@ -103,6 +103,7 @@ export function AdminPanel() {
   const [viewingFiles, setViewingFiles] = useState(false)
   const [viewingTCM, setViewingTCM] = useState(false)
   const [viewingProgressTracker, setViewingProgressTracker] = useState(false)
+  const [expandedTCMAssessment, setExpandedTCMAssessment] = useState<string | null>(null)
 
   // Add new state variables for chart filtering
   const [selectedTrendUser, setSelectedTrendUser] = useState<string | null>(null)
@@ -229,6 +230,75 @@ export function AdminPanel() {
     a.click()
   }
 
+  const exportTCMData = () => {
+    const csvData = tcmAssessments.map((tcm) => {
+      const user = users.find((u) => u.id === tcm.user_id)
+      return {
+        phone_number: user?.phone_number || "",
+        primary_constitution: TCM_CONSTITUTION_NAMES[tcm.primary_constitution]?.en || tcm.primary_constitution,
+        primary_constitution_zh: TCM_CONSTITUTION_NAMES[tcm.primary_constitution]?.zh || "",
+        overall_score: tcm.overall_score,
+        balanced_score: tcm.balanced_score,
+        qi_deficiency_score: tcm.qi_deficiency_score,
+        yang_deficiency_score: tcm.yang_deficiency_score,
+        yin_deficiency_score: tcm.yin_deficiency_score,
+        phlegm_dampness_score: tcm.phlegm_dampness_score,
+        damp_heat_score: tcm.damp_heat_score,
+        blood_stasis_score: tcm.blood_stasis_score,
+        qi_stagnation_score: tcm.qi_stagnation_score,
+        special_constitution_score: tcm.special_constitution_score,
+        recommendations: (tcm.recommendations || []).join("; "),
+        completed_at: tcm.completed_at,
+      }
+    })
+
+    const csv = [
+      [
+        "Phone Number",
+        "Primary Constitution (EN)",
+        "Primary Constitution (ZH)",
+        "Overall Score",
+        "Balanced",
+        "Qi Deficiency",
+        "Yang Deficiency",
+        "Yin Deficiency",
+        "Phlegm-Dampness",
+        "Damp-Heat",
+        "Blood Stasis",
+        "Qi Stagnation",
+        "Special Constitution",
+        "Recommendations",
+        "Completed At",
+      ],
+      ...csvData.map((row) => [
+        row.phone_number,
+        row.primary_constitution,
+        row.primary_constitution_zh,
+        row.overall_score.toString(),
+        row.balanced_score?.toString() || "",
+        row.qi_deficiency_score?.toString() || "",
+        row.yang_deficiency_score?.toString() || "",
+        row.yin_deficiency_score?.toString() || "",
+        row.phlegm_dampness_score?.toString() || "",
+        row.damp_heat_score?.toString() || "",
+        row.blood_stasis_score?.toString() || "",
+        row.qi_stagnation_score?.toString() || "",
+        row.special_constitution_score?.toString() || "",
+        `"${row.recommendations}"`,
+        row.completed_at,
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n")
+
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "tcm-assessment-results.csv"
+    a.click()
+  }
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes"
     const k = 1024
@@ -304,6 +374,19 @@ export function AdminPanel() {
     )
   }
 
+  const getPatientInfo = (userId: string) => {
+    return users.find((u) => u.id === userId)
+  }
+
+  // Get all TCM assessments with patient info
+  const getAllTCMPatientsData = () => {
+    return tcmAssessments.map((tcm) => ({
+      ...tcm,
+      patient: getPatientInfo(tcm.user_id),
+      images: getUserTCMImages(tcm.user_id),
+    }))
+  }
+
   const getAverageScores = () => {
     const mocaScores = assessments.filter((a) => a.assessment_type === "MOCA").map((a) => a.total_score)
     const mmseScores = assessments.filter((a) => a.assessment_type === "MMSE").map((a) => a.total_score)
@@ -369,6 +452,12 @@ export function AdminPanel() {
               <Download className="w-4 h-4" />
               <span>{t("admin.export_csv")}</span>
             </Button>
+            {viewingTCM && tcmAssessments.length > 0 && (
+              <Button onClick={exportTCMData} variant="outline" className="flex items-center space-x-2">
+                <Download className="w-4 h-4" />
+                <span>Export TCM CSV</span>
+              </Button>
+            )}
             <ThemeToggle />
             <Button onClick={handleLogout} variant="outline" className="flex items-center space-x-2 bg-transparent">
               <LogOut className="w-4 h-4" />
@@ -458,6 +547,164 @@ export function AdminPanel() {
             users={users}
           />
         </div>
+
+        {/* All TCM Patients Data Section */}
+        {viewingTCM && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Leaf className="w-6 h-6 text-emerald-600" />
+                All TCM Constitution Assessments ({tcmAssessments.length} total)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {tcmAssessments.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No TCM assessments have been completed yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {getAllTCMPatientsData().map((tcmData) => {
+                    const isExpanded = expandedTCMAssessment === tcmData.id
+                    return (
+                      <div key={tcmData.id} className="border rounded-lg overflow-hidden">
+                        {/* Header - Always visible */}
+                        <div
+                          className="p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                          onClick={() => setExpandedTCMAssessment(isExpanded ? null : tcmData.id)}
+                        >
+                          <div className="flex justify-between items-center flex-wrap gap-3">
+                            <div className="flex items-center gap-4 flex-wrap">
+                              <Badge variant="default" className="bg-emerald-600 text-base px-3 py-1">
+                                {TCM_CONSTITUTION_NAMES[tcmData.primary_constitution]?.zh || tcmData.primary_constitution}
+                              </Badge>
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <Phone className="w-4 h-4" />
+                                <span className="font-medium">{tcmData.patient?.phone_number || "Unknown"}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <Calendar className="w-4 h-4" />
+                                <span>{new Date(tcmData.completed_at).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-medium">
+                                Score: {tcmData.overall_score}/100
+                              </span>
+                              {tcmData.images.length > 0 && (
+                                <Badge variant="outline" className="text-xs">
+                                  <ImageIcon className="w-3 h-3 mr-1" />
+                                  {tcmData.images.length} images
+                                </Badge>
+                              )}
+                              {isExpanded ? (
+                                <ChevronUp className="w-5 h-5 text-gray-500" />
+                              ) : (
+                                <ChevronDown className="w-5 h-5 text-gray-500" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Expanded Details */}
+                        {isExpanded && (
+                          <div className="p-4 border-t space-y-6">
+                            {/* Patient Images */}
+                            {tcmData.images.length > 0 && (
+                              <div>
+                                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                  <ImageIcon className="w-4 h-4" />
+                                  Tongue & Face Images
+                                </h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                  {tcmData.images.map((file) => (
+                                    <div key={file.id} className="border rounded-lg overflow-hidden">
+                                      <div className="relative w-full h-32 bg-gray-100">
+                                        <img
+                                          src={getFileUrl(file.file_path) || "/placeholder.svg"}
+                                          alt={file.filename}
+                                          className="h-full w-full object-cover cursor-pointer hover:opacity-90"
+                                          onClick={() => window.open(getFileUrl(file.file_path), "_blank")}
+                                          onError={(event) => {
+                                            if (event.currentTarget.src.endsWith("/placeholder.svg")) return
+                                            event.currentTarget.src = "/placeholder.svg"
+                                          }}
+                                        />
+                                      </div>
+                                      <div className="p-2 text-xs text-gray-600">
+                                        <p className="font-medium truncate">{file.filename}</p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Constitution Scores */}
+                            <div>
+                              <h4 className="font-semibold mb-3">Constitution Scores Breakdown</h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {[
+                                  { key: "balanced_score", label: "Balanced", zh: "平和质" },
+                                  { key: "qi_deficiency_score", label: "Qi Deficiency", zh: "气虚质" },
+                                  { key: "yang_deficiency_score", label: "Yang Deficiency", zh: "阳虚质" },
+                                  { key: "yin_deficiency_score", label: "Yin Deficiency", zh: "阴虚质" },
+                                  { key: "phlegm_dampness_score", label: "Phlegm-Dampness", zh: "痰湿质" },
+                                  { key: "damp_heat_score", label: "Damp-Heat", zh: "湿热质" },
+                                  { key: "blood_stasis_score", label: "Blood Stasis", zh: "血瘀质" },
+                                  { key: "qi_stagnation_score", label: "Qi Stagnation", zh: "气郁质" },
+                                  { key: "special_constitution_score", label: "Special", zh: "特禀质" },
+                                ].map(({ key, label, zh }) => {
+                                  const score = tcmData[key as keyof TCMAssessment] as number
+                                  const isPrimary = tcmData.primary_constitution === key.replace("_score", "")
+                                  return (
+                                    <div 
+                                      key={key} 
+                                      className={`p-3 rounded-lg border ${isPrimary ? "bg-emerald-50 border-emerald-300" : "bg-gray-50"}`}
+                                    >
+                                      <div className="flex justify-between items-center mb-1">
+                                        <span className="text-sm font-medium">{label}</span>
+                                        <span className="text-xs text-gray-500">{zh}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                          <div 
+                                            className={`h-full rounded-full ${
+                                              isPrimary ? "bg-emerald-500" : 
+                                              score >= 60 ? "bg-yellow-500" : "bg-gray-400"
+                                            }`}
+                                            style={{ width: `${score}%` }}
+                                          />
+                                        </div>
+                                        <span className="text-sm font-bold w-8 text-right">{score}</span>
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Recommendations */}
+                            {tcmData.recommendations && tcmData.recommendations.length > 0 && (
+                              <div>
+                                <h4 className="font-semibold mb-3">Recommendations</h4>
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                                  <ul className="list-disc list-inside text-sm text-gray-700 space-y-2">
+                                    {tcmData.recommendations.map((rec, idx) => (
+                                      <li key={idx}>{rec}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Users and Details */}
         <div className="grid lg:grid-cols-2 gap-8">
