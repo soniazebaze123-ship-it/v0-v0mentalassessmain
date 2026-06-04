@@ -40,6 +40,16 @@ interface User {
 
 type ReportLanguage = "en" | "zh-CN" | "zh-HK" | "fr"
 
+type ReportStatus =
+  | "incomplete"
+  | "pending_tcm_review"
+  | "tcm_reviewed"
+  | "pending_final_approval"
+  | "approved"
+  | "published_to_patient"
+
+type TCMReviewStatus = "draft" | "reviewed"
+
 type ReportLabels = {
   reportTitle: string
   patientInfo: string
@@ -254,6 +264,43 @@ interface TCMAssessment {
   }
 }
 
+interface TCMDoctorReview {
+  id: string
+  user_id: string
+  doctor_id?: string | null
+  tcm_constitution?: string | null
+  tongue_observation?: string | null
+  face_observation?: string | null
+  questionnaire_interpretation?: string | null
+  tcm_diagnosis?: string | null
+  therapy_plan?: string | null
+  dietary_advice?: string | null
+  follow_up_recommendation?: string | null
+  doctor_name?: string | null
+  review_date?: string | null
+  review_status: TCMReviewStatus
+  reviewed_at?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+interface MedicalReport {
+  id: string
+  user_id: string
+  language: ReportLanguage
+  report_status: ReportStatus
+  cognitive_summary?: string | null
+  sensory_summary?: string | null
+  tcm_summary?: string | null
+  final_diagnostic_analysis?: string | null
+  treatment_recommendation?: string | null
+  doctor_approved_by?: string | null
+  approved_at?: string | null
+  published_to_patient_at?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
 function clampCognitiveScore(score: number | null | undefined) {
   const numericScore = typeof score === "number" && Number.isFinite(score) ? score : 0
   return Math.min(30, Math.max(0, numericScore))
@@ -270,8 +317,9 @@ export function AdminPanel() {
   const [userProgress, setUserProgress] = useState<UserProgress[]>([])
   const [sensoryAssessments, setSensoryAssessments] = useState<SensoryAssessment[]>([])
   const [tcmAssessments, setTcmAssessments] = useState<TCMAssessment[]>([])
+  const [doctorReviews, setDoctorReviews] = useState<TCMDoctorReview[]>([])
+  const [medicalReports, setMedicalReports] = useState<MedicalReport[]>([])
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
-  const [labAnalysis, setLabAnalysis] = useState("")
   const [viewingFiles, setViewingFiles] = useState(false)
   const [viewingProgressTracker, setViewingProgressTracker] = useState(false)
 
@@ -283,8 +331,21 @@ export function AdminPanel() {
   const [tcmDiagnosisInput, setTcmDiagnosisInput] = useState("")
   const [tcmTherapyPlanInput, setTcmTherapyPlanInput] = useState("")
   const [finalSummaryInput, setFinalSummaryInput] = useState("")
+  const [tcmConstitutionInput, setTcmConstitutionInput] = useState("")
+  const [tongueObservationInput, setTongueObservationInput] = useState("")
+  const [faceObservationInput, setFaceObservationInput] = useState("")
+  const [questionnaireInterpretationInput, setQuestionnaireInterpretationInput] = useState("")
+  const [dietaryAdviceInput, setDietaryAdviceInput] = useState("")
+  const [followUpRecommendationInput, setFollowUpRecommendationInput] = useState("")
+  const [doctorNameInput, setDoctorNameInput] = useState("")
+  const [reviewDateInput, setReviewDateInput] = useState("")
+  const [workflowMessage, setWorkflowMessage] = useState("")
   const [generatedReport, setGeneratedReport] = useState("")
   const [generatedAllReports, setGeneratedAllReports] = useState("")
+  const [patientSearch, setPatientSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<"all" | ReportStatus>("all")
+  const [riskFilter, setRiskFilter] = useState<"all" | "high" | "moderate" | "low">("all")
+  const [tcmImageFilter, setTcmImageFilter] = useState<"all" | "complete" | "missing_tongue" | "missing_face" | "missing_questionnaire">("all")
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -295,10 +356,25 @@ export function AdminPanel() {
   useEffect(() => {
     setGeneratedReport("")
     setGeneratedAllReports("")
-    setTcmDiagnosisInput("")
-    setTcmTherapyPlanInput("")
-    setFinalSummaryInput("")
-  }, [selectedUser])
+    setWorkflowMessage("")
+
+    const existingReview = doctorReviews
+      .filter((review) => review.user_id === selectedUser)
+      .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())[0]
+    const existingReport = medicalReports.find((report) => report.user_id === selectedUser)
+
+    setTcmConstitutionInput(existingReview?.tcm_constitution || "")
+    setTongueObservationInput(existingReview?.tongue_observation || "")
+    setFaceObservationInput(existingReview?.face_observation || "")
+    setQuestionnaireInterpretationInput(existingReview?.questionnaire_interpretation || "")
+    setTcmDiagnosisInput(existingReview?.tcm_diagnosis || "")
+    setTcmTherapyPlanInput(existingReview?.therapy_plan || "")
+    setDietaryAdviceInput(existingReview?.dietary_advice || "")
+    setFollowUpRecommendationInput(existingReview?.follow_up_recommendation || "")
+    setDoctorNameInput(existingReview?.doctor_name || "")
+    setReviewDateInput(existingReview?.review_date || "")
+    setFinalSummaryInput(existingReport?.final_diagnostic_analysis || "")
+  }, [selectedUser, doctorReviews, medicalReports])
 
   const handleLogin = async () => {
     // Simple authentication - in production, use proper authentication
@@ -351,6 +427,14 @@ export function AdminPanel() {
         .from("tcm_assessments")
         .select("*")
         .order("completed_at", { ascending: false })
+      const { data: reviewData, error: reviewError } = await supabase
+        .from("tcm_doctor_reviews")
+        .select("*")
+        .order("updated_at", { ascending: false })
+      const { data: reportData, error: reportError } = await supabase
+        .from("medical_reports")
+        .select("*")
+        .order("updated_at", { ascending: false })
 
       const mappedAssessments = (assessmentsData || []).map((assessment) => {
         const sourceData = assessment.data && typeof assessment.data === "object" ? assessment.data : {}
@@ -410,6 +494,12 @@ export function AdminPanel() {
       setUserProgress(progressData || [])
       setSensoryAssessments((sensoryData || []) as SensoryAssessment[])
       setTcmAssessments((tcmData || []) as TCMAssessment[])
+      if (!reviewError) {
+        setDoctorReviews((reviewData || []) as TCMDoctorReview[])
+      }
+      if (!reportError) {
+        setMedicalReports((reportData || []) as MedicalReport[])
+      }
 
       const { data: runtimeData } = await supabase
         .from("olfactory_runtime_settings")
@@ -421,33 +511,6 @@ export function AdminPanel() {
       }
     } catch (error) {
       console.error("Error loading data:", error)
-    }
-  }
-
-  const updateLabAnalysis = async (assessmentId: string) => {
-    try {
-      await supabase.from("assessments").update({ laboratory_analysis: labAnalysis }).eq("id", assessmentId)
-
-      setAssessments((prev) =>
-        prev.map((a) => (a.id === assessmentId ? { ...a, laboratory_analysis: labAnalysis } : a)),
-      )
-      setLabAnalysis("")
-      alert(
-        localizeText("Laboratory analysis updated successfully", {
-          zh: "实验室分析更新成功",
-          yue: "化驗分析更新成功",
-          fr: "Analyse de laboratoire mise a jour avec succes",
-        }),
-      )
-    } catch (error) {
-      console.error("Error updating lab analysis:", error)
-      alert(
-        localizeText("Failed to update laboratory analysis", {
-          zh: "更新实验室分析失败",
-          yue: "更新化驗分析失敗",
-          fr: "Echec de la mise a jour de l'analyse de laboratoire",
-        }),
-      )
     }
   }
 
@@ -594,6 +657,58 @@ export function AdminPanel() {
     return tcmAssessments.filter((assessment) => assessment.user_id === userId)
   }
 
+  const getUserDoctorReview = (userId: string) => {
+    return doctorReviews
+      .filter((review) => review.user_id === userId)
+      .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())[0]
+  }
+
+  const getUserMedicalReport = (userId: string) => {
+    return medicalReports.find((report) => report.user_id === userId)
+  }
+
+  const getTcmImageState = (userId: string) => {
+    const files = getUserFiles(userId)
+    const hasTongueImage = files.some((file) => /tongue/i.test(file.filename))
+    const hasFaceImage = files.some((file) => /face/i.test(file.filename))
+    const hasQuestionnaire = getUserTcmAssessments(userId).length > 0
+
+    if (!hasTongueImage) return { key: "missing_tongue" as const, label: "Missing tongue" }
+    if (!hasFaceImage) return { key: "missing_face" as const, label: "Missing face" }
+    if (!hasQuestionnaire) return { key: "missing_questionnaire" as const, label: "Missing questionnaire" }
+    return { key: "complete" as const, label: "Complete" }
+  }
+
+  const getUserLatestCognitiveRisk = (userId: string) => {
+    const userAssessments = getUserAssessments(userId)
+    const latestMoca = userAssessments
+      .filter((assessment) => assessment.assessment_type === "MOCA")
+      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
+    const latestMmse = userAssessments
+      .filter((assessment) => assessment.assessment_type === "MMSE")
+      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
+
+    const mocaRisk = latestMoca && latestMoca.total_score <= 25
+    const mmseRisk = latestMmse && latestMmse.total_score <= 24
+    const riskFlags = [mocaRisk, mmseRisk].filter(Boolean).length
+
+    if (riskFlags >= 2) return { key: "high" as const, label: "High risk" }
+    if (riskFlags === 1) return { key: "moderate" as const, label: "Moderate risk" }
+    return { key: "low" as const, label: "Low risk" }
+  }
+
+  const getWorkflowStatusForUser = (userId: string): ReportStatus => {
+    const report = getUserMedicalReport(userId)
+    if (report?.report_status) return report.report_status
+
+    const review = getUserDoctorReview(userId)
+    const tcmImageState = getTcmImageState(userId)
+    if (tcmImageState.key !== "complete") return "incomplete"
+    if (!review) return "pending_tcm_review"
+    if (review.review_status === "reviewed") return "pending_final_approval"
+    return "pending_tcm_review"
+  }
+
   const getOlfactoryLabel = (value?: string | null) => {
     if (!value || value === "No answer") return "No answer"
     const translated = t(`sensory.olfactory.smell.${value}`)
@@ -733,8 +848,16 @@ export function AdminPanel() {
       labels.tcm,
       `Primary Constitution: ${latestTcm?.primary_constitution || labels.unknown}`,
       `TCM Score: ${latestTcm?.overall_score ?? labels.unknown}`,
+      `TCM Constitution (doctor): ${tcmConstitutionInput || labels.unknown}`,
+      `Tongue Observation: ${tongueObservationInput || labels.unknown}`,
+      `Face Observation: ${faceObservationInput || labels.unknown}`,
+      `Questionnaire Interpretation: ${questionnaireInterpretationInput || labels.unknown}`,
       `${labels.diagnosis}: ${tcmDiagnosisInput || labels.unknown}`,
       `${labels.treatmentPlan}: ${tcmTherapyPlanInput || labels.unknown}`,
+      `Dietary Advice: ${dietaryAdviceInput || labels.unknown}`,
+      `Follow-up Recommendation: ${followUpRecommendationInput || labels.unknown}`,
+      `Doctor Name: ${doctorNameInput || labels.unknown}`,
+      `Review Date: ${reviewDateInput || labels.unknown}`,
       "",
       labels.finalPlan,
       `Risk Tier: ${finalRisk}`,
@@ -807,6 +930,136 @@ export function AdminPanel() {
     printWindow.focus()
     printWindow.print()
   }
+
+  const saveDoctorReview = async (reviewStatus: TCMReviewStatus) => {
+    if (!selectedUser) return
+    try {
+      const existingReview = getUserDoctorReview(selectedUser)
+      const payload = {
+        user_id: selectedUser,
+        tcm_constitution: tcmConstitutionInput || null,
+        tongue_observation: tongueObservationInput || null,
+        face_observation: faceObservationInput || null,
+        questionnaire_interpretation: questionnaireInterpretationInput || null,
+        tcm_diagnosis: tcmDiagnosisInput || null,
+        therapy_plan: tcmTherapyPlanInput || null,
+        dietary_advice: dietaryAdviceInput || null,
+        follow_up_recommendation: followUpRecommendationInput || null,
+        doctor_name: doctorNameInput || null,
+        review_date: reviewDateInput || null,
+        review_status: reviewStatus,
+        reviewed_at: reviewStatus === "reviewed" ? new Date().toISOString() : null,
+      }
+
+      let savedRecord: TCMDoctorReview | null = null
+      if (existingReview?.id) {
+        const { data, error } = await supabase
+          .from("tcm_doctor_reviews")
+          .update(payload)
+          .eq("id", existingReview.id)
+          .select("*")
+          .single()
+        if (error) throw error
+        savedRecord = data as TCMDoctorReview
+      } else {
+        const { data, error } = await supabase.from("tcm_doctor_reviews").insert(payload).select("*").single()
+        if (error) throw error
+        savedRecord = data as TCMDoctorReview
+      }
+
+      if (savedRecord) {
+        setDoctorReviews((prev) => [savedRecord as TCMDoctorReview, ...prev.filter((review) => review.id !== savedRecord!.id)])
+      }
+
+      const existingReport = getUserMedicalReport(selectedUser)
+      const autoStatus: ReportStatus = reviewStatus === "reviewed" ? "tcm_reviewed" : "pending_tcm_review"
+      if (existingReport?.id) {
+        const { data: syncedReport, error: syncError } = await supabase
+          .from("medical_reports")
+          .update({ report_status: autoStatus, language: reportLanguage })
+          .eq("id", existingReport.id)
+          .select("*")
+          .single()
+        if (!syncError && syncedReport) {
+          setMedicalReports((prev) => [syncedReport as MedicalReport, ...prev.filter((report) => report.id !== syncedReport.id)])
+        }
+      } else {
+        const { data: insertedReport, error: insertReportError } = await supabase
+          .from("medical_reports")
+          .insert({ user_id: selectedUser, report_status: autoStatus, language: reportLanguage })
+          .select("*")
+          .single()
+        if (!insertReportError && insertedReport) {
+          setMedicalReports((prev) => [insertedReport as MedicalReport, ...prev.filter((report) => report.id !== insertedReport.id)])
+        }
+      }
+
+      setWorkflowMessage(reviewStatus === "reviewed" ? "TCM review marked as reviewed." : "TCM review draft saved.")
+    } catch (error) {
+      console.error("Failed to save TCM doctor review:", error)
+      setWorkflowMessage("Could not save review. Ensure table tcm_doctor_reviews exists.")
+    }
+  }
+
+  const updateReportStatus = async (nextStatus: ReportStatus) => {
+    if (!selectedUser) return
+    try {
+      const existingReport = getUserMedicalReport(selectedUser)
+      const payload = {
+        user_id: selectedUser,
+        language: reportLanguage,
+        report_status: nextStatus,
+        final_diagnostic_analysis: finalSummaryInput || null,
+        treatment_recommendation: tcmTherapyPlanInput || null,
+        approved_at: nextStatus === "approved" || nextStatus === "published_to_patient" ? new Date().toISOString() : null,
+        published_to_patient_at: nextStatus === "published_to_patient" ? new Date().toISOString() : null,
+      }
+
+      let savedRecord: MedicalReport | null = null
+      if (existingReport?.id) {
+        const { data, error } = await supabase
+          .from("medical_reports")
+          .update(payload)
+          .eq("id", existingReport.id)
+          .select("*")
+          .single()
+        if (error) throw error
+        savedRecord = data as MedicalReport
+      } else {
+        const { data, error } = await supabase.from("medical_reports").insert(payload).select("*").single()
+        if (error) throw error
+        savedRecord = data as MedicalReport
+      }
+
+      if (savedRecord) {
+        setMedicalReports((prev) => [savedRecord as MedicalReport, ...prev.filter((report) => report.id !== savedRecord!.id)])
+      }
+      setWorkflowMessage(`Report status updated to ${nextStatus}.`)
+    } catch (error) {
+      console.error("Failed to update report status:", error)
+      setWorkflowMessage("Could not update report status. Ensure table medical_reports exists.")
+    }
+  }
+
+  const currentSelectedReportStatus = selectedUser ? getWorkflowStatusForUser(selectedUser) : "incomplete"
+  const canDownloadSelectedReport = currentSelectedReportStatus === "published_to_patient"
+
+  const filteredUsers = users.filter((user) => {
+    const query = patientSearch.trim().toLowerCase()
+    const identityBlob = `${user.phone_number || ""} ${user.name || ""} ${user.national_id || ""}`.toLowerCase()
+    if (query && !identityBlob.includes(query)) return false
+
+    const workflowStatus = getWorkflowStatusForUser(user.id)
+    if (statusFilter !== "all" && workflowStatus !== statusFilter) return false
+
+    const risk = getUserLatestCognitiveRisk(user.id)
+    if (riskFilter !== "all" && risk.key !== riskFilter) return false
+
+    const imageState = getTcmImageState(user.id)
+    if (tcmImageFilter !== "all" && imageState.key !== tcmImageFilter) return false
+
+    return true
+  })
 
   // Inside the `AdminPanel` component, after `averageScores` calculation, add the following data preparations:
   const mocaDistributionData = getScoreDistribution(assessments, "MOCA")
@@ -982,14 +1235,102 @@ export function AdminPanel() {
           {/* Users List */}
           <Card>
             <CardHeader>
-              <CardTitle>{t("admin.registered_users")}</CardTitle>
+              <CardTitle>Patient Report Review Dashboard</CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="grid gap-3 md:grid-cols-2 mb-4">
+                <AssessmentInput
+                  placeholder="Search by phone, name, or national ID"
+                  value={patientSearch}
+                  onChange={(event) => setPatientSearch(event.target.value)}
+                />
+                <div className="grid grid-cols-3 gap-2">
+                  <select
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value as "all" | ReportStatus)}
+                    className="h-10 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:ring-2 focus:ring-blue-300"
+                  >
+                    <option value="all">All status</option>
+                    <option value="incomplete">incomplete</option>
+                    <option value="pending_tcm_review">pending_tcm_review</option>
+                    <option value="tcm_reviewed">tcm_reviewed</option>
+                    <option value="pending_final_approval">pending_final_approval</option>
+                    <option value="approved">approved</option>
+                    <option value="published_to_patient">published_to_patient</option>
+                  </select>
+                  <select
+                    value={riskFilter}
+                    onChange={(event) => setRiskFilter(event.target.value as "all" | "high" | "moderate" | "low")}
+                    className="h-10 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:ring-2 focus:ring-blue-300"
+                  >
+                    <option value="all">All risk</option>
+                    <option value="high">High risk</option>
+                    <option value="moderate">Moderate risk</option>
+                    <option value="low">Low risk</option>
+                  </select>
+                  <select
+                    value={tcmImageFilter}
+                    onChange={(event) =>
+                      setTcmImageFilter(
+                        event.target.value as "all" | "complete" | "missing_tongue" | "missing_face" | "missing_questionnaire",
+                      )
+                    }
+                    className="h-10 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:ring-2 focus:ring-blue-300"
+                  >
+                    <option value="all">All TCM files</option>
+                    <option value="complete">Complete</option>
+                    <option value="missing_tongue">Missing tongue</option>
+                    <option value="missing_face">Missing face</option>
+                    <option value="missing_questionnaire">Missing questionnaire</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mb-4 overflow-auto rounded-lg border border-slate-200">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold">Patient</th>
+                      <th className="px-3 py-2 text-left font-semibold">Cognitive Status</th>
+                      <th className="px-3 py-2 text-left font-semibold">TCM Images</th>
+                      <th className="px-3 py-2 text-left font-semibold">Report Status</th>
+                      <th className="px-3 py-2 text-left font-semibold">Download</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((user) => {
+                      const risk = getUserLatestCognitiveRisk(user.id)
+                      const tcmImageState = getTcmImageState(user.id)
+                      const workflowStatus = getWorkflowStatusForUser(user.id)
+                      return (
+                        <tr
+                          key={`row-${user.id}`}
+                          className={`cursor-pointer border-t ${selectedUser === user.id ? "bg-blue-50" : "hover:bg-slate-50"}`}
+                          onClick={() => setSelectedUser(user.id)}
+                        >
+                          <td className="px-3 py-2">
+                            <p className="font-medium">{user.name || user.phone_number}</p>
+                            <p className="text-xs text-slate-500">{user.phone_number}</p>
+                          </td>
+                          <td className="px-3 py-2">{risk.label}</td>
+                          <td className="px-3 py-2">{tcmImageState.label}</td>
+                          <td className="px-3 py-2">
+                            <Badge variant="outline">{workflowStatus}</Badge>
+                          </td>
+                          <td className="px-3 py-2">{workflowStatus === "published_to_patient" ? "Available" : "Locked"}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
               <div className="space-y-4 max-h-96 overflow-y-auto">
-                {users.map((user) => {
+                {filteredUsers.map((user) => {
                   const userAssessments = getUserAssessments(user.id)
                   const userFiles = getUserFiles(user.id)
                   const userCurrentProgress = getUserProgress(user.id)
+                  const workflowStatus = getWorkflowStatusForUser(user.id)
                   return (
                     <div
                       key={user.id}
@@ -1000,7 +1341,7 @@ export function AdminPanel() {
                     >
                       <div className="flex justify-between items-center flex-wrap gap-2">
                         <div>
-                          <p className="font-medium">{user.phone_number}</p>
+                          <p className="font-medium">{user.name || user.phone_number}</p>
                           <p className="text-sm text-gray-600">
                             {t("admin.registered")}: {new Date(user.created_at).toLocaleDateString()}
                           </p>
@@ -1012,6 +1353,7 @@ export function AdminPanel() {
                           <Badge variant="outline">
                             {t("admin.in_progress_count", { count: userCurrentProgress.length })}
                           </Badge>
+                          <Badge variant="outline">{workflowStatus}</Badge>
                           <Badge variant="outline">{t("admin.files_count", { count: userFiles.length })}</Badge>
                         </div>
                       </div>
@@ -1236,23 +1578,6 @@ export function AdminPanel() {
                             )}
                           </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor={`lab-${assessment.id}`}>{t("admin.laboratory_analysis")}</Label>
-                            <AssessmentTextarea
-                              id={`lab-${assessment.id}`}
-                              value={assessment.laboratory_analysis || labAnalysis}
-                              onChange={(e) => setLabAnalysis(e.target.value)}
-                              placeholder={t("admin.enter_analysis")}
-                              rows={3}
-                            />
-                            <Button
-                              size="sm"
-                              onClick={() => updateLabAnalysis(assessment.id)}
-                              disabled={!labAnalysis.trim()}
-                            >
-                              {t("admin.update_analysis")}
-                            </Button>
-                          </div>
                         </div>
                       ))}
                       {getUserAssessments(selectedUser).length === 0 && (
@@ -1354,8 +1679,15 @@ export function AdminPanel() {
                           <Badge className="bg-sky-600 text-white hover:bg-sky-600">Premium</Badge>
                         </div>
                         <p className="mt-2 text-sm text-slate-600">
-                          Generate a unified multilingual report from cognitive, sensory, and TCM data with doctor final plan.
+                          Individualized report workflow: doctor reviews each patient, approves, then publishes for patient download.
                         </p>
+
+                        <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-600">
+                          Current status: <span className="font-semibold">{currentSelectedReportStatus}</span>
+                          {currentSelectedReportStatus !== "published_to_patient" && (
+                            <p className="mt-1 text-slate-500">Patient download remains locked until status is published_to_patient.</p>
+                          )}
+                        </div>
 
                         <div className="mt-4 grid gap-4 md:grid-cols-3">
                           <div className="space-y-2 md:col-span-1">
@@ -1373,7 +1705,71 @@ export function AdminPanel() {
                             </select>
                           </div>
 
-                          <div className="space-y-2 md:col-span-2">
+                          <div className="space-y-2 md:col-span-1">
+                            <Label htmlFor="doctor-name">Doctor name</Label>
+                            <AssessmentInput
+                              id="doctor-name"
+                              value={doctorNameInput}
+                              onChange={(event) => setDoctorNameInput(event.target.value)}
+                              placeholder="TCM doctor name"
+                            />
+                          </div>
+
+                          <div className="space-y-2 md:col-span-1">
+                            <Label htmlFor="review-date">Review date</Label>
+                            <AssessmentInput
+                              id="review-date"
+                              type="date"
+                              value={reviewDateInput}
+                              onChange={(event) => setReviewDateInput(event.target.value)}
+                            />
+                          </div>
+
+                          <div className="space-y-2 md:col-span-3">
+                            <Label htmlFor="tcm-constitution">TCM constitution</Label>
+                            <AssessmentTextarea
+                              id="tcm-constitution"
+                              value={tcmConstitutionInput}
+                              onChange={(event) => setTcmConstitutionInput(event.target.value)}
+                              placeholder="Describe constitution type and rationale"
+                              rows={2}
+                            />
+                          </div>
+
+                          <div className="space-y-2 md:col-span-3">
+                            <Label htmlFor="tongue-observation">Tongue observation</Label>
+                            <AssessmentTextarea
+                              id="tongue-observation"
+                              value={tongueObservationInput}
+                              onChange={(event) => setTongueObservationInput(event.target.value)}
+                              placeholder="Color, coating, moisture, fissures"
+                              rows={2}
+                            />
+                          </div>
+
+                          <div className="space-y-2 md:col-span-3">
+                            <Label htmlFor="face-observation">Face observation</Label>
+                            <AssessmentTextarea
+                              id="face-observation"
+                              value={faceObservationInput}
+                              onChange={(event) => setFaceObservationInput(event.target.value)}
+                              placeholder="Complexion, eye region, expression patterns"
+                              rows={2}
+                            />
+                          </div>
+
+                          <div className="space-y-2 md:col-span-3">
+                            <Label htmlFor="questionnaire-interpretation">Pulse/questionnaire interpretation</Label>
+                            <AssessmentTextarea
+                              id="questionnaire-interpretation"
+                              value={questionnaireInterpretationInput}
+                              onChange={(event) => setQuestionnaireInterpretationInput(event.target.value)}
+                              placeholder="Interpret questionnaire and pulse indicators"
+                              rows={2}
+                            />
+                          </div>
+
+                          <div className="space-y-2 md:col-span-3">
                             <Label htmlFor="tcm-diagnosis">TCM diagnosis</Label>
                             <AssessmentTextarea
                               id="tcm-diagnosis"
@@ -1397,6 +1793,28 @@ export function AdminPanel() {
                         </div>
 
                         <div className="mt-4 space-y-2">
+                          <Label htmlFor="dietary-advice">Dietary advice</Label>
+                          <AssessmentTextarea
+                            id="dietary-advice"
+                            value={dietaryAdviceInput}
+                            onChange={(event) => setDietaryAdviceInput(event.target.value)}
+                            placeholder="Food strategy and restrictions"
+                            rows={2}
+                          />
+                        </div>
+
+                        <div className="mt-4 space-y-2">
+                          <Label htmlFor="follow-up-recommendation">Follow-up recommendation</Label>
+                          <AssessmentTextarea
+                            id="follow-up-recommendation"
+                            value={followUpRecommendationInput}
+                            onChange={(event) => setFollowUpRecommendationInput(event.target.value)}
+                            placeholder="Follow-up schedule and escalation criteria"
+                            rows={2}
+                          />
+                        </div>
+
+                        <div className="mt-4 space-y-2">
                           <Label htmlFor="final-summary">Final clinical summary</Label>
                           <AssessmentTextarea
                             id="final-summary"
@@ -1408,15 +1826,41 @@ export function AdminPanel() {
                         </div>
 
                         <div className="mt-4 flex flex-wrap gap-2">
+                          <Button onClick={() => saveDoctorReview("draft")} variant="outline">
+                            Save TCM draft
+                          </Button>
+                          <Button onClick={() => saveDoctorReview("reviewed")} variant="outline">
+                            Mark TCM reviewed
+                          </Button>
+                          <Button onClick={() => updateReportStatus("approved")} variant="outline">
+                            Approve final report
+                          </Button>
+                          <Button onClick={() => updateReportStatus("pending_final_approval")} variant="outline">
+                            Send to final approval
+                          </Button>
+                          <Button
+                            onClick={() => updateReportStatus("published_to_patient")}
+                            variant="outline"
+                            disabled={currentSelectedReportStatus !== "approved" && currentSelectedReportStatus !== "published_to_patient"}
+                          >
+                            Publish to patient
+                          </Button>
+                        </div>
+
+                        {workflowMessage && (
+                          <p className="mt-2 text-xs text-slate-600">{workflowMessage}</p>
+                        )}
+
+                        <div className="mt-4 flex flex-wrap gap-2">
                           <Button onClick={handleGenerateReport}>
                             <FileText className="mr-2 h-4 w-4" />
                             Generate report draft
                           </Button>
-                          <Button onClick={handleDownloadReport} variant="outline" disabled={!generatedReport}>
+                          <Button onClick={handleDownloadReport} variant="outline" disabled={!generatedReport || !canDownloadSelectedReport}>
                             <Download className="mr-2 h-4 w-4" />
                             Download report
                           </Button>
-                          <Button onClick={handlePrintReport} variant="outline" disabled={!generatedReport}>
+                          <Button onClick={handlePrintReport} variant="outline" disabled={!generatedReport || !canDownloadSelectedReport}>
                             <Printer className="mr-2 h-4 w-4" />
                             Print
                           </Button>
