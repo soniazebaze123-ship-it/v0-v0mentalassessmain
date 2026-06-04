@@ -1042,7 +1042,8 @@ export function AdminPanel() {
   }
 
   const currentSelectedReportStatus = selectedUser ? getWorkflowStatusForUser(selectedUser) : "incomplete"
-  const canDownloadSelectedReport = currentSelectedReportStatus === "published_to_patient"
+  const canPublishToPatient =
+    currentSelectedReportStatus === "approved" || currentSelectedReportStatus === "published_to_patient"
 
   const filteredUsers = users.filter((user) => {
     const query = patientSearch.trim().toLowerCase()
@@ -1841,7 +1842,7 @@ export function AdminPanel() {
                           <Button
                             onClick={() => updateReportStatus("published_to_patient")}
                             variant="outline"
-                            disabled={currentSelectedReportStatus !== "approved" && currentSelectedReportStatus !== "published_to_patient"}
+                            disabled={!canPublishToPatient}
                           >
                             Publish to patient
                           </Button>
@@ -1856,11 +1857,11 @@ export function AdminPanel() {
                             <FileText className="mr-2 h-4 w-4" />
                             Generate report draft
                           </Button>
-                          <Button onClick={handleDownloadReport} variant="outline" disabled={!generatedReport || !canDownloadSelectedReport}>
+                          <Button onClick={handleDownloadReport} variant="outline" disabled={!generatedReport}>
                             <Download className="mr-2 h-4 w-4" />
                             Download report
                           </Button>
-                          <Button onClick={handlePrintReport} variant="outline" disabled={!generatedReport || !canDownloadSelectedReport}>
+                          <Button onClick={handlePrintReport} variant="outline" disabled={!generatedReport}>
                             <Printer className="mr-2 h-4 w-4" />
                             Print
                           </Button>
