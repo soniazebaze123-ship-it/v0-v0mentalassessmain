@@ -19,7 +19,7 @@ export function ScoreDistributionChart({ mocaData, mmseData }: ScoreDistribution
       <Card>
         <CardHeader>
           <CardTitle>
-            {t("dashboard.moca")} - {t("admin.score_distribution")}
+            {t("dashboard.moca")} - {t("admin.score_distribution_title")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -43,7 +43,7 @@ export function ScoreDistributionChart({ mocaData, mmseData }: ScoreDistribution
       <Card>
         <CardHeader>
           <CardTitle>
-            {t("dashboard.mmse")} - {t("admin.score_distribution")}
+            {t("dashboard.mmse")} - {t("admin.score_distribution_title")}
           </CardTitle>
         </CardHeader>
         <CardContent>

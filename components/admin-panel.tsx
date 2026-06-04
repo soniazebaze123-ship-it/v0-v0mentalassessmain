@@ -1036,19 +1036,16 @@ export function AdminPanel() {
   const getSectionNames = (assessmentType: string) => {
     if (assessmentType === "MOCA") {
       return {
-        cube: t("moca.cube"),
-        clock: localizeText("Clock Drawing", { zh: "画钟任务", yue: "畫鐘任務", fr: "Dessin d'horloge" }),
-        trail_making: localizeText("Trail Making", { zh: "连线任务", yue: "連線任務", fr: "Trails" }),
-        animal_naming: localizeText("Animal Naming", { zh: "动物命名", yue: "動物命名", fr: "Denomination des animaux" }),
-        object_naming: localizeText("Object Naming", { zh: "物体命名", yue: "物件命名", fr: "Denomination des objets" }),
         visuospatial: t("moca.visuospatial"),
+        trail_making: localizeText("Trail making", { zh: "连线测试", yue: "連線測試", fr: "Trails" }),
+        cube: t("moca.cube"),
+        clock: localizeText("Clock drawing", { zh: "画钟", yue: "畫鐘", fr: "Horloge" }),
         executive: t("moca.executive"),
         naming: t("moca.naming"),
-        memory_task: t("moca.memory"),
+        animal_naming: localizeText("Animal naming", { zh: "动物命名", yue: "動物命名", fr: "Denomination animaux" }),
+        object_naming: localizeText("Object naming", { zh: "物体命名", yue: "物體命名", fr: "Denomination objets" }),
         memory: t("moca.memory"),
-        attention_task: t("moca.attention"),
         attention: t("moca.attention"),
-        language_abstraction: t("moca.language"),
         language: t("moca.language"),
         orientation: t("moca.orientation"),
       }
@@ -1064,8 +1061,8 @@ export function AdminPanel() {
         reading_command: t("mmse.reading_command"),
         writing: t("mmse.writing"),
         copying: t("mmse.copying"),
-        legacy_mmse_score: localizeText("Legacy MMSE score", { zh: "旧版 MMSE 分数", yue: "舊版 MMSE 分數", fr: "Score MMSE herite" }),
-        legacy_mmse_max_score: localizeText("Legacy MMSE max score", { zh: "旧版 MMSE 满分", yue: "舊版 MMSE 滿分", fr: "Score max MMSE herite" }),
+        legacy_mmse_score: localizeText("Legacy MMSE score", { zh: "旧版 MMSE 分数", yue: "舊版 MMSE 分數", fr: "Score MMSE legacy" }),
+        legacy_mmse_max_score: localizeText("Legacy MMSE max score", { zh: "旧版 MMSE 满分", yue: "舊版 MMSE 滿分", fr: "Score max MMSE legacy" }),
       }
     }
   }
