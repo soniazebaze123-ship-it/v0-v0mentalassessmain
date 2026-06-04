@@ -56,12 +56,12 @@ const TCM_QUESTIONS_MAP: Record<string, { text: string; textZh: string; constitu
   bal3: { text: "Do you adapt well to environmental changes?", textZh: "您能很好地适应环境变化吗？", constitution: "Balanced" },
 }
 
-const LIKERT_LABELS: Record<number, string> = {
-  1: "Never (从不)",
-  2: "Rarely (很少)",
-  3: "Sometimes (有时)",
-  4: "Often (经常)",
-  5: "Always (总是)",
+const LIKERT_LABELS: Record<number, { en: string; zh: string; yue: string; fr: string }> = {
+  1: { en: "Never", zh: "从不", yue: "從不", fr: "Jamais" },
+  2: { en: "Rarely", zh: "很少", yue: "很少", fr: "Rarement" },
+  3: { en: "Sometimes", zh: "有时", yue: "有時", fr: "Parfois" },
+  4: { en: "Often", zh: "经常", yue: "經常", fr: "Souvent" },
+  5: { en: "Always", zh: "总是", yue: "總是", fr: "Toujours" },
 }
 
 interface User {
@@ -201,6 +201,163 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     mmseDesignScores: "Scores de reconstruction MMSE",
     unknown: "Non renseigne",
   },
+}
+
+type ReportContentLabels = {
+  cityProvinceValue: string
+  hospitalValue: string
+  olfactory: string
+  auditory: string
+  visual: string
+  primaryConstitution: string
+  tcmScore: string
+  tcmConstitutionDoctor: string
+  tongueObservation: string
+  faceObservation: string
+  questionnaireInterpretation: string
+  dietaryAdvice: string
+  followUpRecommendation: string
+  doctorName: string
+  reviewDate: string
+  questionnaireResponses: string
+  autoRecommendations: string
+  riskTier: string
+  riskHigh: string
+  riskModerate: string
+  riskLow: string
+}
+
+const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
+  en: {
+    cityProvinceValue: "Guangzhou / Guangdong",
+    hospitalValue: "Nanfang Hospital of Integrated Traditional Chinese and Western Medicine",
+    olfactory: "Olfactory",
+    auditory: "Auditory",
+    visual: "Visual",
+    primaryConstitution: "Primary Constitution",
+    tcmScore: "TCM Score",
+    tcmConstitutionDoctor: "TCM Constitution (doctor)",
+    tongueObservation: "Tongue Observation",
+    faceObservation: "Face Observation",
+    questionnaireInterpretation: "Questionnaire Interpretation",
+    dietaryAdvice: "Dietary Advice",
+    followUpRecommendation: "Follow-up Recommendation",
+    doctorName: "Doctor Name",
+    reviewDate: "Review Date",
+    questionnaireResponses: "TCM Questionnaire Responses",
+    autoRecommendations: "Auto-generated Health Recommendations",
+    riskTier: "Risk Tier",
+    riskHigh: "HIGH",
+    riskModerate: "MODERATE",
+    riskLow: "LOW",
+  },
+  "zh-CN": {
+    cityProvinceValue: "广州 / 广东",
+    hospitalValue: "南方医科大学中西医结合医院",
+    olfactory: "嗅觉",
+    auditory: "听觉",
+    visual: "视觉",
+    primaryConstitution: "主要体质",
+    tcmScore: "中医总分",
+    tcmConstitutionDoctor: "中医体质（医生）",
+    tongueObservation: "舌象观察",
+    faceObservation: "面诊观察",
+    questionnaireInterpretation: "问卷解读",
+    dietaryAdvice: "饮食建议",
+    followUpRecommendation: "随访建议",
+    doctorName: "医生姓名",
+    reviewDate: "评审日期",
+    questionnaireResponses: "中医问卷作答",
+    autoRecommendations: "问卷自动生成健康建议",
+    riskTier: "风险等级",
+    riskHigh: "高",
+    riskModerate: "中",
+    riskLow: "低",
+  },
+  "zh-HK": {
+    cityProvinceValue: "廣州 / 廣東",
+    hospitalValue: "南方醫科大學中西醫結合醫院",
+    olfactory: "嗅覺",
+    auditory: "聽覺",
+    visual: "視覺",
+    primaryConstitution: "主要體質",
+    tcmScore: "中醫總分",
+    tcmConstitutionDoctor: "中醫體質（醫生）",
+    tongueObservation: "舌象觀察",
+    faceObservation: "面診觀察",
+    questionnaireInterpretation: "問卷解讀",
+    dietaryAdvice: "飲食建議",
+    followUpRecommendation: "隨訪建議",
+    doctorName: "醫生姓名",
+    reviewDate: "評審日期",
+    questionnaireResponses: "中醫問卷作答",
+    autoRecommendations: "問卷自動生成健康建議",
+    riskTier: "風險等級",
+    riskHigh: "高",
+    riskModerate: "中",
+    riskLow: "低",
+  },
+  fr: {
+    cityProvinceValue: "Guangzhou / Guangdong",
+    hospitalValue: "Hopital integre de medecine chinoise et occidentale de Nanfang",
+    olfactory: "Olfactif",
+    auditory: "Auditif",
+    visual: "Visuel",
+    primaryConstitution: "Constitution principale",
+    tcmScore: "Score MTC",
+    tcmConstitutionDoctor: "Constitution MTC (medecin)",
+    tongueObservation: "Observation de la langue",
+    faceObservation: "Observation du visage",
+    questionnaireInterpretation: "Interpretation du questionnaire",
+    dietaryAdvice: "Conseil dietetique",
+    followUpRecommendation: "Recommandation de suivi",
+    doctorName: "Nom du medecin",
+    reviewDate: "Date de revue",
+    questionnaireResponses: "Reponses au questionnaire MTC",
+    autoRecommendations: "Recommandations de sante auto-generees",
+    riskTier: "Niveau de risque",
+    riskHigh: "ELEVE",
+    riskModerate: "MODERE",
+    riskLow: "FAIBLE",
+  },
+}
+
+const CONSTITUTION_LABELS: Record<string, { "zh-CN": string; "zh-HK": string; fr: string }> = {
+  balanced: { "zh-CN": "平和质", "zh-HK": "平和質", fr: "Constitution equilibree" },
+  "qi deficiency": { "zh-CN": "气虚质", "zh-HK": "氣虛質", fr: "Deficience du qi" },
+  "yang deficiency": { "zh-CN": "阳虚质", "zh-HK": "陽虛質", fr: "Deficience du yang" },
+  "yin deficiency": { "zh-CN": "阴虚质", "zh-HK": "陰虛質", fr: "Deficience du yin" },
+  "phlegm-dampness": { "zh-CN": "痰湿质", "zh-HK": "痰濕質", fr: "Mucosites-humidite" },
+  "damp-heat": { "zh-CN": "湿热质", "zh-HK": "濕熱質", fr: "Humidite-chaleur" },
+  "blood stasis": { "zh-CN": "血瘀质", "zh-HK": "血瘀質", fr: "Stase sanguine" },
+  "qi stagnation": { "zh-CN": "气郁质", "zh-HK": "氣鬱質", fr: "Stagnation du qi" },
+  "special constitution": { "zh-CN": "特禀质", "zh-HK": "特稟質", fr: "Constitution speciale" },
+}
+
+const getConstitutionLabelForLanguage = (value: string, language: ReportLanguage) => {
+  if (!value) return value
+  const normalized = value.replace(/_/g, " ").toLowerCase()
+  const mapping = CONSTITUTION_LABELS[normalized]
+  if (!mapping || language === "en") return value.replace(/_/g, " ")
+  return mapping[language]
+}
+
+const getLikertLabelForReport = (score: number, language: ReportLanguage) => {
+  const labels = LIKERT_LABELS[score]
+  if (!labels) return String(score)
+  if (language === "zh-CN") return labels.zh
+  if (language === "zh-HK") return labels.yue
+  if (language === "fr") return labels.fr
+  return labels.en
+}
+
+const getLikertLabelForUi = (score: number, language: "en" | "zh" | "yue" | "fr") => {
+  const labels = LIKERT_LABELS[score]
+  if (!labels) return String(score)
+  if (language === "zh") return labels.zh
+  if (language === "yue") return labels.yue
+  if (language === "fr") return labels.fr
+  return labels.en
 }
 
 export interface Assessment {
@@ -360,7 +517,7 @@ function clampCognitiveScore(score: number | null | undefined) {
 }
 
 export function AdminPanel() {
-  const { t, localizeText } = useLanguage()
+  const { language, t, localizeText } = useLanguage()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
@@ -399,6 +556,22 @@ export function AdminPanel() {
   const [statusFilter, setStatusFilter] = useState<"all" | ReportStatus>("all")
   const [riskFilter, setRiskFilter] = useState<"all" | "high" | "moderate" | "low">("all")
   const [tcmImageFilter, setTcmImageFilter] = useState<"all" | "complete" | "missing_images" | "missing_questionnaire">("all")
+
+  useEffect(() => {
+    if (language === "zh") {
+      setReportLanguage("zh-CN")
+      return
+    }
+    if (language === "yue") {
+      setReportLanguage("zh-HK")
+      return
+    }
+    if (language === "fr") {
+      setReportLanguage("fr")
+      return
+    }
+    setReportLanguage("en")
+  }, [language])
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -753,9 +926,22 @@ export function AdminPanel() {
       !!(latest?.answers?.face_image_url)
     const hasImages = hasTongueImage && hasFaceImage
 
-    if (!hasQuestionnaire) return { key: "missing_questionnaire" as const, label: "Missing questionnaire" }
-    if (!hasImages) return { key: "missing_images" as const, label: "Missing images" }
-    return { key: "complete" as const, label: "Complete" }
+    if (!hasQuestionnaire) {
+      return {
+        key: "missing_questionnaire" as const,
+        label: localizeText("Missing questionnaire", { zh: "缺少问卷", yue: "缺少問卷", fr: "Questionnaire manquant" }),
+      }
+    }
+    if (!hasImages) {
+      return {
+        key: "missing_images" as const,
+        label: localizeText("Missing images", { zh: "缺少图片", yue: "缺少圖片", fr: "Images manquantes" }),
+      }
+    }
+    return {
+      key: "complete" as const,
+      label: localizeText("Complete", { zh: "完整", yue: "完整", fr: "Complet" }),
+    }
   }
 
   const getUserLatestCognitiveRisk = (userId: string) => {
@@ -771,9 +957,41 @@ export function AdminPanel() {
     const mmseRisk = latestMmse && latestMmse.total_score <= 24
     const riskFlags = [mocaRisk, mmseRisk].filter(Boolean).length
 
-    if (riskFlags >= 2) return { key: "high" as const, label: "High risk" }
-    if (riskFlags === 1) return { key: "moderate" as const, label: "Moderate risk" }
-    return { key: "low" as const, label: "Low risk" }
+    if (riskFlags >= 2) {
+      return {
+        key: "high" as const,
+        label: localizeText("High risk", { zh: "高风险", yue: "高風險", fr: "Risque eleve" }),
+      }
+    }
+    if (riskFlags === 1) {
+      return {
+        key: "moderate" as const,
+        label: localizeText("Moderate risk", { zh: "中风险", yue: "中風險", fr: "Risque modere" }),
+      }
+    }
+    return {
+      key: "low" as const,
+      label: localizeText("Low risk", { zh: "低风险", yue: "低風險", fr: "Risque faible" }),
+    }
+  }
+
+  const getReportStatusLabel = (status: ReportStatus) => {
+    switch (status) {
+      case "incomplete":
+        return localizeText("Incomplete", { zh: "资料不完整", yue: "資料不完整", fr: "Incomplet" })
+      case "pending_tcm_review":
+        return localizeText("Pending TCM review", { zh: "待中医审核", yue: "待中醫審核", fr: "En attente de revue MTC" })
+      case "tcm_reviewed":
+        return localizeText("TCM reviewed", { zh: "中医已审核", yue: "中醫已審核", fr: "Revue MTC terminee" })
+      case "pending_final_approval":
+        return localizeText("Pending final approval", { zh: "待最终审批", yue: "待最終審批", fr: "En attente d'approbation finale" })
+      case "approved":
+        return localizeText("Approved", { zh: "已批准", yue: "已批准", fr: "Approuve" })
+      case "published_to_patient":
+        return localizeText("Published to patient", { zh: "已发布给患者", yue: "已發布給患者", fr: "Publie au patient" })
+      default:
+        return status
+    }
   }
 
   const getWorkflowStatusForUser = (userId: string): ReportStatus => {
@@ -873,6 +1091,7 @@ export function AdminPanel() {
 
   const buildMedicalReport = (userId: string, language: ReportLanguage) => {
     const labels = REPORT_LABELS[language]
+    const contentLabels = REPORT_CONTENT_LABELS[language]
     const user = users.find((entry) => entry.id === userId)
     const userAssessments = getUserAssessments(userId)
     const userSensory = getUserSensoryAssessments(userId)
@@ -902,7 +1121,12 @@ export function AdminPanel() {
     const mmseRisk = latestMmse && latestMmse.total_score <= 24
     const olfactoryRisk = latestOlfactory?.classification?.toLowerCase().includes("severe")
     const riskFlagCount = [mocaRisk, mmseRisk, olfactoryRisk].filter(Boolean).length
-    const finalRisk = riskFlagCount >= 2 ? "HIGH" : riskFlagCount === 1 ? "MODERATE" : "LOW"
+    const finalRisk =
+      riskFlagCount >= 2
+        ? contentLabels.riskHigh
+        : riskFlagCount === 1
+          ? contentLabels.riskModerate
+          : contentLabels.riskLow
 
     return [
       labels.reportTitle,
@@ -913,8 +1137,8 @@ export function AdminPanel() {
       `${labels.idNumber}: ${user?.national_id || labels.unknown}`,
       `${labels.sex}: ${user?.gender || labels.unknown}`,
       `${labels.dateOfBirth}: ${user?.date_of_birth || labels.unknown}`,
-      `${labels.cityProvince}: guangzhou / guangdong`,
-      `${labels.hospital}: 南方医科大学中西结合医院`,
+      `${labels.cityProvince}: ${contentLabels.cityProvinceValue}`,
+      `${labels.hospital}: ${contentLabels.hospitalValue}`,
       "",
       labels.cognitive,
       `MMSE: ${latestMmse ? `${latestMmse.total_score}/30` : labels.unknown}`,
@@ -923,26 +1147,26 @@ export function AdminPanel() {
       ...formatMmseReconstructionScores(latestMmse),
       "",
       labels.sensory,
-      `Olfactory: ${latestOlfactory ? `${latestOlfactory.raw_score ?? "-"} (${latestOlfactory.classification || "-"})` : labels.unknown}`,
-      `Auditory: ${latestAuditory ? `${latestAuditory.normalized_score ?? "-"} (${latestAuditory.classification || "-"})` : labels.unknown}`,
-      `Visual: ${latestVisual ? `${latestVisual.normalized_score ?? "-"} (${latestVisual.classification || "-"})` : labels.unknown}`,
+      `${contentLabels.olfactory}: ${latestOlfactory ? `${latestOlfactory.raw_score ?? "-"} (${latestOlfactory.classification || "-"})` : labels.unknown}`,
+      `${contentLabels.auditory}: ${latestAuditory ? `${latestAuditory.normalized_score ?? "-"} (${latestAuditory.classification || "-"})` : labels.unknown}`,
+      `${contentLabels.visual}: ${latestVisual ? `${latestVisual.normalized_score ?? "-"} (${latestVisual.classification || "-"})` : labels.unknown}`,
       "",
       labels.tcm,
-      `Primary Constitution: ${latestTcm?.primary_constitution?.replace(/_/g, " ") || labels.unknown}`,
-      `TCM Score: ${latestTcm?.overall_score ?? labels.unknown}`,
-      `TCM Constitution (doctor): ${savedReview?.tcm_constitution || tcmConstitutionInput || labels.unknown}`,
-      `Tongue Observation: ${savedReview?.tongue_observation || tongueObservationInput || labels.unknown}`,
-      `Face Observation: ${savedReview?.face_observation || faceObservationInput || labels.unknown}`,
-      `Questionnaire Interpretation: ${savedReview?.questionnaire_interpretation || questionnaireInterpretationInput || labels.unknown}`,
+      `${contentLabels.primaryConstitution}: ${latestTcm?.primary_constitution ? getConstitutionLabelForLanguage(latestTcm.primary_constitution, language) : labels.unknown}`,
+      `${contentLabels.tcmScore}: ${latestTcm?.overall_score ?? labels.unknown}`,
+      `${contentLabels.tcmConstitutionDoctor}: ${savedReview?.tcm_constitution || tcmConstitutionInput || labels.unknown}`,
+      `${contentLabels.tongueObservation}: ${savedReview?.tongue_observation || tongueObservationInput || labels.unknown}`,
+      `${contentLabels.faceObservation}: ${savedReview?.face_observation || faceObservationInput || labels.unknown}`,
+      `${contentLabels.questionnaireInterpretation}: ${savedReview?.questionnaire_interpretation || questionnaireInterpretationInput || labels.unknown}`,
       `${labels.diagnosis}: ${savedReview?.tcm_diagnosis || tcmDiagnosisInput || labels.unknown}`,
       `${labels.treatmentPlan}: ${savedReview?.therapy_plan || tcmTherapyPlanInput || labels.unknown}`,
-      `Dietary Advice: ${savedReview?.dietary_advice || dietaryAdviceInput || labels.unknown}`,
-      `Follow-up Recommendation: ${savedReview?.follow_up_recommendation || followUpRecommendationInput || labels.unknown}`,
-      `Doctor Name: ${savedReview?.doctor_name || doctorNameInput || labels.unknown}`,
-      `Review Date: ${savedReview?.review_date || reviewDateInput || labels.unknown}`,
+      `${contentLabels.dietaryAdvice}: ${savedReview?.dietary_advice || dietaryAdviceInput || labels.unknown}`,
+      `${contentLabels.followUpRecommendation}: ${savedReview?.follow_up_recommendation || followUpRecommendationInput || labels.unknown}`,
+      `${contentLabels.doctorName}: ${savedReview?.doctor_name || doctorNameInput || labels.unknown}`,
+      `${contentLabels.reviewDate}: ${savedReview?.review_date || reviewDateInput || labels.unknown}`,
       "",
       // Questionnaire Q&A section
-      "── TCM Questionnaire Responses ──",
+      `── ${contentLabels.questionnaireResponses} ──`,
       ...(latestTcm?.answers?.questionnaire
         ? (() => {
             const qa = latestTcm.answers!.questionnaire!
@@ -952,12 +1176,12 @@ export function AdminPanel() {
               if (!q) continue
               if (!grouped[q.constitution]) grouped[q.constitution] = []
               grouped[q.constitution].push(
-                `  • ${q.textZh} / ${q.text}: ${LIKERT_LABELS[score as number] ?? score}`
+                `  • ${language === "en" ? q.text : language === "fr" ? q.text : q.textZh}: ${getLikertLabelForReport(score as number, language)}`
               )
             }
             const lines: string[] = []
             for (const [constitution, answers] of Object.entries(grouped)) {
-              lines.push(`[${constitution}]`)
+              lines.push(`[${getConstitutionLabelForLanguage(constitution, language)}]`)
               lines.push(...answers)
             }
             return lines
@@ -967,14 +1191,14 @@ export function AdminPanel() {
       // Auto-generated recommendations from questionnaire
       ...(latestTcm?.recommendations && latestTcm.recommendations.length > 0
         ? [
-            "── Auto-generated Health Recommendations ──",
+            `── ${contentLabels.autoRecommendations} ──`,
             ...latestTcm.recommendations.map((r) => `  • ${r}`),
             "",
           ]
         : []),
       "",
       labels.finalPlan,
-      `Risk Tier: ${finalRisk}`,
+      `${contentLabels.riskTier}: ${finalRisk}`,
       `${labels.finalSummary}: ${finalSummaryInput || labels.unknown}`,
       `${labels.eegNote}.`,
       "",
@@ -1002,13 +1226,19 @@ export function AdminPanel() {
   }
 
   const handlePrintReport = () => {
-    if (!generatedReport) return
+    if (!selectedUser) return
+    const reportText = generatedReport || buildMedicalReport(selectedUser, reportLanguage)
+    if (!generatedReport) {
+      setGeneratedReport(reportText)
+    }
     const printWindow = window.open("", "_blank", "noopener,noreferrer,width=900,height=700")
     if (!printWindow) return
-    printWindow.document.write(`<pre style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; padding: 24px; line-height: 1.6;">${generatedReport.replace(/</g, "&lt;")}</pre>`)
+    printWindow.document.write(`<pre style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; padding: 24px; line-height: 1.6;">${reportText.replace(/</g, "&lt;")}</pre>`)
     printWindow.document.close()
     printWindow.focus()
-    printWindow.print()
+    setTimeout(() => {
+      printWindow.print()
+    }, 150)
   }
 
   const buildAllMedicalReports = (language: ReportLanguage) => {
@@ -1036,13 +1266,18 @@ export function AdminPanel() {
   }
 
   const handlePrintAllReports = () => {
-    if (!generatedAllReports) return
+    const allReports = generatedAllReports || buildAllMedicalReports(reportLanguage)
+    if (!generatedAllReports) {
+      setGeneratedAllReports(allReports)
+    }
     const printWindow = window.open("", "_blank", "noopener,noreferrer,width=1000,height=800")
     if (!printWindow) return
-    printWindow.document.write(`<pre style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; padding: 24px; line-height: 1.6;">${generatedAllReports.replace(/</g, "&lt;")}</pre>`)
+    printWindow.document.write(`<pre style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; padding: 24px; line-height: 1.6;">${allReports.replace(/</g, "&lt;")}</pre>`)
     printWindow.document.close()
     printWindow.focus()
-    printWindow.print()
+    setTimeout(() => {
+      printWindow.print()
+    }, 150)
   }
 
   const saveDoctorReview = async (reviewStatus: TCMReviewStatus) => {
@@ -1108,10 +1343,28 @@ export function AdminPanel() {
         }
       }
 
-      setWorkflowMessage(reviewStatus === "reviewed" ? "TCM review marked as reviewed." : "TCM review draft saved.")
+      setWorkflowMessage(
+        reviewStatus === "reviewed"
+          ? localizeText("TCM review marked as reviewed.", {
+              zh: "中医审核已标记为完成。",
+              yue: "中醫審核已標記為完成。",
+              fr: "La revue MTC est marquee comme terminee.",
+            })
+          : localizeText("TCM review draft saved.", {
+              zh: "中医审核草稿已保存。",
+              yue: "中醫審核草稿已保存。",
+              fr: "Le brouillon de revue MTC est enregistre.",
+            }),
+      )
     } catch (error) {
       console.error("Failed to save TCM doctor review:", error)
-      setWorkflowMessage("Could not save review. Ensure table tcm_doctor_reviews exists.")
+      setWorkflowMessage(
+        localizeText("Could not save review. Ensure table tcm_doctor_reviews exists.", {
+          zh: "无法保存审核。请确认 tcm_doctor_reviews 表已创建。",
+          yue: "無法保存審核。請確認 tcm_doctor_reviews 表已建立。",
+          fr: "Impossible d'enregistrer la revue. Verifiez que la table tcm_doctor_reviews existe.",
+        }),
+      )
     }
   }
 
@@ -1148,10 +1401,22 @@ export function AdminPanel() {
       if (savedRecord) {
         setMedicalReports((prev) => [savedRecord as MedicalReport, ...prev.filter((report) => report.id !== savedRecord!.id)])
       }
-      setWorkflowMessage(`Report status updated to ${nextStatus}.`)
+      setWorkflowMessage(
+        localizeText("Report status updated to", {
+          zh: "报告状态已更新为",
+          yue: "報告狀態已更新為",
+          fr: "Le statut du rapport est passe a",
+        }) + ` ${getReportStatusLabel(nextStatus)}.`,
+      )
     } catch (error) {
       console.error("Failed to update report status:", error)
-      setWorkflowMessage("Could not update report status. Ensure table medical_reports exists.")
+      setWorkflowMessage(
+        localizeText("Could not update report status. Ensure table medical_reports exists.", {
+          zh: "无法更新报告状态。请确认 medical_reports 表已创建。",
+          yue: "無法更新報告狀態。請確認 medical_reports 表已建立。",
+          fr: "Impossible de mettre a jour le statut du rapport. Verifiez que la table medical_reports existe.",
+        }),
+      )
     }
   }
 
@@ -1350,12 +1615,22 @@ export function AdminPanel() {
           {/* Users List */}
           <Card>
             <CardHeader>
-              <CardTitle>Patient Report Review Dashboard</CardTitle>
+              <CardTitle>
+                {localizeText("Patient Report Review Dashboard", {
+                  zh: "患者报告审核面板",
+                  yue: "患者報告審核面板",
+                  fr: "Tableau de revue des rapports patient",
+                })}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid gap-3 md:grid-cols-2 mb-4">
                 <AssessmentInput
-                  placeholder="Search by phone, name, or national ID"
+                  placeholder={localizeText("Search by phone, name, or national ID", {
+                    zh: "按手机号、姓名或身份证号搜索",
+                    yue: "按手機號、姓名或身份證號搜尋",
+                    fr: "Rechercher par telephone, nom ou identifiant national",
+                  })}
                   value={patientSearch}
                   onChange={(event) => setPatientSearch(event.target.value)}
                 />
@@ -1365,23 +1640,23 @@ export function AdminPanel() {
                     onChange={(event) => setStatusFilter(event.target.value as "all" | ReportStatus)}
                     className="h-10 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:ring-2 focus:ring-blue-300"
                   >
-                    <option value="all">All status</option>
-                    <option value="incomplete">incomplete</option>
-                    <option value="pending_tcm_review">pending_tcm_review</option>
-                    <option value="tcm_reviewed">tcm_reviewed</option>
-                    <option value="pending_final_approval">pending_final_approval</option>
-                    <option value="approved">approved</option>
-                    <option value="published_to_patient">published_to_patient</option>
+                    <option value="all">{localizeText("All status", { zh: "全部状态", yue: "全部狀態", fr: "Tous les statuts" })}</option>
+                    <option value="incomplete">{getReportStatusLabel("incomplete")}</option>
+                    <option value="pending_tcm_review">{getReportStatusLabel("pending_tcm_review")}</option>
+                    <option value="tcm_reviewed">{getReportStatusLabel("tcm_reviewed")}</option>
+                    <option value="pending_final_approval">{getReportStatusLabel("pending_final_approval")}</option>
+                    <option value="approved">{getReportStatusLabel("approved")}</option>
+                    <option value="published_to_patient">{getReportStatusLabel("published_to_patient")}</option>
                   </select>
                   <select
                     value={riskFilter}
                     onChange={(event) => setRiskFilter(event.target.value as "all" | "high" | "moderate" | "low")}
                     className="h-10 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:ring-2 focus:ring-blue-300"
                   >
-                    <option value="all">All risk</option>
-                    <option value="high">High risk</option>
-                    <option value="moderate">Moderate risk</option>
-                    <option value="low">Low risk</option>
+                    <option value="all">{localizeText("All risk", { zh: "全部风险", yue: "全部風險", fr: "Tous les risques" })}</option>
+                    <option value="high">{localizeText("High risk", { zh: "高风险", yue: "高風險", fr: "Risque eleve" })}</option>
+                    <option value="moderate">{localizeText("Moderate risk", { zh: "中风险", yue: "中風險", fr: "Risque modere" })}</option>
+                    <option value="low">{localizeText("Low risk", { zh: "低风险", yue: "低風險", fr: "Risque faible" })}</option>
                   </select>
                   <select
                     value={tcmImageFilter}
@@ -1392,10 +1667,10 @@ export function AdminPanel() {
                     }
                     className="h-10 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:ring-2 focus:ring-blue-300"
                   >
-                    <option value="all">All TCM files</option>
-                    <option value="complete">Questionnaire + Images</option>
-                    <option value="missing_images">Missing images (questionnaire OK)</option>
-                    <option value="missing_questionnaire">Missing questionnaire</option>
+                    <option value="all">{localizeText("All TCM files", { zh: "全部中医资料", yue: "全部中醫資料", fr: "Tous les dossiers MTC" })}</option>
+                    <option value="complete">{localizeText("Questionnaire + Images", { zh: "问卷+图片完整", yue: "問卷+圖片完整", fr: "Questionnaire + images" })}</option>
+                    <option value="missing_images">{localizeText("Missing images (questionnaire OK)", { zh: "缺少图片（问卷已完成）", yue: "缺少圖片（問卷已完成）", fr: "Images manquantes (questionnaire OK)" })}</option>
+                    <option value="missing_questionnaire">{localizeText("Missing questionnaire", { zh: "缺少问卷", yue: "缺少問卷", fr: "Questionnaire manquant" })}</option>
                   </select>
                 </div>
               </div>
@@ -1404,11 +1679,11 @@ export function AdminPanel() {
                 <table className="min-w-full text-sm">
                   <thead className="bg-slate-50">
                     <tr>
-                      <th className="px-3 py-2 text-left font-semibold">Patient</th>
-                      <th className="px-3 py-2 text-left font-semibold">Cognitive Status</th>
-                      <th className="px-3 py-2 text-left font-semibold">TCM Images</th>
-                      <th className="px-3 py-2 text-left font-semibold">Report Status</th>
-                      <th className="px-3 py-2 text-left font-semibold">Download</th>
+                      <th className="px-3 py-2 text-left font-semibold">{localizeText("Patient", { zh: "患者", yue: "患者", fr: "Patient" })}</th>
+                      <th className="px-3 py-2 text-left font-semibold">{localizeText("Cognitive Status", { zh: "认知状态", yue: "認知狀態", fr: "Statut cognitif" })}</th>
+                      <th className="px-3 py-2 text-left font-semibold">{localizeText("TCM Images", { zh: "中医图片", yue: "中醫圖片", fr: "Images MTC" })}</th>
+                      <th className="px-3 py-2 text-left font-semibold">{localizeText("Report Status", { zh: "报告状态", yue: "報告狀態", fr: "Statut du rapport" })}</th>
+                      <th className="px-3 py-2 text-left font-semibold">{localizeText("Download", { zh: "下载", yue: "下載", fr: "Telechargement" })}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1429,9 +1704,13 @@ export function AdminPanel() {
                           <td className="px-3 py-2">{risk.label}</td>
                           <td className="px-3 py-2">{tcmImageState.label}</td>
                           <td className="px-3 py-2">
-                            <Badge variant="outline">{workflowStatus}</Badge>
+                            <Badge variant="outline">{getReportStatusLabel(workflowStatus)}</Badge>
                           </td>
-                          <td className="px-3 py-2">{workflowStatus === "published_to_patient" ? "Available" : "Locked"}</td>
+                          <td className="px-3 py-2">
+                            {workflowStatus === "published_to_patient"
+                              ? localizeText("Available", { zh: "可下载", yue: "可下載", fr: "Disponible" })
+                              : localizeText("Locked", { zh: "锁定", yue: "鎖定", fr: "Verrouille" })}
+                          </td>
                         </tr>
                       )
                     })}
@@ -1467,7 +1746,7 @@ export function AdminPanel() {
                           <Badge variant="outline">
                             {t("admin.in_progress_count", { count: userCurrentProgress.length })}
                           </Badge>
-                          <Badge variant="outline">{workflowStatus}</Badge>
+                          <Badge variant="outline">{getReportStatusLabel(workflowStatus)}</Badge>
                           <Badge variant="outline">{t("admin.files_count", { count: userFiles.length })}</Badge>
                         </div>
                       </div>
@@ -1698,7 +1977,9 @@ export function AdminPanel() {
                         <p className="text-gray-600">{t("admin.no_completed_assessments")}</p>
                       )}
 
-                      <h3 className="text-lg font-semibold mt-6">TCM & Pulse Reviews</h3>
+                      <h3 className="text-lg font-semibold mt-6">
+                        {localizeText("TCM & Pulse Reviews", { zh: "中医与脉象评估", yue: "中醫與脈象評估", fr: "Revue MTC et pouls" })}
+                      </h3>
                       {getUserTcmAssessments(selectedUser).map((assessment) => (
                         <div key={assessment.id} className="border rounded-lg p-4 space-y-3 bg-emerald-50/60">
                           <div className="flex justify-between items-center flex-wrap gap-2">
@@ -1706,18 +1987,20 @@ export function AdminPanel() {
                               {assessment.primary_constitution}
                             </Badge>
                             <span className="text-sm text-gray-600">
-                              {assessment.completed_at ? new Date(assessment.completed_at).toLocaleDateString() : "No date"}
+                              {assessment.completed_at
+                                ? new Date(assessment.completed_at).toLocaleDateString()
+                                : localizeText("No date", { zh: "无日期", yue: "無日期", fr: "Sans date" })}
                             </span>
                           </div>
                           <p className="text-sm text-slate-700">
-                            Overall score: <span className="font-semibold">{assessment.overall_score ?? "-"}/100</span>
+                            {localizeText("Overall score", { zh: "总分", yue: "總分", fr: "Score global" })}: <span className="font-semibold">{assessment.overall_score ?? "-"}/100</span>
                           </p>
                           {assessment.answers?.pulse_assessment && (
                             <div className="rounded-lg border border-emerald-200 bg-white/90 p-3 text-sm text-slate-700">
                               <p>
-                                Pulse severity: <span className="font-semibold">{assessment.answers.pulse_assessment.severity ?? 0}</span>
+                                {localizeText("Pulse severity", { zh: "脉象严重度", yue: "脈象嚴重度", fr: "Severite du pouls" })}: <span className="font-semibold">{assessment.answers.pulse_assessment.severity ?? 0}</span>
                                 {" • "}
-                                Pulse score: <span className="font-semibold">{assessment.answers.pulse_assessment.clinicalPulseScore ?? 0}/100</span>
+                                {localizeText("Pulse score", { zh: "脉象评分", yue: "脈象評分", fr: "Score du pouls" })}: <span className="font-semibold">{assessment.answers.pulse_assessment.clinicalPulseScore ?? 0}/100</span>
                               </p>
                               {assessment.answers.pulse_assessment.selectedPulseIds && assessment.answers.pulse_assessment.selectedPulseIds.length > 0 && (
                                 <div className="mt-2 flex flex-wrap gap-2">
@@ -1729,17 +2012,17 @@ export function AdminPanel() {
                                 </div>
                               )}
                               {assessment.answers.pulse_assessment.notes && (
-                                <p className="mt-2 text-xs text-slate-600">Doctor note: {assessment.answers.pulse_assessment.notes}</p>
+                                <p className="mt-2 text-xs text-slate-600">{localizeText("Doctor note", { zh: "医生备注", yue: "醫生備註", fr: "Note du medecin" })}: {assessment.answers.pulse_assessment.notes}</p>
                               )}
                             </div>
                           )}
                         </div>
                       ))}
                       {getUserTcmAssessments(selectedUser).length === 0 && (
-                        <p className="text-gray-600">No TCM pulse reviews recorded for this user</p>
+                        <p className="text-gray-600">{localizeText("No TCM pulse reviews recorded for this user", { zh: "该用户暂无中医脉象评估记录", yue: "該用戶暫無中醫脈象評估記錄", fr: "Aucune revue MTC/pouls pour cet utilisateur" })}</p>
                       )}
 
-                      <h3 className="text-lg font-semibold mt-6">Sensory Screenings</h3>
+                      <h3 className="text-lg font-semibold mt-6">{localizeText("Sensory Screenings", { zh: "感觉筛查", yue: "感官篩查", fr: "Depistages sensoriels" })}</h3>
                       {getUserSensoryAssessments(selectedUser).map((assessment) => (
                         <div key={assessment.id} className="border rounded-lg p-4 space-y-3 bg-amber-50/60">
                           <div className="flex justify-between items-center flex-wrap gap-2">
@@ -1747,18 +2030,20 @@ export function AdminPanel() {
                               {assessment.test_type}
                             </Badge>
                             <span className="text-sm text-gray-600">
-                              {assessment.test_date ? new Date(assessment.test_date).toLocaleDateString() : "No date"}
+                              {assessment.test_date
+                                ? new Date(assessment.test_date).toLocaleDateString()
+                                : localizeText("No date", { zh: "无日期", yue: "無日期", fr: "Sans date" })}
                             </span>
                           </div>
                           <p className="text-sm text-slate-700">
-                            Raw score: <span className="font-semibold">{assessment.raw_score ?? "-"}</span>
+                            {localizeText("Raw score", { zh: "原始分", yue: "原始分", fr: "Score brut" })}: <span className="font-semibold">{assessment.raw_score ?? "-"}</span>
                             {assessment.test_type === "olfactory" ? " / 12" : ""}
                             {" • "}
-                            Classification: <span className="font-semibold">{assessment.classification ?? "-"}</span>
+                            {localizeText("Classification", { zh: "分级", yue: "分級", fr: "Classification" })}: <span className="font-semibold">{assessment.classification ?? "-"}</span>
                           </p>
                           {assessment.test_type === "olfactory" && assessment.test_data?.strip_results && (
                             <div className="rounded-lg border border-amber-200 bg-white/90 p-3">
-                              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Patient strip responses</p>
+                              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{localizeText("Patient strip responses", { zh: "患者试纸作答", yue: "患者試紙作答", fr: "Reponses patient par bande" })}</p>
                               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                                 {assessment.test_data.strip_results.map((result) => (
                                   <div
@@ -1768,11 +2053,15 @@ export function AdminPanel() {
                                     <div className="flex items-center justify-between gap-2">
                                       <div className="font-semibold">Strip #{result.strip}</div>
                                       <Badge variant="outline" className={result.correct ? "border-emerald-300 bg-white text-emerald-700" : "border-rose-300 bg-white text-rose-700"}>
-                                        {result.correct ? "Correct" : result.timedOut ? "Timed out" : "Review"}
+                                        {result.correct
+                                          ? localizeText("Correct", { zh: "正确", yue: "正確", fr: "Correct" })
+                                          : result.timedOut
+                                            ? localizeText("Timed out", { zh: "超时", yue: "超時", fr: "Temps ecoule" })
+                                            : localizeText("Review", { zh: "复核", yue: "覆核", fr: "Verifier" })}
                                       </Badge>
                                     </div>
-                                    <div>Selected: {getOlfactoryLabel(result.selected)}</div>
-                                    <div>Correct: {getOlfactoryLabel(result.correctAnswer)}</div>
+                                    <div>{localizeText("Selected", { zh: "选择", yue: "選擇", fr: "Selection" })}: {getOlfactoryLabel(result.selected)}</div>
+                                    <div>{localizeText("Correct", { zh: "正确", yue: "正確", fr: "Correct" })}: {getOlfactoryLabel(result.correctAnswer)}</div>
                                   </div>
                                 ))}
                               </div>
@@ -1781,7 +2070,7 @@ export function AdminPanel() {
                         </div>
                       ))}
                       {getUserSensoryAssessments(selectedUser).length === 0 && (
-                        <p className="text-gray-600">No sensory screenings recorded for this user</p>
+                        <p className="text-gray-600">{localizeText("No sensory screenings recorded for this user", { zh: "该用户暂无感觉筛查记录", yue: "該用戶暫無感官篩查記錄", fr: "Aucun depistage sensoriel pour cet utilisateur" })}</p>
                       )}
 
                       {(() => {
@@ -1811,11 +2100,20 @@ export function AdminPanel() {
                         return (
                           <div className="mt-6 rounded-2xl border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,0.96),rgba(255,255,255,0.98),rgba(239,246,255,0.94))] p-5 shadow-sm">
                             <div className="flex items-center justify-between gap-3 flex-wrap">
-                              <h3 className="text-lg font-semibold text-emerald-950">TCM Doctor Review Pack</h3>
-                              <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">Doctor workspace</Badge>
+                              <h3 className="text-lg font-semibold text-emerald-950">{localizeText("TCM Doctor Review Pack", { zh: "中医医生审核包", yue: "中醫醫生審核包", fr: "Pack de revue medecin MTC" })}</h3>
+                              <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
+                                {localizeText("Doctor workspace", { zh: "医生工作区", yue: "醫生工作區", fr: "Espace medecin" })}
+                              </Badge>
                             </div>
                             <p className="mt-2 text-sm text-slate-600">
-                              Review tongue and face images, questionnaire constitution data, and existing remarks before finalizing the patient report.
+                              {localizeText(
+                                "Review tongue and face images, questionnaire constitution data, and existing remarks before finalizing the patient report.",
+                                {
+                                  zh: "在生成患者报告前，先审核舌象、面诊图像、问卷体质数据及已有医生备注。",
+                                  yue: "在生成患者報告前，先審核舌象、面診圖像、問卷體質數據及已有醫生備註。",
+                                  fr: "Avant finalisation du rapport patient, verifier les images langue/visage, la constitution et les remarques existantes.",
+                                },
+                              )}
                             </p>
 
                             {/* Tongue and Face images */}
@@ -1844,7 +2142,7 @@ export function AdminPanel() {
                                     )}
                                   </div>
                                 ) : (
-                                  <p className="mt-3 text-sm text-slate-500">No tongue image uploaded for this patient.</p>
+                                  <p className="mt-3 text-sm text-slate-500">{localizeText("No tongue image uploaded for this patient.", { zh: "该患者未上传舌象图片。", yue: "該患者未上傳舌象圖片。", fr: "Aucune image de langue n'a ete televersee pour ce patient." })}</p>
                                 )}
                               </div>
 
@@ -1872,7 +2170,13 @@ export function AdminPanel() {
                                     )}
                                   </div>
                                 ) : (
-                                  <p className="mt-3 text-sm text-slate-500">No face image uploaded for this patient.</p>
+                                  <p className="mt-3 text-sm text-slate-500">
+                                    {localizeText("No face image uploaded for this patient.", {
+                                      zh: "该患者未上传面诊图片。",
+                                      yue: "該患者未上傳面診圖片。",
+                                      fr: "Aucune image du visage n'a ete televersee pour ce patient.",
+                                    })}
+                                  </p>
                                 )}
                               </div>
                             </div>
@@ -1880,20 +2184,26 @@ export function AdminPanel() {
                             {/* TCM Questionnaire & Constitution */}
                             <div className="mt-4 grid gap-4 lg:grid-cols-2">
                               <div className="rounded-xl border border-emerald-100 bg-white p-4 text-sm text-slate-700">
-                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">TCM questionnaire and constitution</p>
+                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                  {localizeText("TCM questionnaire and constitution", {
+                                    zh: "中医问卷与体质",
+                                    yue: "中醫問卷與體質",
+                                    fr: "Questionnaire MTC et constitution",
+                                  })}
+                                </p>
                                 {latestTcmAssessment ? (
                                   <div className="mt-3 space-y-3">
                                     <div className="rounded-lg bg-emerald-50 p-3">
-                                      <p>Primary constitution: <span className="font-semibold text-emerald-800">{latestTcmAssessment.primary_constitution?.replace(/_/g, " ") || "-"}</span></p>
-                                      <p>Primary score: <span className="font-semibold">{latestTcmAssessment.primary_score != null ? `${latestTcmAssessment.primary_score}%` : "-"}</span></p>
-                                      <p>Overall balance score: <span className="font-semibold">{latestTcmAssessment.overall_score ?? "-"}/100</span></p>
-                                      <p>Completed: <span className="font-semibold">{latestTcmAssessment.completed_at ? new Date(latestTcmAssessment.completed_at).toLocaleString() : "-"}</span></p>
+                                      <p>{localizeText("Primary constitution", { zh: "主要体质", yue: "主要體質", fr: "Constitution principale" })}: <span className="font-semibold text-emerald-800">{latestTcmAssessment.primary_constitution ? getConstitutionLabelForLanguage(latestTcmAssessment.primary_constitution, reportLanguage) : "-"}</span></p>
+                                      <p>{localizeText("Primary score", { zh: "主要体质分", yue: "主要體質分", fr: "Score principal" })}: <span className="font-semibold">{latestTcmAssessment.primary_score != null ? `${latestTcmAssessment.primary_score}%` : "-"}</span></p>
+                                      <p>{localizeText("Overall balance score", { zh: "总体平衡分", yue: "總體平衡分", fr: "Score d'equilibre global" })}: <span className="font-semibold">{latestTcmAssessment.overall_score ?? "-"}/100</span></p>
+                                      <p>{localizeText("Completed", { zh: "完成时间", yue: "完成時間", fr: "Termine le" })}: <span className="font-semibold">{latestTcmAssessment.completed_at ? new Date(latestTcmAssessment.completed_at).toLocaleString() : "-"}</span></p>
                                     </div>
 
                                     {/* All constitution scores */}
                                     {constitutionScores.length > 0 && (
                                       <div>
-                                        <p className="text-xs font-semibold text-slate-500 mb-2">Constitution scores breakdown</p>
+                                        <p className="text-xs font-semibold text-slate-500 mb-2">{localizeText("Constitution scores breakdown", { zh: "体质分数明细", yue: "體質分數明細", fr: "Detail des scores de constitution" })}</p>
                                         <div className="space-y-1">
                                           {constitutionScores.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).map((item) => (
                                             <div key={item.key} className="flex items-center gap-2">
@@ -1914,9 +2224,9 @@ export function AdminPanel() {
                                     {/* Pulse assessment */}
                                     {latestTcmAssessment.answers?.pulse_assessment && (
                                       <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
-                                        <p className="text-xs font-semibold text-slate-500 mb-1">Pulse assessment (脉象)</p>
-                                        <p>Severity: <span className="font-semibold">{latestTcmAssessment.answers.pulse_assessment.severity ?? 0}/10</span></p>
-                                        <p>Clinical pulse score: <span className="font-semibold">{latestTcmAssessment.answers.pulse_assessment.clinicalPulseScore ?? 0}/100</span></p>
+                                        <p className="text-xs font-semibold text-slate-500 mb-1">{localizeText("Pulse assessment", { zh: "脉象评估", yue: "脈象評估", fr: "Evaluation du pouls" })}</p>
+                                        <p>{localizeText("Severity", { zh: "严重度", yue: "嚴重度", fr: "Severite" })}: <span className="font-semibold">{latestTcmAssessment.answers.pulse_assessment.severity ?? 0}/10</span></p>
+                                        <p>{localizeText("Clinical pulse score", { zh: "临床脉象分", yue: "臨床脈象分", fr: "Score clinique du pouls" })}: <span className="font-semibold">{latestTcmAssessment.answers.pulse_assessment.clinicalPulseScore ?? 0}/100</span></p>
                                         {latestTcmAssessment.answers.pulse_assessment.selectedPulseIds && latestTcmAssessment.answers.pulse_assessment.selectedPulseIds.length > 0 && (
                                           <div className="mt-2 flex flex-wrap gap-1">
                                             {latestTcmAssessment.answers.pulse_assessment.selectedPulseIds.map((pulseId) => (
@@ -1927,7 +2237,7 @@ export function AdminPanel() {
                                           </div>
                                         )}
                                         {latestTcmAssessment.answers.pulse_assessment.notes && (
-                                          <p className="mt-2 text-xs text-slate-600">Note: {latestTcmAssessment.answers.pulse_assessment.notes}</p>
+                                          <p className="mt-2 text-xs text-slate-600">{localizeText("Note", { zh: "备注", yue: "備註", fr: "Note" })}: {latestTcmAssessment.answers.pulse_assessment.notes}</p>
                                         )}
                                       </div>
                                     )}
@@ -1944,17 +2254,19 @@ export function AdminPanel() {
                                       }
                                       return (
                                         <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3">
-                                          <p className="text-xs font-semibold text-slate-600 mb-2">Patient questionnaire responses (问卷答案)</p>
+                                          <p className="text-xs font-semibold text-slate-600 mb-2">{localizeText("Patient questionnaire responses", { zh: "患者问卷答案", yue: "患者問卷答案", fr: "Reponses au questionnaire patient" })}</p>
                                           <div className="space-y-3">
                                             {Object.entries(grouped).map(([constitution, items]) => (
                                               <div key={constitution}>
-                                                <p className="text-xs font-semibold text-emerald-700 mb-1">{constitution}</p>
+                                                <p className="text-xs font-semibold text-emerald-700 mb-1">{getConstitutionLabelForLanguage(constitution, reportLanguage)}</p>
                                                 <div className="space-y-1">
                                                   {items.map((item) => (
                                                     <div key={item.id} className="flex items-start justify-between gap-2">
-                                                      <span className="text-xs text-slate-600 flex-1">{item.textZh}</span>
+                                                      <span className="text-xs text-slate-600 flex-1">
+                                                        {language === "en" ? item.text : language === "fr" ? item.text : item.textZh}
+                                                      </span>
                                                       <Badge variant="outline" className={`text-xs shrink-0 ${item.score >= 4 ? "border-rose-200 bg-rose-50 text-rose-700" : item.score <= 2 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
-                                                        {LIKERT_LABELS[item.score] ?? item.score}
+                                                        {getLikertLabelForUi(item.score, language)}
                                                       </Badge>
                                                     </div>
                                                   ))}
@@ -1969,7 +2281,7 @@ export function AdminPanel() {
                                     {/* Patient-generated recommendations from questionnaire */}
                                     {latestTcmAssessment.recommendations && latestTcmAssessment.recommendations.length > 0 && (
                                       <div className="rounded-lg border border-amber-100 bg-amber-50/60 p-3">
-                                        <p className="text-xs font-semibold text-amber-700 mb-2">Auto-generated recommendations (from questionnaire)</p>
+                                        <p className="text-xs font-semibold text-amber-700 mb-2">{localizeText("Auto-generated recommendations (from questionnaire)", { zh: "自动生成建议（来自问卷）", yue: "自動生成建議（來自問卷）", fr: "Recommandations auto-generees (questionnaire)" })}</p>
                                         <ul className="space-y-1">
                                           {latestTcmAssessment.recommendations.map((rec, idx) => (
                                             <li key={idx} className="text-xs text-slate-700 flex items-start gap-1">
@@ -1982,40 +2294,40 @@ export function AdminPanel() {
                                     )}
                                   </div>
                                 ) : (
-                                  <p className="mt-3 text-sm text-slate-500">No TCM questionnaire assessment is available for this patient.</p>
+                                  <p className="mt-3 text-sm text-slate-500">{localizeText("No TCM questionnaire assessment is available for this patient.", { zh: "该患者暂无中医问卷评估记录。", yue: "該患者暫無中醫問卷評估記錄。", fr: "Aucune evaluation du questionnaire MTC n'est disponible pour ce patient." })}</p>
                                 )}
                               </div>
 
                               {/* Doctor remarks & recommendations */}
                               <div className="rounded-xl border border-emerald-100 bg-white p-4 text-sm text-slate-700">
-                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Doctor remarks and recommendations</p>
+                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{localizeText("Doctor remarks and recommendations", { zh: "医生备注与建议", yue: "醫生備註與建議", fr: "Remarques et recommandations du medecin" })}</p>
                                 <div className="mt-3 space-y-2">
                                   <p>
-                                    Constitution note: <span className="font-semibold">{existingDoctorReview?.tcm_constitution || tcmConstitutionInput || "-"}</span>
+                                    {localizeText("Constitution note", { zh: "体质备注", yue: "體質備註", fr: "Note constitution" })}: <span className="font-semibold">{existingDoctorReview?.tcm_constitution || tcmConstitutionInput || "-"}</span>
                                   </p>
                                   <p>
-                                    Tongue remark: <span className="font-semibold">{existingDoctorReview?.tongue_observation || tongueObservationInput || "-"}</span>
+                                    {localizeText("Tongue remark", { zh: "舌象备注", yue: "舌象備註", fr: "Remarque langue" })}: <span className="font-semibold">{existingDoctorReview?.tongue_observation || tongueObservationInput || "-"}</span>
                                   </p>
                                   <p>
-                                    Face remark: <span className="font-semibold">{existingDoctorReview?.face_observation || faceObservationInput || "-"}</span>
+                                    {localizeText("Face remark", { zh: "面诊备注", yue: "面診備註", fr: "Remarque visage" })}: <span className="font-semibold">{existingDoctorReview?.face_observation || faceObservationInput || "-"}</span>
                                   </p>
                                   <p>
-                                    Questionnaire interpretation: <span className="font-semibold">{existingDoctorReview?.questionnaire_interpretation || questionnaireInterpretationInput || "-"}</span>
+                                    {localizeText("Questionnaire interpretation", { zh: "问卷解读", yue: "問卷解讀", fr: "Interpretation du questionnaire" })}: <span className="font-semibold">{existingDoctorReview?.questionnaire_interpretation || questionnaireInterpretationInput || "-"}</span>
                                   </p>
                                   <p>
-                                    TCM diagnosis: <span className="font-semibold">{existingDoctorReview?.tcm_diagnosis || tcmDiagnosisInput || "-"}</span>
+                                    {localizeText("TCM diagnosis", { zh: "中医诊断", yue: "中醫診斷", fr: "Diagnostic MTC" })}: <span className="font-semibold">{existingDoctorReview?.tcm_diagnosis || tcmDiagnosisInput || "-"}</span>
                                   </p>
                                   <p>
-                                    Therapy plan: <span className="font-semibold">{existingDoctorReview?.therapy_plan || tcmTherapyPlanInput || "-"}</span>
+                                    {localizeText("Therapy plan", { zh: "治疗方案", yue: "治療方案", fr: "Plan therapeutique" })}: <span className="font-semibold">{existingDoctorReview?.therapy_plan || tcmTherapyPlanInput || "-"}</span>
                                   </p>
                                   <p>
-                                    Dietary advice: <span className="font-semibold">{existingDoctorReview?.dietary_advice || dietaryAdviceInput || "-"}</span>
+                                    {localizeText("Dietary advice", { zh: "饮食建议", yue: "飲食建議", fr: "Conseil dietetique" })}: <span className="font-semibold">{existingDoctorReview?.dietary_advice || dietaryAdviceInput || "-"}</span>
                                   </p>
                                   <p>
-                                    Follow-up recommendation: <span className="font-semibold">{existingDoctorReview?.follow_up_recommendation || followUpRecommendationInput || "-"}</span>
+                                    {localizeText("Follow-up recommendation", { zh: "随访建议", yue: "隨訪建議", fr: "Recommandation de suivi" })}: <span className="font-semibold">{existingDoctorReview?.follow_up_recommendation || followUpRecommendationInput || "-"}</span>
                                   </p>
                                   {!existingDoctorReview && (
-                                    <p className="text-xs text-slate-400 italic mt-2">No doctor review saved yet. Use the form below to enter remarks.</p>
+                                    <p className="text-xs text-slate-400 italic mt-2">{localizeText("No doctor review saved yet. Use the form below to enter remarks.", { zh: "尚未保存医生评审，请使用下方表单填写备注。", yue: "尚未保存醫生評審，請使用下方表單填寫備註。", fr: "Aucune revue medecin enregistree. Utilisez le formulaire ci-dessous." })}</p>
                                   )}
                                 </div>
                               </div>
@@ -2028,24 +2340,37 @@ export function AdminPanel() {
                         <div className="flex items-center justify-between gap-3 flex-wrap">
                           <h3 className="text-lg font-semibold flex items-center gap-2">
                             <Sparkles className="w-5 h-5 text-sky-600" />
-                            Medical Report Studio
+                            {localizeText("Medical Report Studio", { zh: "医学报告工作台", yue: "醫學報告工作台", fr: "Studio de rapport medical" })}
                           </h3>
-                          <Badge className="bg-sky-600 text-white hover:bg-sky-600">Premium</Badge>
+                          <Badge className="bg-sky-600 text-white hover:bg-sky-600">{localizeText("Premium", { zh: "高级", yue: "高級", fr: "Premium" })}</Badge>
                         </div>
                         <p className="mt-2 text-sm text-slate-600">
-                          Individualized report workflow: doctor reviews each patient, approves, then publishes for patient download.
+                          {localizeText(
+                            "Individualized report workflow: doctor reviews each patient, approves, then publishes for patient download.",
+                            {
+                              zh: "个体化报告流程：医生逐一审核患者，完成审批后发布给患者下载。",
+                              yue: "個體化報告流程：醫生逐一審核患者，完成審批後發布給患者下載。",
+                              fr: "Flux personnalise: le medecin revoit, approuve puis publie pour telechargement patient.",
+                            },
+                          )}
                         </p>
 
                         <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-600">
-                          Current status: <span className="font-semibold">{currentSelectedReportStatus}</span>
+                          {localizeText("Current status", { zh: "当前状态", yue: "當前狀態", fr: "Statut actuel" })}: <span className="font-semibold">{getReportStatusLabel(currentSelectedReportStatus)}</span>
                           {currentSelectedReportStatus !== "published_to_patient" && (
-                            <p className="mt-1 text-slate-500">Patient download remains locked until status is published_to_patient.</p>
+                            <p className="mt-1 text-slate-500">
+                              {localizeText("Patient download remains locked until status is published_to_patient.", {
+                                zh: "患者下载将在状态变为“已发布给患者”后解锁。",
+                                yue: "患者下載將在狀態變為「已發布給患者」後解鎖。",
+                                fr: "Le telechargement patient reste verrouille jusqu'au statut Publie au patient.",
+                              })}
+                            </p>
                           )}
                         </div>
 
                         <div className="mt-4 grid gap-4 md:grid-cols-3">
                           <div className="space-y-2 md:col-span-1">
-                            <Label htmlFor="report-language">Report language</Label>
+                            <Label htmlFor="report-language">{localizeText("Report language", { zh: "报告语言", yue: "報告語言", fr: "Langue du rapport" })}</Label>
                             <select
                               id="report-language"
                               value={reportLanguage}
@@ -2060,17 +2385,17 @@ export function AdminPanel() {
                           </div>
 
                           <div className="space-y-2 md:col-span-1">
-                            <Label htmlFor="doctor-name">Doctor name</Label>
+                            <Label htmlFor="doctor-name">{localizeText("Doctor name", { zh: "医生姓名", yue: "醫生姓名", fr: "Nom du medecin" })}</Label>
                             <AssessmentInput
                               id="doctor-name"
                               value={doctorNameInput}
                               onChange={(event) => setDoctorNameInput(event.target.value)}
-                              placeholder="TCM doctor name"
+                              placeholder={localizeText("TCM doctor name", { zh: "请输入中医医生姓名", yue: "請輸入中醫醫生姓名", fr: "Nom du medecin MTC" })}
                             />
                           </div>
 
                           <div className="space-y-2 md:col-span-1">
-                            <Label htmlFor="review-date">Review date</Label>
+                            <Label htmlFor="review-date">{localizeText("Review date", { zh: "评审日期", yue: "評審日期", fr: "Date de revue" })}</Label>
                             <AssessmentInput
                               id="review-date"
                               type="date"
@@ -2080,124 +2405,124 @@ export function AdminPanel() {
                           </div>
 
                           <div className="space-y-2 md:col-span-3">
-                            <Label htmlFor="tcm-constitution">TCM constitution</Label>
+                            <Label htmlFor="tcm-constitution">{localizeText("TCM constitution", { zh: "中医体质", yue: "中醫體質", fr: "Constitution MTC" })}</Label>
                             <AssessmentTextarea
                               id="tcm-constitution"
                               value={tcmConstitutionInput}
                               onChange={(event) => setTcmConstitutionInput(event.target.value)}
-                              placeholder="Describe constitution type and rationale"
+                              placeholder={localizeText("Describe constitution type and rationale", { zh: "描述体质类型及判断依据", yue: "描述體質類型及判斷依據", fr: "Decrire le type de constitution et son raisonnement" })}
                               rows={2}
                             />
                           </div>
 
                           <div className="space-y-2 md:col-span-3">
-                            <Label htmlFor="tongue-observation">Tongue observation</Label>
+                            <Label htmlFor="tongue-observation">{localizeText("Tongue observation", { zh: "舌象观察", yue: "舌象觀察", fr: "Observation de la langue" })}</Label>
                             <AssessmentTextarea
                               id="tongue-observation"
                               value={tongueObservationInput}
                               onChange={(event) => setTongueObservationInput(event.target.value)}
-                              placeholder="Color, coating, moisture, fissures"
+                              placeholder={localizeText("Color, coating, moisture, fissures", { zh: "颜色、舌苔、湿润度、裂纹", yue: "顏色、舌苔、濕潤度、裂紋", fr: "Couleur, enduit, humidite, fissures" })}
                               rows={2}
                             />
                           </div>
 
                           <div className="space-y-2 md:col-span-3">
-                            <Label htmlFor="face-observation">Face observation</Label>
+                            <Label htmlFor="face-observation">{localizeText("Face observation", { zh: "面诊观察", yue: "面診觀察", fr: "Observation du visage" })}</Label>
                             <AssessmentTextarea
                               id="face-observation"
                               value={faceObservationInput}
                               onChange={(event) => setFaceObservationInput(event.target.value)}
-                              placeholder="Complexion, eye region, expression patterns"
+                              placeholder={localizeText("Complexion, eye region, expression patterns", { zh: "面色、眼周、神情特征", yue: "面色、眼周、神情特徵", fr: "Teint, zone oculaire, expressions" })}
                               rows={2}
                             />
                           </div>
 
                           <div className="space-y-2 md:col-span-3">
-                            <Label htmlFor="questionnaire-interpretation">Pulse/questionnaire interpretation</Label>
+                            <Label htmlFor="questionnaire-interpretation">{localizeText("Pulse/questionnaire interpretation", { zh: "脉象/问卷解读", yue: "脈象/問卷解讀", fr: "Interpretation pouls/questionnaire" })}</Label>
                             <AssessmentTextarea
                               id="questionnaire-interpretation"
                               value={questionnaireInterpretationInput}
                               onChange={(event) => setQuestionnaireInterpretationInput(event.target.value)}
-                              placeholder="Interpret questionnaire and pulse indicators"
+                              placeholder={localizeText("Interpret questionnaire and pulse indicators", { zh: "解读问卷与脉象指标", yue: "解讀問卷與脈象指標", fr: "Interpreter les indicateurs du questionnaire et du pouls" })}
                               rows={2}
                             />
                           </div>
 
                           <div className="space-y-2 md:col-span-3">
-                            <Label htmlFor="tcm-diagnosis">TCM diagnosis</Label>
+                            <Label htmlFor="tcm-diagnosis">{localizeText("TCM diagnosis", { zh: "中医诊断", yue: "中醫診斷", fr: "Diagnostic MTC" })}</Label>
                             <AssessmentTextarea
                               id="tcm-diagnosis"
                               value={tcmDiagnosisInput}
                               onChange={(event) => setTcmDiagnosisInput(event.target.value)}
-                              placeholder="Enter TCM diagnosis"
+                              placeholder={localizeText("Enter TCM diagnosis", { zh: "填写中医诊断", yue: "填寫中醫診斷", fr: "Saisir le diagnostic MTC" })}
                               rows={2}
                             />
                           </div>
                         </div>
 
                         <div className="mt-4 space-y-2">
-                          <Label htmlFor="tcm-therapy-plan">TCM therapy and regimen plan</Label>
+                          <Label htmlFor="tcm-therapy-plan">{localizeText("TCM therapy and regimen plan", { zh: "中医治疗与调理方案", yue: "中醫治療與調理方案", fr: "Plan therapeutique et regimen MTC" })}</Label>
                           <AssessmentTextarea
                             id="tcm-therapy-plan"
                             value={tcmTherapyPlanInput}
                             onChange={(event) => setTcmTherapyPlanInput(event.target.value)}
-                            placeholder="Herbs, acupuncture frequency, lifestyle, follow-up interval"
+                            placeholder={localizeText("Herbs, acupuncture frequency, lifestyle, follow-up interval", { zh: "中药、针灸频次、生活方式、随访周期", yue: "中藥、針灸頻次、生活方式、隨訪週期", fr: "Plantes, frequence d'acupuncture, mode de vie, intervalle de suivi" })}
                             rows={3}
                           />
                         </div>
 
                         <div className="mt-4 space-y-2">
-                          <Label htmlFor="dietary-advice">Dietary advice</Label>
+                          <Label htmlFor="dietary-advice">{localizeText("Dietary advice", { zh: "饮食建议", yue: "飲食建議", fr: "Conseil dietetique" })}</Label>
                           <AssessmentTextarea
                             id="dietary-advice"
                             value={dietaryAdviceInput}
                             onChange={(event) => setDietaryAdviceInput(event.target.value)}
-                            placeholder="Food strategy and restrictions"
+                            placeholder={localizeText("Food strategy and restrictions", { zh: "饮食策略与禁忌", yue: "飲食策略與禁忌", fr: "Strategie alimentaire et restrictions" })}
                             rows={2}
                           />
                         </div>
 
                         <div className="mt-4 space-y-2">
-                          <Label htmlFor="follow-up-recommendation">Follow-up recommendation</Label>
+                          <Label htmlFor="follow-up-recommendation">{localizeText("Follow-up recommendation", { zh: "随访建议", yue: "隨訪建議", fr: "Recommandation de suivi" })}</Label>
                           <AssessmentTextarea
                             id="follow-up-recommendation"
                             value={followUpRecommendationInput}
                             onChange={(event) => setFollowUpRecommendationInput(event.target.value)}
-                            placeholder="Follow-up schedule and escalation criteria"
+                            placeholder={localizeText("Follow-up schedule and escalation criteria", { zh: "随访计划与升级处理标准", yue: "隨訪計劃與升級處理標準", fr: "Calendrier de suivi et criteres d'escalade" })}
                             rows={2}
                           />
                         </div>
 
                         <div className="mt-4 space-y-2">
-                          <Label htmlFor="final-summary">Final clinical summary</Label>
+                          <Label htmlFor="final-summary">{localizeText("Final clinical summary", { zh: "最终临床总结", yue: "最終臨床總結", fr: "Synthese clinique finale" })}</Label>
                           <AssessmentTextarea
                             id="final-summary"
                             value={finalSummaryInput}
                             onChange={(event) => setFinalSummaryInput(event.target.value)}
-                            placeholder="Integrated recommendation combining neurology + TCM"
+                            placeholder={localizeText("Integrated recommendation combining neurology + TCM", { zh: "神经科与中医结合的综合建议", yue: "神經科與中醫結合的綜合建議", fr: "Recommandation integree neurologie + MTC" })}
                             rows={3}
                           />
                         </div>
 
                         <div className="mt-4 flex flex-wrap gap-2">
                           <Button onClick={() => saveDoctorReview("draft")} variant="outline">
-                            Save TCM draft
+                            {localizeText("Save TCM draft", { zh: "保存中医草稿", yue: "保存中醫草稿", fr: "Enregistrer le brouillon MTC" })}
                           </Button>
                           <Button onClick={() => saveDoctorReview("reviewed")} variant="outline">
-                            Mark TCM reviewed
+                            {localizeText("Mark TCM reviewed", { zh: "标记为中医已审核", yue: "標記為中醫已審核", fr: "Marquer revue MTC terminee" })}
                           </Button>
                           <Button onClick={() => updateReportStatus("approved")} variant="outline">
-                            Approve final report
+                            {localizeText("Approve final report", { zh: "批准最终报告", yue: "批准最終報告", fr: "Approuver le rapport final" })}
                           </Button>
                           <Button onClick={() => updateReportStatus("pending_final_approval")} variant="outline">
-                            Send to final approval
+                            {localizeText("Send to final approval", { zh: "提交最终审批", yue: "提交最終審批", fr: "Envoyer pour approbation finale" })}
                           </Button>
                           <Button
                             onClick={() => updateReportStatus("published_to_patient")}
                             variant="outline"
                             disabled={!canPublishToPatient}
                           >
-                            Publish to patient
+                            {localizeText("Publish to patient", { zh: "发布给患者", yue: "發布給患者", fr: "Publier au patient" })}
                           </Button>
                         </div>
 
@@ -2208,30 +2533,30 @@ export function AdminPanel() {
                         <div className="mt-4 flex flex-wrap gap-2">
                           <Button onClick={handleGenerateReport}>
                             <FileText className="mr-2 h-4 w-4" />
-                            Generate report draft
+                            {localizeText("Generate report draft", { zh: "生成报告草稿", yue: "生成報告草稿", fr: "Generer le brouillon du rapport" })}
                           </Button>
                           <Button onClick={handleDownloadReport} variant="outline" disabled={!generatedReport}>
                             <Download className="mr-2 h-4 w-4" />
-                            Download report
+                            {localizeText("Download report", { zh: "下载报告", yue: "下載報告", fr: "Telecharger le rapport" })}
                           </Button>
-                          <Button onClick={handlePrintReport} variant="outline" disabled={!generatedReport}>
+                          <Button onClick={handlePrintReport} variant="outline" disabled={!selectedUser}>
                             <Printer className="mr-2 h-4 w-4" />
-                            Print
+                            {localizeText("Print", { zh: "打印", yue: "列印", fr: "Imprimer" })}
                           </Button>
                         </div>
 
                         <div className="mt-4 flex flex-wrap gap-2">
                           <Button onClick={handleGenerateAllReports} variant="secondary">
                             <Sparkles className="mr-2 h-4 w-4" />
-                            Generate all patient reports
+                            {localizeText("Generate all patient reports", { zh: "生成全部患者报告", yue: "生成全部患者報告", fr: "Generer tous les rapports patient" })}
                           </Button>
                           <Button onClick={handleDownloadAllReports} variant="outline" disabled={!generatedAllReports}>
                             <Download className="mr-2 h-4 w-4" />
-                            Download all reports
+                            {localizeText("Download all reports", { zh: "下载全部报告", yue: "下載全部報告", fr: "Telecharger tous les rapports" })}
                           </Button>
-                          <Button onClick={handlePrintAllReports} variant="outline" disabled={!generatedAllReports}>
+                          <Button onClick={handlePrintAllReports} variant="outline" disabled={users.length === 0}>
                             <Printer className="mr-2 h-4 w-4" />
-                            Print all reports
+                            {localizeText("Print all reports", { zh: "打印全部报告", yue: "列印全部報告", fr: "Imprimer tous les rapports" })}
                           </Button>
                         </div>
 
