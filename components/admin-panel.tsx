@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { AssessmentTextarea } from "@/components/ui/assessment-textarea"
 import { supabase } from "@/lib/supabase"
-import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp } from "lucide-react"
+import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp, Leaf } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 
 // Add imports for new chart components and data utilities
@@ -55,6 +55,38 @@ interface UserProgress {
   updated_at: string
 }
 
+interface TCMAssessment {
+  id: string
+  user_id: string
+  primary_constitution: string
+  overall_score: number
+  balanced_score: number
+  qi_deficiency_score: number
+  yang_deficiency_score: number
+  yin_deficiency_score: number
+  phlegm_dampness_score: number
+  damp_heat_score: number
+  blood_stasis_score: number
+  qi_stagnation_score: number
+  special_constitution_score: number
+  answers: Record<string, number>
+  recommendations: string[]
+  completed_at: string
+}
+
+// TCM Constitution display names
+const TCM_CONSTITUTION_NAMES: Record<string, { en: string; zh: string }> = {
+  balanced: { en: "Balanced (Ping He)", zh: "平和质" },
+  qi_deficiency: { en: "Qi Deficiency", zh: "气虚质" },
+  yang_deficiency: { en: "Yang Deficiency", zh: "阳虚质" },
+  yin_deficiency: { en: "Yin Deficiency", zh: "阴虚质" },
+  phlegm_dampness: { en: "Phlegm-Dampness", zh: "痰湿质" },
+  damp_heat: { en: "Damp-Heat", zh: "湿热质" },
+  blood_stasis: { en: "Blood Stasis", zh: "血瘀质" },
+  qi_stagnation: { en: "Qi Stagnation", zh: "气郁质" },
+  special_constitution: { en: "Special Constitution", zh: "特禀质" },
+}
+
 export function AdminPanel() {
   const { t } = useLanguage()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -64,10 +96,12 @@ export function AdminPanel() {
   const [assessments, setAssessments] = useState<Assessment[]>([])
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [userProgress, setUserProgress] = useState<UserProgress[]>([])
+  const [tcmAssessments, setTcmAssessments] = useState<TCMAssessment[]>([])
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
   const [labAnalysis, setLabAnalysis] = useState("")
   const [loading, setLoading] = useState(false)
   const [viewingFiles, setViewingFiles] = useState(false)
+  const [viewingTCM, setViewingTCM] = useState(false)
   const [viewingProgressTracker, setViewingProgressTracker] = useState(false)
 
   // Add new state variables for chart filtering
@@ -116,6 +150,12 @@ export function AdminPanel() {
         .from("user_progress")
         .select("*")
         .order("updated_at", { ascending: false })
+      
+      // Load TCM assessments
+      const { data: tcmData } = await supabase
+        .from("tcm_assessments")
+        .select("*")
+        .order("completed_at", { ascending: false })
 
       const mappedAssessments = (assessmentsData || []).map((assessment) => ({
         id: assessment.id,
@@ -131,6 +171,7 @@ export function AdminPanel() {
       setAssessments(mappedAssessments)
       setUploadedFiles(filesData || [])
       setUserProgress(progressData || [])
+      setTcmAssessments(tcmData || [])
     } catch (error) {
       console.error("Error loading data:", error)
     } finally {
@@ -252,6 +293,17 @@ export function AdminPanel() {
     return userProgress.filter((p) => p.user_id === userId)
   }
 
+  const getUserTCMAssessments = (userId: string) => {
+    return tcmAssessments.filter((t) => t.user_id === userId)
+  }
+
+  const getUserTCMImages = (userId: string) => {
+    return uploadedFiles.filter((f) => 
+      f.user_id === userId && 
+      (f.filename.includes("tongue") || f.filename.includes("face") || f.file_path.includes("tcm"))
+    )
+  }
+
   const getAverageScores = () => {
     const mocaScores = assessments.filter((a) => a.assessment_type === "MOCA").map((a) => a.total_score)
     const mmseScores = assessments.filter((a) => a.assessment_type === "MMSE").map((a) => a.total_score)
@@ -305,7 +357,11 @@ export function AdminPanel() {
               <TrendingUp className="w-4 h-4 mr-2" />
               Patient Progress
             </Button>
-            <Button onClick={() => setViewingFiles(!viewingFiles)} variant="outline">
+            <Button onClick={() => { setViewingTCM(!viewingTCM); setViewingFiles(false); }} variant="outline">
+              <Leaf className="w-4 h-4 mr-2" />
+              {viewingTCM ? t("admin.view_assessments") : "TCM Data"}
+            </Button>
+            <Button onClick={() => { setViewingFiles(!viewingFiles); setViewingTCM(false); }} variant="outline">
               <Eye className="w-4 h-4 mr-2" />
               {viewingFiles ? t("admin.view_assessments") : t("admin.view_files")}
             </Button>
@@ -370,6 +426,18 @@ export function AdminPanel() {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-2">
+                <Leaf className="w-8 h-8 text-emerald-600" />
+                <div>
+                  <p className="text-2xl font-bold">{tcmAssessments.length}</p>
+                  <p className="text-sm text-gray-600">TCM Assessments</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Add the new chart components below the statistics cards, before the "Users and Details" section. */}
@@ -404,6 +472,7 @@ export function AdminPanel() {
                   const userAssessments = getUserAssessments(user.id)
                   const userFiles = getUserFiles(user.id)
                   const userCurrentProgress = getUserProgress(user.id)
+                  const userTCM = getUserTCMAssessments(user.id)
                   return (
                     <div
                       key={user.id}
@@ -427,6 +496,11 @@ export function AdminPanel() {
                             {t("admin.in_progress_count", { count: userCurrentProgress.length })}
                           </Badge>
                           <Badge variant="outline">{t("admin.files_count", { count: userFiles.length })}</Badge>
+                          {userTCM.length > 0 && (
+                            <Badge variant="default" className="bg-emerald-600">
+                              TCM: {userTCM.length}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -441,7 +515,9 @@ export function AdminPanel() {
             <CardHeader>
               <CardTitle>
                 {selectedUser
-                  ? viewingFiles
+                  ? viewingTCM
+                    ? "TCM Constitution Assessment"
+                    : viewingFiles
                     ? t("admin.user_files")
                     : t("admin.assessment_details")
                   : t("admin.select_user")}
@@ -450,7 +526,125 @@ export function AdminPanel() {
             <CardContent>
               {selectedUser ? (
                 <div className="space-y-4">
-                  {viewingFiles ? (
+                  {viewingTCM ? (
+                    // TCM View
+                    <div className="space-y-6">
+                      {/* TCM Images Section */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                          <ImageIcon className="w-5 h-5" />
+                          Tongue & Face Images
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          {getUserTCMImages(selectedUser).map((file) => (
+                            <div key={file.id} className="border rounded-lg overflow-hidden">
+                              <div className="relative w-full h-40 bg-gray-100">
+                                <img
+                                  src={getFileUrl(file.file_path) || "/placeholder.svg"}
+                                  alt={file.filename}
+                                  className="h-full w-full object-cover cursor-pointer hover:opacity-90"
+                                  onClick={() => window.open(getFileUrl(file.file_path), "_blank")}
+                                  onError={(event) => {
+                                    if (event.currentTarget.src.endsWith("/placeholder.svg")) return
+                                    event.currentTarget.src = "/placeholder.svg"
+                                  }}
+                                />
+                              </div>
+                              <div className="p-2 text-xs text-gray-600">
+                                <p className="font-medium truncate">{file.filename}</p>
+                                <p>{new Date(file.uploaded_at).toLocaleDateString()}</p>
+                              </div>
+                            </div>
+                          ))}
+                          {getUserTCMImages(selectedUser).length === 0 && (
+                            <p className="col-span-2 text-gray-500 text-center py-4">No tongue/face images uploaded</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* TCM Assessments Section */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                          <Leaf className="w-5 h-5" />
+                          Constitution Assessment Results
+                        </h3>
+                        {getUserTCMAssessments(selectedUser).map((tcm) => (
+                          <div key={tcm.id} className="border rounded-lg p-4 space-y-4 mb-4">
+                            <div className="flex justify-between items-center flex-wrap gap-2">
+                              <Badge variant="default" className="bg-emerald-600 text-lg px-3 py-1">
+                                {TCM_CONSTITUTION_NAMES[tcm.primary_constitution]?.zh || tcm.primary_constitution}
+                              </Badge>
+                              <span className="text-sm text-gray-600">
+                                {new Date(tcm.completed_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div className="bg-gray-50 p-2 rounded">
+                                <span className="text-gray-600">Primary:</span>
+                                <span className="font-medium ml-1">
+                                  {TCM_CONSTITUTION_NAMES[tcm.primary_constitution]?.en}
+                                </span>
+                              </div>
+                              <div className="bg-gray-50 p-2 rounded">
+                                <span className="text-gray-600">Overall Score:</span>
+                                <span className="font-medium ml-1">{tcm.overall_score}/100</span>
+                              </div>
+                            </div>
+
+                            {/* Score Breakdown */}
+                            <div>
+                              <p className="font-medium mb-2">Constitution Scores:</p>
+                              <div className="grid grid-cols-1 gap-1 text-sm">
+                                {[
+                                  { key: "balanced_score", label: "Balanced (平和质)" },
+                                  { key: "qi_deficiency_score", label: "Qi Deficiency (气虚质)" },
+                                  { key: "yang_deficiency_score", label: "Yang Deficiency (阳虚质)" },
+                                  { key: "yin_deficiency_score", label: "Yin Deficiency (阴虚质)" },
+                                  { key: "phlegm_dampness_score", label: "Phlegm-Dampness (痰湿质)" },
+                                  { key: "damp_heat_score", label: "Damp-Heat (湿热质)" },
+                                  { key: "blood_stasis_score", label: "Blood Stasis (血瘀质)" },
+                                  { key: "qi_stagnation_score", label: "Qi Stagnation (气郁质)" },
+                                  { key: "special_constitution_score", label: "Special (特禀质)" },
+                                ].map(({ key, label }) => {
+                                  const score = tcm[key as keyof TCMAssessment] as number
+                                  return (
+                                    <div key={key} className="flex justify-between items-center">
+                                      <span>{label}:</span>
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                          <div 
+                                            className={`h-full rounded-full ${score >= 60 ? "bg-emerald-500" : score >= 40 ? "bg-yellow-500" : "bg-gray-400"}`}
+                                            style={{ width: `${score}%` }}
+                                          />
+                                        </div>
+                                        <span className="font-medium w-8 text-right">{score}</span>
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Recommendations */}
+                            {tcm.recommendations && tcm.recommendations.length > 0 && (
+                              <div>
+                                <p className="font-medium mb-2">Recommendations:</p>
+                                <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+                                  {tcm.recommendations.map((rec, idx) => (
+                                    <li key={idx}>{rec}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {getUserTCMAssessments(selectedUser).length === 0 && (
+                          <p className="text-gray-500 text-center py-4">No TCM assessments completed</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : viewingFiles ? (
                     // Files View
                     <div className="space-y-4">
                       {getUserFiles(selectedUser).map((file) => (
