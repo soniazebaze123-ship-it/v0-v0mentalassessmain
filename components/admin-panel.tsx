@@ -387,6 +387,39 @@ export function AdminPanel() {
     }))
   }
 
+  // Get all patients who uploaded TCM images (even without questionnaire results)
+  const getAllTCMImagePatients = () => {
+    // Get unique user IDs from TCM image uploads
+    const tcmImageFiles = uploadedFiles.filter((f) => 
+      f.file_path.startsWith("tcm/") || f.filename.includes("tongue") || f.filename.includes("face")
+    )
+    
+    const userIds = [...new Set(tcmImageFiles.map((f) => f.user_id))]
+    
+    return userIds.map((userId) => {
+      const patient = getPatientInfo(userId)
+      const images = tcmImageFiles.filter((f) => f.user_id === userId)
+      const tcmResult = tcmAssessments.find((t) => t.user_id === userId)
+      const firstUpload = images.length > 0 
+        ? images.reduce((earliest, img) => 
+            new Date(img.uploaded_at) < new Date(earliest.uploaded_at) ? img : earliest
+          ).uploaded_at
+        : null
+      
+      return {
+        userId,
+        patient,
+        images,
+        tcmResult, // May be undefined if questionnaire wasn't saved
+        firstUpload,
+        imageCount: images.length,
+      }
+    }).sort((a, b) => {
+      if (!a.firstUpload || !b.firstUpload) return 0
+      return new Date(b.firstUpload).getTime() - new Date(a.firstUpload).getTime()
+    })
+  }
+
   const getAverageScores = () => {
     const mocaScores = assessments.filter((a) => a.assessment_type === "MOCA").map((a) => a.total_score)
     const mmseScores = assessments.filter((a) => a.assessment_type === "MMSE").map((a) => a.total_score)
@@ -521,8 +554,8 @@ export function AdminPanel() {
               <div className="flex items-center space-x-2">
                 <Leaf className="w-8 h-8 text-emerald-600" />
                 <div>
-                  <p className="text-2xl font-bold">{tcmAssessments.length}</p>
-                  <p className="text-sm text-gray-600">TCM Assessments</p>
+                  <p className="text-2xl font-bold">{getAllTCMImagePatients().length}</p>
+                  <p className="text-sm text-gray-600">TCM Patients (with images)</p>
                 </div>
               </div>
             </CardContent>
@@ -554,47 +587,57 @@ export function AdminPanel() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Leaf className="w-6 h-6 text-emerald-600" />
-                All TCM Constitution Assessments ({tcmAssessments.length} total)
+                All TCM Patients ({getAllTCMImagePatients().length} patients with images)
               </CardTitle>
+              <p className="text-sm text-gray-500 mt-1">
+                Showing all patients who uploaded tongue/face images for TCM diagnosis
+              </p>
             </CardHeader>
             <CardContent>
-              {tcmAssessments.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No TCM assessments have been completed yet.</p>
+              {getAllTCMImagePatients().length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No TCM images have been uploaded yet.</p>
               ) : (
                 <div className="space-y-4">
-                  {getAllTCMPatientsData().map((tcmData) => {
-                    const isExpanded = expandedTCMAssessment === tcmData.id
+                  {getAllTCMImagePatients().map((patientData) => {
+                    const isExpanded = expandedTCMAssessment === patientData.userId
+                    const hasQuestionnaireResult = !!patientData.tcmResult
                     return (
-                      <div key={tcmData.id} className="border rounded-lg overflow-hidden">
+                      <div key={patientData.userId} className="border rounded-lg overflow-hidden">
                         {/* Header - Always visible */}
                         <div
                           className="p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
-                          onClick={() => setExpandedTCMAssessment(isExpanded ? null : tcmData.id)}
+                          onClick={() => setExpandedTCMAssessment(isExpanded ? null : patientData.userId)}
                         >
                           <div className="flex justify-between items-center flex-wrap gap-3">
                             <div className="flex items-center gap-4 flex-wrap">
-                              <Badge variant="default" className="bg-emerald-600 text-base px-3 py-1">
-                                {TCM_CONSTITUTION_NAMES[tcmData.primary_constitution]?.zh || tcmData.primary_constitution}
-                              </Badge>
+                              {hasQuestionnaireResult ? (
+                                <Badge variant="default" className="bg-emerald-600 text-base px-3 py-1">
+                                  {TCM_CONSTITUTION_NAMES[patientData.tcmResult!.primary_constitution]?.zh || patientData.tcmResult!.primary_constitution}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-base px-3 py-1 border-amber-500 text-amber-700">
+                                  Images Only - No Questionnaire
+                                </Badge>
+                              )}
                               <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <Phone className="w-4 h-4" />
-                                <span className="font-medium">{tcmData.patient?.phone_number || "Unknown"}</span>
+                                <span className="font-medium">{patientData.patient?.phone_number || "Unknown"}</span>
                               </div>
                               <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <Calendar className="w-4 h-4" />
-                                <span>{new Date(tcmData.completed_at).toLocaleDateString()}</span>
+                                <span>{patientData.firstUpload ? new Date(patientData.firstUpload).toLocaleDateString() : "N/A"}</span>
                               </div>
                             </div>
                             <div className="flex items-center gap-3">
-                              <span className="text-sm font-medium">
-                                Score: {tcmData.overall_score}/100
-                              </span>
-                              {tcmData.images.length > 0 && (
-                                <Badge variant="outline" className="text-xs">
-                                  <ImageIcon className="w-3 h-3 mr-1" />
-                                  {tcmData.images.length} images
-                                </Badge>
+                              {hasQuestionnaireResult && (
+                                <span className="text-sm font-medium">
+                                  Score: {patientData.tcmResult!.overall_score}/100
+                                </span>
                               )}
+                              <Badge variant="outline" className="text-xs">
+                                <ImageIcon className="w-3 h-3 mr-1" />
+                                {patientData.imageCount} images
+                              </Badge>
                               {isExpanded ? (
                                 <ChevronUp className="w-5 h-5 text-gray-500" />
                               ) : (
@@ -608,91 +651,104 @@ export function AdminPanel() {
                         {isExpanded && (
                           <div className="p-4 border-t space-y-6">
                             {/* Patient Images */}
-                            {tcmData.images.length > 0 && (
-                              <div>
-                                <h4 className="font-semibold mb-3 flex items-center gap-2">
-                                  <ImageIcon className="w-4 h-4" />
-                                  Tongue & Face Images
-                                </h4>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                  {tcmData.images.map((file) => (
-                                    <div key={file.id} className="border rounded-lg overflow-hidden">
-                                      <div className="relative w-full h-32 bg-gray-100">
-                                        <img
-                                          src={getFileUrl(file.file_path) || "/placeholder.svg"}
-                                          alt={file.filename}
-                                          className="h-full w-full object-cover cursor-pointer hover:opacity-90"
-                                          onClick={() => window.open(getFileUrl(file.file_path), "_blank")}
-                                          onError={(event) => {
-                                            if (event.currentTarget.src.endsWith("/placeholder.svg")) return
-                                            event.currentTarget.src = "/placeholder.svg"
-                                          }}
-                                        />
-                                      </div>
-                                      <div className="p-2 text-xs text-gray-600">
-                                        <p className="font-medium truncate">{file.filename}</p>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Constitution Scores */}
                             <div>
-                              <h4 className="font-semibold mb-3">Constitution Scores Breakdown</h4>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {[
-                                  { key: "balanced_score", label: "Balanced", zh: "平和质" },
-                                  { key: "qi_deficiency_score", label: "Qi Deficiency", zh: "气虚质" },
-                                  { key: "yang_deficiency_score", label: "Yang Deficiency", zh: "阳虚质" },
-                                  { key: "yin_deficiency_score", label: "Yin Deficiency", zh: "阴虚质" },
-                                  { key: "phlegm_dampness_score", label: "Phlegm-Dampness", zh: "痰湿质" },
-                                  { key: "damp_heat_score", label: "Damp-Heat", zh: "湿热质" },
-                                  { key: "blood_stasis_score", label: "Blood Stasis", zh: "血瘀质" },
-                                  { key: "qi_stagnation_score", label: "Qi Stagnation", zh: "气郁质" },
-                                  { key: "special_constitution_score", label: "Special", zh: "特禀质" },
-                                ].map(({ key, label, zh }) => {
-                                  const score = tcmData[key as keyof TCMAssessment] as number
-                                  const isPrimary = tcmData.primary_constitution === key.replace("_score", "")
-                                  return (
-                                    <div 
-                                      key={key} 
-                                      className={`p-3 rounded-lg border ${isPrimary ? "bg-emerald-50 border-emerald-300" : "bg-gray-50"}`}
-                                    >
-                                      <div className="flex justify-between items-center mb-1">
-                                        <span className="text-sm font-medium">{label}</span>
-                                        <span className="text-xs text-gray-500">{zh}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                          <div 
-                                            className={`h-full rounded-full ${
-                                              isPrimary ? "bg-emerald-500" : 
-                                              score >= 60 ? "bg-yellow-500" : "bg-gray-400"
-                                            }`}
-                                            style={{ width: `${score}%` }}
-                                          />
-                                        </div>
-                                        <span className="text-sm font-bold w-8 text-right">{score}</span>
-                                      </div>
+                              <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                <ImageIcon className="w-4 h-4" />
+                                Tongue & Face Images ({patientData.images.length})
+                              </h4>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                {patientData.images.map((file) => (
+                                  <div key={file.id} className="border rounded-lg overflow-hidden">
+                                    <div className="relative w-full h-32 bg-gray-100">
+                                      <img
+                                        src={getFileUrl(file.file_path) || "/placeholder.svg"}
+                                        alt={file.filename}
+                                        className="h-full w-full object-cover cursor-pointer hover:opacity-90"
+                                        onClick={() => window.open(getFileUrl(file.file_path), "_blank")}
+                                        onError={(event) => {
+                                          if (event.currentTarget.src.endsWith("/placeholder.svg")) return
+                                          event.currentTarget.src = "/placeholder.svg"
+                                        }}
+                                      />
                                     </div>
-                                  )
-                                })}
+                                    <div className="p-2 text-xs text-gray-600">
+                                      <p className="font-medium truncate">{file.filename}</p>
+                                      <p>{new Date(file.uploaded_at).toLocaleDateString()}</p>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             </div>
 
-                            {/* Recommendations */}
-                            {tcmData.recommendations && tcmData.recommendations.length > 0 && (
-                              <div>
-                                <h4 className="font-semibold mb-3">Recommendations</h4>
-                                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                                  <ul className="list-disc list-inside text-sm text-gray-700 space-y-2">
-                                    {tcmData.recommendations.map((rec, idx) => (
-                                      <li key={idx}>{rec}</li>
-                                    ))}
-                                  </ul>
+                            {/* Constitution Scores - Only show if questionnaire was completed */}
+                            {hasQuestionnaireResult && patientData.tcmResult && (
+                              <>
+                                <div>
+                                  <h4 className="font-semibold mb-3">Constitution Scores Breakdown</h4>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {[
+                                      { key: "balanced_score", label: "Balanced", zh: "平和质" },
+                                      { key: "qi_deficiency_score", label: "Qi Deficiency", zh: "气虚质" },
+                                      { key: "yang_deficiency_score", label: "Yang Deficiency", zh: "阳虚质" },
+                                      { key: "yin_deficiency_score", label: "Yin Deficiency", zh: "阴虚质" },
+                                      { key: "phlegm_dampness_score", label: "Phlegm-Dampness", zh: "痰湿质" },
+                                      { key: "damp_heat_score", label: "Damp-Heat", zh: "湿热质" },
+                                      { key: "blood_stasis_score", label: "Blood Stasis", zh: "血瘀质" },
+                                      { key: "qi_stagnation_score", label: "Qi Stagnation", zh: "气郁质" },
+                                      { key: "special_constitution_score", label: "Special", zh: "特禀质" },
+                                    ].map(({ key, label, zh }) => {
+                                      const score = patientData.tcmResult![key as keyof TCMAssessment] as number
+                                      const isPrimary = patientData.tcmResult!.primary_constitution === key.replace("_score", "")
+                                      return (
+                                        <div 
+                                          key={key} 
+                                          className={`p-3 rounded-lg border ${isPrimary ? "bg-emerald-50 border-emerald-300" : "bg-gray-50"}`}
+                                        >
+                                          <div className="flex justify-between items-center mb-1">
+                                            <span className="text-sm font-medium">{label}</span>
+                                            <span className="text-xs text-gray-500">{zh}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                              <div 
+                                                className={`h-full rounded-full ${
+                                                  isPrimary ? "bg-emerald-500" : 
+                                                  score >= 60 ? "bg-yellow-500" : "bg-gray-400"
+                                                }`}
+                                                style={{ width: `${score}%` }}
+                                              />
+                                            </div>
+                                            <span className="text-sm font-bold w-8 text-right">{score}</span>
+                                          </div>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
                                 </div>
+
+                                {/* Recommendations */}
+                                {patientData.tcmResult.recommendations && patientData.tcmResult.recommendations.length > 0 && (
+                                  <div>
+                                    <h4 className="font-semibold mb-3">Recommendations</h4>
+                                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                                      <ul className="list-disc list-inside text-sm text-gray-700 space-y-2">
+                                        {patientData.tcmResult.recommendations.map((rec, idx) => (
+                                          <li key={idx}>{rec}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            )}
+
+                            {/* Message for missing questionnaire data */}
+                            {!hasQuestionnaireResult && (
+                              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                <p className="text-amber-800 text-sm">
+                                  <strong>Note:</strong> This patient uploaded diagnostic images but the constitution questionnaire results were not saved. 
+                                  The patient may need to retake the questionnaire to get their constitution analysis.
+                                </p>
                               </div>
                             )}
                           </div>
