@@ -53,11 +53,13 @@ type ReportLabels = {
   finalSummary: string
   reportDate: string
   name: string
-  chineseName: string
   idNumber: string
   sex: string
   dateOfBirth: string
   cityProvince: string
+  hospital: string
+  eegNote: string
+  mmseDesignScores: string
   unknown: string
 }
 
@@ -75,11 +77,13 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     finalSummary: "Final Clinical Summary",
     reportDate: "Report Date",
     name: "Name",
-    chineseName: "Chinese Name",
     idNumber: "National ID",
     sex: "Sex",
     dateOfBirth: "Date of Birth",
     cityProvince: "City/Province",
+    hospital: "Hospital",
+    eegNote: "EEG report is still in process",
+    mmseDesignScores: "MMSE Reconstruction Design Scores",
     unknown: "Not provided",
   },
   "zh-CN": {
@@ -95,11 +99,13 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     finalSummary: "临床总结",
     reportDate: "报告日期",
     name: "姓名",
-    chineseName: "中文姓名",
     idNumber: "身份证号",
     sex: "性别",
     dateOfBirth: "出生日期",
     cityProvince: "城市/省份",
+    hospital: "医院",
+    eegNote: "脑电图报告仍在处理中",
+    mmseDesignScores: "MMSE重建设计分项",
     unknown: "未提供",
   },
   "zh-HK": {
@@ -115,11 +121,13 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     finalSummary: "臨床總結",
     reportDate: "報告日期",
     name: "姓名",
-    chineseName: "中文姓名",
     idNumber: "身份證號",
     sex: "性別",
     dateOfBirth: "出生日期",
     cityProvince: "城市/省份",
+    hospital: "醫院",
+    eegNote: "腦電圖報告仍在處理中",
+    mmseDesignScores: "MMSE重建設計分項",
     unknown: "未提供",
   },
   fr: {
@@ -135,11 +143,13 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     finalSummary: "Synthese clinique finale",
     reportDate: "Date du rapport",
     name: "Nom",
-    chineseName: "Nom chinois",
     idNumber: "Identifiant national",
     sex: "Sexe",
     dateOfBirth: "Date de naissance",
     cityProvince: "Ville/Province",
+    hospital: "Hopital",
+    eegNote: "Le rapport EEG est encore en cours",
+    mmseDesignScores: "Scores de reconstruction MMSE",
     unknown: "Non renseigne",
   },
 }
@@ -638,6 +648,29 @@ export function AdminPanel() {
 
   const averageScores = getAverageScores()
 
+  const MMSE_RECONSTRUCTION_KEYS: Array<keyof Assessment["section_scores"]> = [
+    "orientation",
+    "registration",
+    "attention",
+    "recall",
+    "naming",
+    "repetition",
+    "three_stage_command",
+    "reading_command",
+    "writing",
+    "copying",
+  ]
+
+  const formatMmseReconstructionScores = (assessment?: Assessment) => {
+    if (!assessment) return []
+    const labels = getSectionNames("MMSE")
+    return MMSE_RECONSTRUCTION_KEYS.map((key) => {
+      const label = labels[key as keyof typeof labels] || key
+      const score = assessment.section_scores?.[key]
+      return `- ${label}: ${typeof score === "number" ? score : 0}`
+    })
+  }
+
   const getUserDisplayName = (user?: User) => {
     if (!user) return "-"
     return user.chinese_name || user.name || user.phone_number || user.id
@@ -680,16 +713,17 @@ export function AdminPanel() {
       "",
       labels.patientInfo,
       `${labels.name}: ${getUserDisplayName(user)}`,
-      `${labels.chineseName}: ${user?.chinese_name || labels.unknown}`,
       `${labels.idNumber}: ${user?.national_id || labels.unknown}`,
       `${labels.sex}: ${user?.gender || labels.unknown}`,
       `${labels.dateOfBirth}: ${user?.date_of_birth || labels.unknown}`,
-      `${labels.cityProvince}: ${user?.city || labels.unknown} / ${user?.province || labels.unknown}`,
+      `${labels.cityProvince}: guangzhou / guangdong`,
+      `${labels.hospital}: 南方医科大学中西结合医院`,
       "",
       labels.cognitive,
       `MMSE: ${latestMmse ? `${latestMmse.total_score}/30` : labels.unknown}`,
       `MoCA: ${latestMoca ? `${latestMoca.total_score}/30` : labels.unknown}`,
-      `Latest Lab Note: ${latestMmse?.laboratory_analysis || latestMoca?.laboratory_analysis || labels.unknown}`,
+      labels.mmseDesignScores,
+      ...formatMmseReconstructionScores(latestMmse),
       "",
       labels.sensory,
       `Olfactory: ${latestOlfactory ? `${latestOlfactory.raw_score ?? "-"} (${latestOlfactory.classification || "-"})` : labels.unknown}`,
@@ -705,6 +739,7 @@ export function AdminPanel() {
       labels.finalPlan,
       `Risk Tier: ${finalRisk}`,
       `${labels.finalSummary}: ${finalSummaryInput || labels.unknown}`,
+      `${labels.eegNote}.`,
       "",
       `-- ${labels.doctorInputs} --`,
     ].join("\n")
@@ -807,7 +842,7 @@ export function AdminPanel() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center space-x-2">
@@ -839,6 +874,30 @@ export function AdminPanel() {
                 <div>
                   <p className="text-2xl font-bold">{averageScores.moca.toFixed(1)}</p>
                   <p className="text-sm text-gray-600">{t("admin.avg_moca_score")}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-2">
+                <BarChart3 className="w-8 h-8 text-indigo-600" />
+                <div>
+                  <p className="text-2xl font-bold">{averageScores.mmse.toFixed(1)}</p>
+                  <p className="text-sm text-gray-600">Avg MMSE Score</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-2">
+                <Eye className="w-8 h-8 text-amber-600" />
+                <div>
+                  <p className="text-2xl font-bold">{sensoryAssessments.length}</p>
+                  <p className="text-sm text-gray-600">Sensory Screenings</p>
                 </div>
               </div>
             </CardContent>
