@@ -24,6 +24,7 @@ import { TCM_PULSE_OPTIONS } from "@/lib/tcm-pulse"
 import { OLFACTORY_PROTOCOL_QUESTION_SET, SCENT_LABELS } from "@/lib/olfactory/config"
 import { parseOlfactoryProtocolVersion } from "@/lib/olfactory/protocol"
 import type { OlfactoryProtocolVersion } from "@/lib/olfactory/types"
+import { jsPDF } from "jspdf"
 
 // TCM questionnaire question definitions (mirrored from tcm-constitution.tsx)
 const TCM_QUESTIONS_MAP: Record<string, { text: string; textZh: string; constitution: string }> = {
@@ -1216,13 +1217,25 @@ export function AdminPanel() {
     if (!selectedUser || !generatedReport) return
     const user = users.find((entry) => entry.id === selectedUser)
     const filePrefix = getUserDisplayName(user).replace(/\s+/g, "_")
-    const blob = new Blob([generatedReport], { type: "text/markdown" })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement("a")
-    anchor.href = url
-    anchor.download = `MA_${filePrefix}_${reportLanguage}_report.md`
-    anchor.click()
-    URL.revokeObjectURL(url)
+    const doc = new jsPDF({
+      orientation: "p",
+      unit: "pt",
+      format: "a4",
+    })
+    doc.setFontSize(10)
+    const lines = doc.splitTextToSize(generatedReport, 545)
+    let y = 40
+    const lineHeight = 14
+    const pageHeight = doc.internal.pageSize.getHeight()
+    for (const line of lines) {
+      if (y > pageHeight - 30) {
+        doc.addPage()
+        y = 40
+      }
+      doc.text(String(line), 30, y)
+      y += lineHeight
+    }
+    doc.save(`MA_${filePrefix}_${reportLanguage}_report.pdf`)
   }
 
   const handlePrintReport = () => {
@@ -1256,13 +1269,25 @@ export function AdminPanel() {
 
   const handleDownloadAllReports = () => {
     if (!generatedAllReports) return
-    const blob = new Blob([generatedAllReports], { type: "text/markdown" })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement("a")
-    anchor.href = url
-    anchor.download = `MA_all_patients_${reportLanguage}_reports.md`
-    anchor.click()
-    URL.revokeObjectURL(url)
+    const doc = new jsPDF({
+      orientation: "p",
+      unit: "pt",
+      format: "a4",
+    })
+    doc.setFontSize(10)
+    const lines = doc.splitTextToSize(generatedAllReports, 545)
+    let y = 40
+    const lineHeight = 14
+    const pageHeight = doc.internal.pageSize.getHeight()
+    for (const line of lines) {
+      if (y > pageHeight - 30) {
+        doc.addPage()
+        y = 40
+      }
+      doc.text(String(line), 30, y)
+      y += lineHeight
+    }
+    doc.save(`MA_all_patients_${reportLanguage}_reports.pdf`)
   }
 
   const handlePrintAllReports = () => {
