@@ -1945,12 +1945,12 @@ export function AdminPanel() {
                                   return (
                                 <div className="mt-1 grid grid-cols-1 gap-1">
                                   <p>
-                                    {localizeText("Source", { zh: "来源", yue: "來源", fr: "Source" })}: <span className="font-semibold">{assessment.orientation_audit.location.source || "manual"}</span>
+                                    {localizeText("Source", { zh: "来源", yue: "來源", fr: "Source" })}: <span className="font-semibold">{assessment.orientation_audit.location.source || localizeText("manual", { zh: "手动", yue: "手動", fr: "manuel" })}</span>
                                     {" • "}
                                     {localizeText("Confirmed", { zh: "已确认", yue: "已確認", fr: "Confirme" })}: <span className="font-semibold">{assessment.orientation_audit.location.confirmed ? localizeText("Yes", { zh: "是", yue: "是", fr: "Oui" }) : localizeText("No", { zh: "否", yue: "否", fr: "Non" })}</span>
                                   </p>
                                   <p>
-                                    {localizeText("Site", { zh: "地点", yue: "地點", fr: "Site" })}: <span className="font-semibold">{assessment.orientation_audit.location.testedSite || "china_guangzhou_hospital"}</span>
+                                    {localizeText("Site", { zh: "地点", yue: "地點", fr: "Site" })}: <span className="font-semibold">{assessment.orientation_audit.location.testedSite || localizeText("Guangzhou Hospital", { zh: "广州医院", yue: "廣州醫院", fr: "Hopital de Guangzhou" })}</span>
                                     {" • "}
                                     {localizeText("Preset used", { zh: "使用预设", yue: "使用預設", fr: "Preconfiguration utilisee" })}: <span className="font-semibold">{assessment.orientation_audit.location.sitePresetUsed ? localizeText("Yes", { zh: "是", yue: "是", fr: "Oui" }) : localizeText("No", { zh: "否", yue: "否", fr: "Non" })}</span>
                                   </p>
@@ -1984,7 +1984,7 @@ export function AdminPanel() {
                         <div key={assessment.id} className="border rounded-lg p-4 space-y-3 bg-emerald-50/60">
                           <div className="flex justify-between items-center flex-wrap gap-2">
                             <Badge variant="outline" className="bg-emerald-100 text-emerald-800">
-                              {assessment.primary_constitution}
+                              {getConstitutionLabelForLanguage(assessment.primary_constitution, reportLanguage)}
                             </Badge>
                             <span className="text-sm text-gray-600">
                               {assessment.completed_at
@@ -2027,7 +2027,11 @@ export function AdminPanel() {
                         <div key={assessment.id} className="border rounded-lg p-4 space-y-3 bg-amber-50/60">
                           <div className="flex justify-between items-center flex-wrap gap-2">
                             <Badge variant="outline" className="bg-amber-100 text-amber-800">
-                              {assessment.test_type}
+                              {assessment.test_type === "olfactory"
+                                ? localizeText("Olfactory", { zh: "嗅觉", yue: "嗅覺", fr: "Olfactif" })
+                                : assessment.test_type === "auditory"
+                                  ? localizeText("Auditory", { zh: "听觉", yue: "聽覺", fr: "Auditif" })
+                                  : localizeText("Visual", { zh: "视觉", yue: "視覺", fr: "Visuel" })}
                             </Badge>
                             <span className="text-sm text-gray-600">
                               {assessment.test_date
@@ -2051,7 +2055,7 @@ export function AdminPanel() {
                                     className={`rounded-md border p-2 text-xs ${result.correct ? "border-emerald-200 bg-emerald-50/70 text-emerald-800" : "border-rose-200 bg-rose-50/70 text-rose-800"}`}
                                   >
                                     <div className="flex items-center justify-between gap-2">
-                                      <div className="font-semibold">Strip #{result.strip}</div>
+                                      <div className="font-semibold">{localizeText("Strip", { zh: "试纸", yue: "試紙", fr: "Bande" })} #{result.strip}</div>
                                       <Badge variant="outline" className={result.correct ? "border-emerald-300 bg-white text-emerald-700" : "border-rose-300 bg-white text-rose-700"}>
                                         {result.correct
                                           ? localizeText("Correct", { zh: "正确", yue: "正確", fr: "Correct" })
@@ -2119,7 +2123,7 @@ export function AdminPanel() {
                             {/* Tongue and Face images */}
                             <div className="mt-4 grid gap-4 lg:grid-cols-2">
                               <div className="rounded-xl border border-emerald-100 bg-white p-4">
-                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Tongue image (舌象)</p>
+                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{localizeText("Tongue image", { zh: "舌象图像", yue: "舌象圖像", fr: "Image de la langue" })}</p>
                                 {resolvedTongueUrl ? (
                                   <div className="mt-3">
                                     <div className="relative h-48 overflow-hidden rounded-lg bg-slate-100">
@@ -2147,7 +2151,7 @@ export function AdminPanel() {
                               </div>
 
                               <div className="rounded-xl border border-emerald-100 bg-white p-4">
-                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Face image (面诊)</p>
+                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{localizeText("Face image", { zh: "面诊图像", yue: "面診圖像", fr: "Image du visage" })}</p>
                                 {resolvedFaceUrl ? (
                                   <div className="mt-3">
                                     <div className="relative h-48 overflow-hidden rounded-lg bg-slate-100">
