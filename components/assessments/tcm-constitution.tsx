@@ -751,7 +751,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
     }
   }
 
-  const calculateResults = () => {
+  const calculateResults = async () => {
     // Initialize scores for each constitution
     const scores: Record<TCMConstitution, number> = {
       balanced: 0,
@@ -827,11 +827,47 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
       ...(secondaryInfo?.recommendations.slice(0, 2) || []),
     ]
 
+    // Calculate overall score (100 = perfectly balanced, lower = more imbalanced)
+    const avgImbalance = imbalanceScores.map(([, score]) => score).reduce((a, b) => a + b, 0) / imbalanceScores.length
+    const overallScore = Math.round((balancedScore + (100 - avgImbalance)) / 2)
+
     const resultData = {
       primaryConstitution,
       secondaryConstitution,
       constitutionScores: normalizedScores,
       recommendations,
+    }
+
+    // Save to Supabase tcm_assessments table
+    if (user) {
+      try {
+        const { error } = await supabase.from("tcm_assessments").insert({
+          user_id: user.id,
+          primary_constitution: primaryConstitution,
+          balanced_score: normalizedScores.balanced,
+          qi_deficiency_score: normalizedScores.qi_deficiency,
+          yang_deficiency_score: normalizedScores.yang_deficiency,
+          yin_deficiency_score: normalizedScores.yin_deficiency,
+          phlegm_dampness_score: normalizedScores.phlegm_dampness,
+          damp_heat_score: normalizedScores.damp_heat,
+          blood_stasis_score: normalizedScores.blood_stasis,
+          qi_stagnation_score: normalizedScores.qi_stagnation,
+          special_constitution_score: normalizedScores.special_constitution,
+          primary_score: normalizedScores[primaryConstitution],
+          overall_score: overallScore,
+          answers: responses,
+          recommendations: recommendations,
+          completed_at: new Date().toISOString(),
+        })
+        
+        if (error) {
+          console.error("[v0] Error saving TCM assessment:", error)
+        } else {
+          console.log("[v0] TCM assessment saved successfully")
+        }
+      } catch (err) {
+        console.error("[v0] Exception saving TCM assessment:", err)
+      }
     }
 
     setResults(resultData)
