@@ -25,6 +25,45 @@ import { OLFACTORY_PROTOCOL_QUESTION_SET, SCENT_LABELS } from "@/lib/olfactory/c
 import { parseOlfactoryProtocolVersion } from "@/lib/olfactory/protocol"
 import type { OlfactoryProtocolVersion } from "@/lib/olfactory/types"
 
+// TCM questionnaire question definitions (mirrored from tcm-constitution.tsx)
+const TCM_QUESTIONS_MAP: Record<string, { text: string; textZh: string; constitution: string }> = {
+  qi1: { text: "Do you feel tired or fatigued easily?", textZh: "您容易感到疲劳吗？", constitution: "Qi Deficiency" },
+  qi2: { text: "Do you get short of breath with minimal effort?", textZh: "您稍微活动就气短吗？", constitution: "Qi Deficiency" },
+  qi3: { text: "Do you catch colds more often than others?", textZh: "您比别人更容易感冒吗？", constitution: "Qi Deficiency" },
+  yang1: { text: "Do your hands and feet often feel cold?", textZh: "您手脚经常冰凉吗？", constitution: "Yang Deficiency" },
+  yang2: { text: "Do you prefer warm drinks and food over cold?", textZh: "您喜欢温热的食物和饮料吗？", constitution: "Yang Deficiency" },
+  yang3: { text: "Do you feel cold when others feel comfortable?", textZh: "别人感觉舒适时您觉得冷吗？", constitution: "Yang Deficiency" },
+  yin1: { text: "Do you experience dry eyes, mouth, or skin?", textZh: "您经常感到眼睛、口腔或皮肤干燥吗？", constitution: "Yin Deficiency" },
+  yin2: { text: "Do you have warm palms, soles, or chest?", textZh: "您手心、脚心或胸口发热吗？", constitution: "Yin Deficiency" },
+  yin3: { text: "Do you experience night sweats?", textZh: "您有盗汗的情况吗？", constitution: "Yin Deficiency" },
+  pd1: { text: "Does your body feel heavy or sluggish?", textZh: "您感觉身体沉重或迟缓吗？", constitution: "Phlegm-Dampness" },
+  pd2: { text: "Is your skin or face oily?", textZh: "您的皮肤或脸部容易出油吗？", constitution: "Phlegm-Dampness" },
+  pd3: { text: "Do you feel tightness or fullness in chest/abdomen?", textZh: "您感到胸闷或腹胀吗？", constitution: "Phlegm-Dampness" },
+  dh1: { text: "Do you often have a bitter taste in your mouth?", textZh: "您经常口苦或口中有异味吗？", constitution: "Damp-Heat" },
+  dh2: { text: "Is your face oily or prone to acne?", textZh: "您的脸部容易出油或长痘吗？", constitution: "Damp-Heat" },
+  dh3: { text: "Do you feel irritable or easily angered?", textZh: "您容易烦躁或发脾气吗？", constitution: "Damp-Heat" },
+  bs1: { text: "Do you bruise easily?", textZh: "您容易淤青吗？", constitution: "Blood Stasis" },
+  bs2: { text: "Do you have dark circles under your eyes?", textZh: "您有黑眼圈吗？", constitution: "Blood Stasis" },
+  bs3: { text: "Do you experience fixed, stabbing pain in specific areas?", textZh: "您身体某些部位有固定的刺痛感吗？", constitution: "Blood Stasis" },
+  qs1: { text: "Do you feel anxious, depressed, or emotionally unstable?", textZh: "您经常感到焦虑、抑郁或情绪不稳吗？", constitution: "Qi Stagnation" },
+  qs2: { text: "Do you sigh frequently or feel chest tightness?", textZh: "您经常叹气或感到胸闷吗？", constitution: "Qi Stagnation" },
+  qs3: { text: "Does your mood fluctuate with stress?", textZh: "您的情绪随压力波动吗？", constitution: "Qi Stagnation" },
+  sc1: { text: "Do you have allergies (skin, respiratory, or food)?", textZh: "您有过敏症状吗？", constitution: "Special Constitution" },
+  sc2: { text: "Are you sensitive to medications or environmental changes?", textZh: "您对药物或环境变化敏感吗？", constitution: "Special Constitution" },
+  sc3: { text: "Do you experience seasonal symptoms?", textZh: "您有季节性症状吗？", constitution: "Special Constitution" },
+  bal1: { text: "Do you generally feel energetic and refreshed?", textZh: "您通常感到精力充沛吗？", constitution: "Balanced" },
+  bal2: { text: "Is your sleep restful and appetite normal?", textZh: "您睡眠质量好、食欲正常吗？", constitution: "Balanced" },
+  bal3: { text: "Do you adapt well to environmental changes?", textZh: "您能很好地适应环境变化吗？", constitution: "Balanced" },
+}
+
+const LIKERT_LABELS: Record<number, string> = {
+  1: "Never (从不)",
+  2: "Rarely (很少)",
+  3: "Sometimes (有时)",
+  4: "Often (经常)",
+  5: "Always (总是)",
+}
+
 interface User {
   id: string
   phone_number: string
@@ -359,7 +398,7 @@ export function AdminPanel() {
   const [patientSearch, setPatientSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | ReportStatus>("all")
   const [riskFilter, setRiskFilter] = useState<"all" | "high" | "moderate" | "low">("all")
-  const [tcmImageFilter, setTcmImageFilter] = useState<"all" | "complete" | "missing_tongue" | "missing_face" | "missing_questionnaire">("all")
+  const [tcmImageFilter, setTcmImageFilter] = useState<"all" | "complete" | "missing_images" | "missing_questionnaire">("all")
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -704,18 +743,18 @@ export function AdminPanel() {
   const getTcmImageState = (userId: string) => {
     const files = getUserFiles(userId)
     const latest = getLatestTcmAssessment(userId)
-    // Check both uploaded_files names AND tcm_assessments.answers image URLs
+    const hasQuestionnaire = getUserTcmAssessments(userId).length > 0
+    // Images are optional — questionnaire is mandatory for TCM patients
     const hasTongueImage =
       files.some((file) => /tongue/i.test(file.filename)) ||
       !!(latest?.answers?.tongue_image_url)
     const hasFaceImage =
       files.some((file) => /face/i.test(file.filename)) ||
       !!(latest?.answers?.face_image_url)
-    const hasQuestionnaire = getUserTcmAssessments(userId).length > 0
+    const hasImages = hasTongueImage && hasFaceImage
 
-    if (!hasTongueImage) return { key: "missing_tongue" as const, label: "Missing tongue" }
-    if (!hasFaceImage) return { key: "missing_face" as const, label: "Missing face" }
     if (!hasQuestionnaire) return { key: "missing_questionnaire" as const, label: "Missing questionnaire" }
+    if (!hasImages) return { key: "missing_images" as const, label: "Missing images" }
     return { key: "complete" as const, label: "Complete" }
   }
 
@@ -743,7 +782,8 @@ export function AdminPanel() {
 
     const review = getUserDoctorReview(userId)
     const tcmImageState = getTcmImageState(userId)
-    if (tcmImageState.key !== "complete") return "incomplete"
+    // Only missing questionnaire blocks workflow; missing images is acceptable
+    if (tcmImageState.key === "missing_questionnaire") return "incomplete"
     if (!review) return "pending_tcm_review"
     if (review.review_status === "reviewed") return "pending_final_approval"
     return "pending_tcm_review"
@@ -837,6 +877,8 @@ export function AdminPanel() {
     const userAssessments = getUserAssessments(userId)
     const userSensory = getUserSensoryAssessments(userId)
     const userTcm = getUserTcmAssessments(userId)
+    // Use saved doctor review when available, fall back to current input state
+    const savedReview = getUserDoctorReview(userId)
 
     const latestMoca = userAssessments
       .filter((assessment) => assessment.assessment_type === "MOCA")
@@ -886,18 +928,50 @@ export function AdminPanel() {
       `Visual: ${latestVisual ? `${latestVisual.normalized_score ?? "-"} (${latestVisual.classification || "-"})` : labels.unknown}`,
       "",
       labels.tcm,
-      `Primary Constitution: ${latestTcm?.primary_constitution || labels.unknown}`,
+      `Primary Constitution: ${latestTcm?.primary_constitution?.replace(/_/g, " ") || labels.unknown}`,
       `TCM Score: ${latestTcm?.overall_score ?? labels.unknown}`,
-      `TCM Constitution (doctor): ${tcmConstitutionInput || labels.unknown}`,
-      `Tongue Observation: ${tongueObservationInput || labels.unknown}`,
-      `Face Observation: ${faceObservationInput || labels.unknown}`,
-      `Questionnaire Interpretation: ${questionnaireInterpretationInput || labels.unknown}`,
-      `${labels.diagnosis}: ${tcmDiagnosisInput || labels.unknown}`,
-      `${labels.treatmentPlan}: ${tcmTherapyPlanInput || labels.unknown}`,
-      `Dietary Advice: ${dietaryAdviceInput || labels.unknown}`,
-      `Follow-up Recommendation: ${followUpRecommendationInput || labels.unknown}`,
-      `Doctor Name: ${doctorNameInput || labels.unknown}`,
-      `Review Date: ${reviewDateInput || labels.unknown}`,
+      `TCM Constitution (doctor): ${savedReview?.tcm_constitution || tcmConstitutionInput || labels.unknown}`,
+      `Tongue Observation: ${savedReview?.tongue_observation || tongueObservationInput || labels.unknown}`,
+      `Face Observation: ${savedReview?.face_observation || faceObservationInput || labels.unknown}`,
+      `Questionnaire Interpretation: ${savedReview?.questionnaire_interpretation || questionnaireInterpretationInput || labels.unknown}`,
+      `${labels.diagnosis}: ${savedReview?.tcm_diagnosis || tcmDiagnosisInput || labels.unknown}`,
+      `${labels.treatmentPlan}: ${savedReview?.therapy_plan || tcmTherapyPlanInput || labels.unknown}`,
+      `Dietary Advice: ${savedReview?.dietary_advice || dietaryAdviceInput || labels.unknown}`,
+      `Follow-up Recommendation: ${savedReview?.follow_up_recommendation || followUpRecommendationInput || labels.unknown}`,
+      `Doctor Name: ${savedReview?.doctor_name || doctorNameInput || labels.unknown}`,
+      `Review Date: ${savedReview?.review_date || reviewDateInput || labels.unknown}`,
+      "",
+      // Questionnaire Q&A section
+      "── TCM Questionnaire Responses ──",
+      ...(latestTcm?.answers?.questionnaire
+        ? (() => {
+            const qa = latestTcm.answers!.questionnaire!
+            const grouped: Record<string, string[]> = {}
+            for (const [qid, score] of Object.entries(qa)) {
+              const q = TCM_QUESTIONS_MAP[qid]
+              if (!q) continue
+              if (!grouped[q.constitution]) grouped[q.constitution] = []
+              grouped[q.constitution].push(
+                `  • ${q.textZh} / ${q.text}: ${LIKERT_LABELS[score as number] ?? score}`
+              )
+            }
+            const lines: string[] = []
+            for (const [constitution, answers] of Object.entries(grouped)) {
+              lines.push(`[${constitution}]`)
+              lines.push(...answers)
+            }
+            return lines
+          })()
+        : [`  ${labels.unknown}`]),
+      "",
+      // Auto-generated recommendations from questionnaire
+      ...(latestTcm?.recommendations && latestTcm.recommendations.length > 0
+        ? [
+            "── Auto-generated Health Recommendations ──",
+            ...latestTcm.recommendations.map((r) => `  • ${r}`),
+            "",
+          ]
+        : []),
       "",
       labels.finalPlan,
       `Risk Tier: ${finalRisk}`,
@@ -1313,15 +1387,14 @@ export function AdminPanel() {
                     value={tcmImageFilter}
                     onChange={(event) =>
                       setTcmImageFilter(
-                        event.target.value as "all" | "complete" | "missing_tongue" | "missing_face" | "missing_questionnaire",
+                        event.target.value as "all" | "complete" | "missing_images" | "missing_questionnaire",
                       )
                     }
                     className="h-10 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:ring-2 focus:ring-blue-300"
                   >
                     <option value="all">All TCM files</option>
-                    <option value="complete">Complete</option>
-                    <option value="missing_tongue">Missing tongue</option>
-                    <option value="missing_face">Missing face</option>
+                    <option value="complete">Questionnaire + Images</option>
+                    <option value="missing_images">Missing images (questionnaire OK)</option>
                     <option value="missing_questionnaire">Missing questionnaire</option>
                   </select>
                 </div>
@@ -1858,6 +1931,40 @@ export function AdminPanel() {
                                         )}
                                       </div>
                                     )}
+
+                                    {/* Full questionnaire Q&A per question */}
+                                    {latestTcmAssessment.answers?.questionnaire && Object.keys(latestTcmAssessment.answers.questionnaire).length > 0 && (() => {
+                                      const qa = latestTcmAssessment.answers!.questionnaire!
+                                      const grouped: Record<string, Array<{ id: string; textZh: string; text: string; score: number }>> = {}
+                                      for (const [qid, score] of Object.entries(qa)) {
+                                        const q = TCM_QUESTIONS_MAP[qid]
+                                        if (!q) continue
+                                        if (!grouped[q.constitution]) grouped[q.constitution] = []
+                                        grouped[q.constitution].push({ id: qid, textZh: q.textZh, text: q.text, score: score as number })
+                                      }
+                                      return (
+                                        <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3">
+                                          <p className="text-xs font-semibold text-slate-600 mb-2">Patient questionnaire responses (问卷答案)</p>
+                                          <div className="space-y-3">
+                                            {Object.entries(grouped).map(([constitution, items]) => (
+                                              <div key={constitution}>
+                                                <p className="text-xs font-semibold text-emerald-700 mb-1">{constitution}</p>
+                                                <div className="space-y-1">
+                                                  {items.map((item) => (
+                                                    <div key={item.id} className="flex items-start justify-between gap-2">
+                                                      <span className="text-xs text-slate-600 flex-1">{item.textZh}</span>
+                                                      <Badge variant="outline" className={`text-xs shrink-0 ${item.score >= 4 ? "border-rose-200 bg-rose-50 text-rose-700" : item.score <= 2 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
+                                                        {LIKERT_LABELS[item.score] ?? item.score}
+                                                      </Badge>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )
+                                    })()}
 
                                     {/* Patient-generated recommendations from questionnaire */}
                                     {latestTcmAssessment.recommendations && latestTcmAssessment.recommendations.length > 0 && (
