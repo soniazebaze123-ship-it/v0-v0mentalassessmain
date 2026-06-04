@@ -254,6 +254,16 @@ interface TCMAssessment {
   primary_score: number | null
   overall_score: number | null
   completed_at: string | null
+  balanced_score?: number | null
+  qi_deficiency_score?: number | null
+  yang_deficiency_score?: number | null
+  yin_deficiency_score?: number | null
+  phlegm_dampness_score?: number | null
+  damp_heat_score?: number | null
+  blood_stasis_score?: number | null
+  qi_stagnation_score?: number | null
+  special_constitution_score?: number | null
+  recommendations?: string[] | null
   answers?: {
     pulse_assessment?: {
       selectedPulseIds?: string[]
@@ -261,6 +271,10 @@ interface TCMAssessment {
       clinicalPulseScore?: number
       notes?: string
     }
+    questionnaire?: Record<string, number>
+    tongue_image_url?: string | null
+    face_image_url?: string | null
+    uploaded_image_ids?: string[]
   }
 }
 
@@ -678,10 +692,25 @@ export function AdminPanel() {
       .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime())[0]
   }
 
+  // Get image URLs from the TCM assessment record (most reliable source, as URLs are stored directly)
+  const getTcmAssessmentImageUrl = (userId: string, imageKind: "tongue" | "face"): string | null => {
+    const latest = getLatestTcmAssessment(userId)
+    if (!latest?.answers) return null
+    return imageKind === "tongue"
+      ? (latest.answers.tongue_image_url ?? null)
+      : (latest.answers.face_image_url ?? null)
+  }
+
   const getTcmImageState = (userId: string) => {
     const files = getUserFiles(userId)
-    const hasTongueImage = files.some((file) => /tongue/i.test(file.filename))
-    const hasFaceImage = files.some((file) => /face/i.test(file.filename))
+    const latest = getLatestTcmAssessment(userId)
+    // Check both uploaded_files names AND tcm_assessments.answers image URLs
+    const hasTongueImage =
+      files.some((file) => /tongue/i.test(file.filename)) ||
+      !!(latest?.answers?.tongue_image_url)
+    const hasFaceImage =
+      files.some((file) => /face/i.test(file.filename)) ||
+      !!(latest?.answers?.face_image_url)
     const hasQuestionnaire = getUserTcmAssessments(userId).length > 0
 
     if (!hasTongueImage) return { key: "missing_tongue" as const, label: "Missing tongue" }
@@ -1687,6 +1716,24 @@ export function AdminPanel() {
                         const faceImages = getUserImageFiles(selectedUser, "face")
                         const latestTcmAssessment = getLatestTcmAssessment(selectedUser)
                         const existingDoctorReview = getUserDoctorReview(selectedUser)
+                        // Reliable image URLs stored directly on the TCM assessment record
+                        const assessmentTongueUrl = latestTcmAssessment?.answers?.tongue_image_url ?? null
+                        const assessmentFaceUrl = latestTcmAssessment?.answers?.face_image_url ?? null
+                        // Final URL: prefer assessment-stored URL, fall back to uploaded_files match
+                        const resolvedTongueUrl = assessmentTongueUrl || (tongueImages[0] ? getFileUrl(tongueImages[0].file_path) : null)
+                        const resolvedFaceUrl = assessmentFaceUrl || (faceImages[0] ? getFileUrl(faceImages[0].file_path) : null)
+                        // All constitution scores for detailed breakdown
+                        const constitutionScores = latestTcmAssessment ? [
+                          { key: "balanced", label: "平和质 Balanced", score: latestTcmAssessment.balanced_score },
+                          { key: "qi_deficiency", label: "气虚质 Qi Deficiency", score: latestTcmAssessment.qi_deficiency_score },
+                          { key: "yang_deficiency", label: "阳虚质 Yang Deficiency", score: latestTcmAssessment.yang_deficiency_score },
+                          { key: "yin_deficiency", label: "阴虚质 Yin Deficiency", score: latestTcmAssessment.yin_deficiency_score },
+                          { key: "phlegm_dampness", label: "痰湿质 Phlegm-Dampness", score: latestTcmAssessment.phlegm_dampness_score },
+                          { key: "damp_heat", label: "湿热质 Damp-Heat", score: latestTcmAssessment.damp_heat_score },
+                          { key: "blood_stasis", label: "血瘀质 Blood Stasis", score: latestTcmAssessment.blood_stasis_score },
+                          { key: "qi_stagnation", label: "气郁质 Qi Stagnation", score: latestTcmAssessment.qi_stagnation_score },
+                          { key: "special_constitution", label: "特禀质 Special", score: latestTcmAssessment.special_constitution_score },
+                        ].filter(s => s.score != null) : []
 
                         return (
                           <div className="mt-6 rounded-2xl border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,0.96),rgba(255,255,255,0.98),rgba(239,246,255,0.94))] p-5 shadow-sm">
@@ -1698,24 +1745,30 @@ export function AdminPanel() {
                               Review tongue and face images, questionnaire constitution data, and existing remarks before finalizing the patient report.
                             </p>
 
+                            {/* Tongue and Face images */}
                             <div className="mt-4 grid gap-4 lg:grid-cols-2">
                               <div className="rounded-xl border border-emerald-100 bg-white p-4">
-                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Tongue images</p>
-                                {tongueImages.length > 0 ? (
-                                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                    {tongueImages.map((file) => (
-                                      <div key={file.id} className="space-y-2">
-                                        <div className="relative h-36 overflow-hidden rounded-lg bg-slate-100">
-                                          <Image
-                                            src={getFileUrl(file.file_path) || "/placeholder.svg"}
-                                            alt={file.filename}
-                                            fill
-                                            className="object-cover"
-                                          />
-                                        </div>
-                                        <p className="text-xs text-slate-500">{file.filename}</p>
+                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Tongue image (舌象)</p>
+                                {resolvedTongueUrl ? (
+                                  <div className="mt-3">
+                                    <div className="relative h-48 overflow-hidden rounded-lg bg-slate-100">
+                                      <Image
+                                        src={resolvedTongueUrl}
+                                        alt="Tongue image"
+                                        fill
+                                        className="object-contain"
+                                        unoptimized
+                                      />
+                                    </div>
+                                    {tongueImages.length > 1 && (
+                                      <div className="mt-3 grid gap-2 grid-cols-3">
+                                        {tongueImages.slice(1).map((file) => (
+                                          <div key={file.id} className="relative h-20 overflow-hidden rounded-lg bg-slate-100">
+                                            <Image src={getFileUrl(file.file_path)} alt={file.filename} fill className="object-cover" unoptimized />
+                                          </div>
+                                        ))}
                                       </div>
-                                    ))}
+                                    )}
                                   </div>
                                 ) : (
                                   <p className="mt-3 text-sm text-slate-500">No tongue image uploaded for this patient.</p>
@@ -1723,22 +1776,27 @@ export function AdminPanel() {
                               </div>
 
                               <div className="rounded-xl border border-emerald-100 bg-white p-4">
-                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Face images</p>
-                                {faceImages.length > 0 ? (
-                                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                    {faceImages.map((file) => (
-                                      <div key={file.id} className="space-y-2">
-                                        <div className="relative h-36 overflow-hidden rounded-lg bg-slate-100">
-                                          <Image
-                                            src={getFileUrl(file.file_path) || "/placeholder.svg"}
-                                            alt={file.filename}
-                                            fill
-                                            className="object-cover"
-                                          />
-                                        </div>
-                                        <p className="text-xs text-slate-500">{file.filename}</p>
+                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Face image (面诊)</p>
+                                {resolvedFaceUrl ? (
+                                  <div className="mt-3">
+                                    <div className="relative h-48 overflow-hidden rounded-lg bg-slate-100">
+                                      <Image
+                                        src={resolvedFaceUrl}
+                                        alt="Face image"
+                                        fill
+                                        className="object-contain"
+                                        unoptimized
+                                      />
+                                    </div>
+                                    {faceImages.length > 1 && (
+                                      <div className="mt-3 grid gap-2 grid-cols-3">
+                                        {faceImages.slice(1).map((file) => (
+                                          <div key={file.id} className="relative h-20 overflow-hidden rounded-lg bg-slate-100">
+                                            <Image src={getFileUrl(file.file_path)} alt={file.filename} fill className="object-cover" unoptimized />
+                                          </div>
+                                        ))}
                                       </div>
-                                    ))}
+                                    )}
                                   </div>
                                 ) : (
                                   <p className="mt-3 text-sm text-slate-500">No face image uploaded for this patient.</p>
@@ -1746,43 +1804,73 @@ export function AdminPanel() {
                               </div>
                             </div>
 
+                            {/* TCM Questionnaire & Constitution */}
                             <div className="mt-4 grid gap-4 lg:grid-cols-2">
                               <div className="rounded-xl border border-emerald-100 bg-white p-4 text-sm text-slate-700">
                                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">TCM questionnaire and constitution</p>
                                 {latestTcmAssessment ? (
-                                  <div className="mt-3 space-y-2">
-                                    <p>
-                                      Primary constitution: <span className="font-semibold">{latestTcmAssessment.primary_constitution || "-"}</span>
-                                    </p>
-                                    <p>
-                                      Primary score: <span className="font-semibold">{latestTcmAssessment.primary_score ?? "-"}</span>
-                                    </p>
-                                    <p>
-                                      Overall questionnaire score: <span className="font-semibold">{latestTcmAssessment.overall_score ?? "-"}/100</span>
-                                    </p>
-                                    <p>
-                                      Completed at: <span className="font-semibold">{latestTcmAssessment.completed_at ? new Date(latestTcmAssessment.completed_at).toLocaleString() : "-"}</span>
-                                    </p>
+                                  <div className="mt-3 space-y-3">
+                                    <div className="rounded-lg bg-emerald-50 p-3">
+                                      <p>Primary constitution: <span className="font-semibold text-emerald-800">{latestTcmAssessment.primary_constitution?.replace(/_/g, " ") || "-"}</span></p>
+                                      <p>Primary score: <span className="font-semibold">{latestTcmAssessment.primary_score != null ? `${latestTcmAssessment.primary_score}%` : "-"}</span></p>
+                                      <p>Overall balance score: <span className="font-semibold">{latestTcmAssessment.overall_score ?? "-"}/100</span></p>
+                                      <p>Completed: <span className="font-semibold">{latestTcmAssessment.completed_at ? new Date(latestTcmAssessment.completed_at).toLocaleString() : "-"}</span></p>
+                                    </div>
+
+                                    {/* All constitution scores */}
+                                    {constitutionScores.length > 0 && (
+                                      <div>
+                                        <p className="text-xs font-semibold text-slate-500 mb-2">Constitution scores breakdown</p>
+                                        <div className="space-y-1">
+                                          {constitutionScores.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).map((item) => (
+                                            <div key={item.key} className="flex items-center gap-2">
+                                              <span className="w-44 text-xs text-slate-600 shrink-0">{item.label}</span>
+                                              <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                                                <div
+                                                  className={`h-full rounded-full ${item.key === latestTcmAssessment.primary_constitution ? "bg-emerald-500" : "bg-slate-300"}`}
+                                                  style={{ width: `${item.score ?? 0}%` }}
+                                                />
+                                              </div>
+                                              <span className="text-xs font-medium w-8 text-right">{item.score}%</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Pulse assessment */}
                                     {latestTcmAssessment.answers?.pulse_assessment && (
                                       <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
-                                        <p>
-                                          Pulse severity: <span className="font-semibold">{latestTcmAssessment.answers.pulse_assessment.severity ?? 0}</span>
-                                        </p>
-                                        <p>
-                                          Clinical pulse score: <span className="font-semibold">{latestTcmAssessment.answers.pulse_assessment.clinicalPulseScore ?? 0}/100</span>
-                                        </p>
+                                        <p className="text-xs font-semibold text-slate-500 mb-1">Pulse assessment (脉象)</p>
+                                        <p>Severity: <span className="font-semibold">{latestTcmAssessment.answers.pulse_assessment.severity ?? 0}/10</span></p>
+                                        <p>Clinical pulse score: <span className="font-semibold">{latestTcmAssessment.answers.pulse_assessment.clinicalPulseScore ?? 0}/100</span></p>
                                         {latestTcmAssessment.answers.pulse_assessment.selectedPulseIds && latestTcmAssessment.answers.pulse_assessment.selectedPulseIds.length > 0 && (
-                                          <div className="mt-2 flex flex-wrap gap-2">
+                                          <div className="mt-2 flex flex-wrap gap-1">
                                             {latestTcmAssessment.answers.pulse_assessment.selectedPulseIds.map((pulseId) => (
-                                              <Badge key={`review-pack-${latestTcmAssessment.id}-${pulseId}`} variant="outline" className="bg-white">
+                                              <Badge key={`review-pack-${latestTcmAssessment.id}-${pulseId}`} variant="outline" className="bg-white text-xs">
                                                 {getPulseLabel(pulseId)}
                                               </Badge>
                                             ))}
                                           </div>
                                         )}
                                         {latestTcmAssessment.answers.pulse_assessment.notes && (
-                                          <p className="mt-2 text-xs text-slate-600">Assessment note: {latestTcmAssessment.answers.pulse_assessment.notes}</p>
+                                          <p className="mt-2 text-xs text-slate-600">Note: {latestTcmAssessment.answers.pulse_assessment.notes}</p>
                                         )}
+                                      </div>
+                                    )}
+
+                                    {/* Patient-generated recommendations from questionnaire */}
+                                    {latestTcmAssessment.recommendations && latestTcmAssessment.recommendations.length > 0 && (
+                                      <div className="rounded-lg border border-amber-100 bg-amber-50/60 p-3">
+                                        <p className="text-xs font-semibold text-amber-700 mb-2">Auto-generated recommendations (from questionnaire)</p>
+                                        <ul className="space-y-1">
+                                          {latestTcmAssessment.recommendations.map((rec, idx) => (
+                                            <li key={idx} className="text-xs text-slate-700 flex items-start gap-1">
+                                              <span className="text-amber-500 mt-0.5">•</span>
+                                              {rec}
+                                            </li>
+                                          ))}
+                                        </ul>
                                       </div>
                                     )}
                                   </div>
@@ -1791,8 +1879,9 @@ export function AdminPanel() {
                                 )}
                               </div>
 
+                              {/* Doctor remarks & recommendations */}
                               <div className="rounded-xl border border-emerald-100 bg-white p-4 text-sm text-slate-700">
-                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Current remarks and recommendations</p>
+                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Doctor remarks and recommendations</p>
                                 <div className="mt-3 space-y-2">
                                   <p>
                                     Constitution note: <span className="font-semibold">{existingDoctorReview?.tcm_constitution || tcmConstitutionInput || "-"}</span>
@@ -1818,6 +1907,9 @@ export function AdminPanel() {
                                   <p>
                                     Follow-up recommendation: <span className="font-semibold">{existingDoctorReview?.follow_up_recommendation || followUpRecommendationInput || "-"}</span>
                                   </p>
+                                  {!existingDoctorReview && (
+                                    <p className="text-xs text-slate-400 italic mt-2">No doctor review saved yet. Use the form below to enter remarks.</p>
+                                  )}
                                 </div>
                               </div>
                             </div>
