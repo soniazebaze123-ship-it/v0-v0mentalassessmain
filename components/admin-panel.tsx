@@ -220,6 +220,7 @@ type ReportContentLabels = {
   olfactory: string
   olfactoryDiagnosis: string
   olfactoryRecommendation: string
+  mocaScoreDistribution: string
   auditory: string
   visual: string
   primaryConstitution: string
@@ -248,6 +249,7 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     olfactory: "Olfactory",
     olfactoryDiagnosis: "Olfactory Diagnosis",
     olfactoryRecommendation: "Olfactory Recommendation",
+    mocaScoreDistribution: "MoCA Score Distribution",
     auditory: "Auditory",
     visual: "Visual",
     primaryConstitution: "Primary Constitution",
@@ -274,6 +276,7 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     olfactory: "嗅觉",
     olfactoryDiagnosis: "嗅觉诊断",
     olfactoryRecommendation: "嗅觉建议",
+    mocaScoreDistribution: "MoCA 分项分布",
     auditory: "听觉",
     visual: "视觉",
     primaryConstitution: "主要体质",
@@ -300,6 +303,7 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     olfactory: "嗅覺",
     olfactoryDiagnosis: "嗅覺診斷",
     olfactoryRecommendation: "嗅覺建議",
+    mocaScoreDistribution: "MoCA 分項分佈",
     auditory: "聽覺",
     visual: "視覺",
     primaryConstitution: "主要體質",
@@ -326,6 +330,7 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     olfactory: "Olfactif",
     olfactoryDiagnosis: "Diagnostic olfactif",
     olfactoryRecommendation: "Recommandation olfactive",
+    mocaScoreDistribution: "Repartition des scores MoCA",
     auditory: "Auditif",
     visual: "Visuel",
     primaryConstitution: "Constitution principale",
@@ -1465,6 +1470,38 @@ export function AdminPanel() {
     })
   }
 
+  const MOCA_DISTRIBUTION_KEYS: Array<keyof Assessment["section_scores"]> = [
+    "visuospatial",
+    "trail_making",
+    "cube",
+    "clock",
+    "executive",
+    "naming",
+    "animal_naming",
+    "object_naming",
+    "attention",
+    "language",
+    "abstraction",
+    "memory",
+    "delayed_recall",
+    "orientation",
+  ]
+
+  const formatMocaScoreDistribution = (assessment?: Assessment) => {
+    if (!assessment || !assessment.section_scores) return []
+    const labels = getSectionNames("MOCA")
+    const scores = assessment.section_scores
+    const orderedKeys = MOCA_DISTRIBUTION_KEYS.filter((key) => Object.prototype.hasOwnProperty.call(scores, key))
+    const extraKeys = Object.keys(scores).filter((key) => !MOCA_DISTRIBUTION_KEYS.includes(key as keyof Assessment["section_scores"]))
+    const keys = [...orderedKeys, ...extraKeys]
+
+    return keys.map((key) => {
+      const label = labels[key as keyof typeof labels] || key
+      const score = scores[key]
+      return `- ${label}: ${typeof score === "number" ? score : 0}`
+    })
+  }
+
   const getUserDisplayName = (user?: User) => {
     if (!user) return "-"
     return user.chinese_name || user.name || user.phone_number || user.id
@@ -1526,7 +1563,11 @@ export function AdminPanel() {
       "",
       labels.cognitive,
       `MMSE SCORE: ${latestMmse ? `${latestMmse.total_score}/30` : labels.unknown}`,
-      `MoCA: ${latestMoca ? `${latestMoca.total_score}/30` : labels.unknown}`,
+      `MoCA SCORE: ${latestMoca ? `${latestMoca.total_score}/30` : labels.unknown}`,
+      `${contentLabels.mocaScoreDistribution}:`,
+      ...(formatMocaScoreDistribution(latestMoca).length > 0
+        ? formatMocaScoreDistribution(latestMoca)
+        : [`- ${labels.unknown}`]),
       "",
       labels.sensory,
       `${contentLabels.olfactory}: ${latestOlfactory ? `${latestOlfactory.raw_score ?? "-"} (${latestOlfactory.classification || "-"})` : labels.unknown}`,
