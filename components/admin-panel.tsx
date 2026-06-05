@@ -353,30 +353,34 @@ const getDementiaRiskRecommendation = (
   language: ReportLanguage,
 ) => {
   if (language === "zh-CN") {
-    if (riskLevel === "high") return "建议尽快转诊记忆门诊/神经科，4周内完成全面认知评估并启动家庭照护计划。"
-    if (riskLevel === "moderate") return "建议8-12周内复评认知功能，优化睡眠、运动与慢病管理，必要时专科随访。"
-    return "当前风险较低，建议每6-12个月常规筛查并保持健康生活方式。"
+    if (riskLevel === "high")
+      return "高风险：建议1-4周内转诊记忆门诊/神经科，完成全面认知评估、药物与共病评估，并同步启动家属照护与居家安全干预。"
+    if (riskLevel === "moderate")
+      return "中风险：建议8-12周复评（MMSE/MoCA），强化睡眠、运动、血压血糖血脂管理及抑郁筛查；若出现功能下降，提前专科随访。"
+    return "低风险：建议6-12个月常规复筛，持续认知训练与社交活动，保持地中海式饮食、规律运动和睡眠管理。"
   }
   if (language === "zh-HK") {
-    if (riskLevel === "high") return "建議盡快轉介記憶門診/神經科，於4週內完成全面認知評估並啟動家庭照護計劃。"
-    if (riskLevel === "moderate") return "建議8-12週內重評認知功能，改善睡眠、運動及慢病管理，必要時專科跟進。"
-    return "目前風險較低，建議每6-12個月常規篩查並維持健康生活方式。"
+    if (riskLevel === "high")
+      return "高風險：建議1-4週內轉介記憶門診/神經科，完成全面認知評估、藥物及共病評估，並同步啟動家屬照護與家居安全介入。"
+    if (riskLevel === "moderate")
+      return "中風險：建議8-12週重評（MMSE/MoCA），加強睡眠、運動、血壓血糖血脂管理及情緒篩查；如功能下降，提早專科跟進。"
+    return "低風險：建議6-12個月常規複篩，持續認知訓練與社交活動，維持地中海飲食、規律運動及睡眠管理。"
   }
   if (language === "fr") {
     if (riskLevel === "high")
-      return "Orientation rapide en consultation memoire/neurologie, evaluation cognitive complete sous 4 semaines et plan d'accompagnement familial."
+      return "Risque eleve : orientation memoire/neurologie sous 1 a 4 semaines, bilan cognitif complet, revue medicamenteuse/comorbidites et mise en place immediate d'un plan d'accompagnement familial et de securite a domicile."
     if (riskLevel === "moderate")
-      return "Reevaluation cognitive dans 8 a 12 semaines, optimisation du sommeil, de l'activite physique et des comorbidites; suivi specialise si besoin."
-    return "Risque actuel faible; depistage de routine tous les 6 a 12 mois et maintien d'une hygiene de vie protectrice."
+      return "Risque modere : reevaluation cognitive dans 8 a 12 semaines (MMSE/MoCA), optimisation sommeil-activite physique-facteurs vasculaires et depistage thymique; suivi specialise anticipe en cas de declin fonctionnel."
+    return "Risque faible : depistage de routine tous les 6 a 12 mois, stimulation cognitive et sociale continue, avec maintien d'une hygiene de vie protectrice."
   }
 
   if (riskLevel === "high") {
-    return "Recommend urgent memory clinic/neurology referral, full cognitive workup within 4 weeks, and initiation of a family care plan."
+    return "High risk: refer to memory clinic/neurology within 1-4 weeks for full cognitive workup, medication/comorbidity review, and immediate family-care plus home-safety planning."
   }
   if (riskLevel === "moderate") {
-    return "Recommend cognitive reassessment in 8-12 weeks, optimization of sleep/exercise/chronic disease control, and specialist follow-up if concerns persist."
+    return "Moderate risk: repeat MMSE/MoCA in 8-12 weeks, optimize sleep/exercise/vascular risk control, screen mood, and expedite specialist follow-up if functional decline appears."
   }
-  return "Current risk is low; continue routine screening every 6-12 months and maintain protective lifestyle measures."
+  return "Low risk: continue routine screening every 6-12 months with ongoing cognitive-social stimulation and protective lifestyle measures."
 }
 
 const CONSTITUTION_LABELS: Record<string, { "zh-CN": string; "zh-HK": string; fr: string }> = {
