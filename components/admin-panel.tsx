@@ -24,7 +24,8 @@ import { TCM_PULSE_OPTIONS } from "@/lib/tcm-pulse"
 import { OLFACTORY_PROTOCOL_QUESTION_SET, SCENT_LABELS } from "@/lib/olfactory/config"
 import { parseOlfactoryProtocolVersion } from "@/lib/olfactory/protocol"
 import type { OlfactoryProtocolVersion } from "@/lib/olfactory/types"
-import { jsPDF } from "jspdf"
+import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib"
+import fontkit from "@pdf-lib/fontkit"
 
 // TCM questionnaire question definitions (mirrored from tcm-constitution.tsx)
 const TCM_QUESTIONS_MAP: Record<string, { text: string; textZh: string; constitution: string }> = {
@@ -79,6 +80,204 @@ interface User {
 }
 
 type ReportLanguage = "en" | "zh-CN" | "zh-HK" | "fr"
+
+const wrapTextToWidth = (text: string, font: PDFFont, fontSize: number, maxWidth: number) => {
+  const lines: string[] = []
+
+  for (const paragraph of text.split("\n")) {
+    if (!paragraph) {
+      lines.push("")
+      continue
+    }
+
+    const tokens = paragraph.match(/\S+\s*|\s+/g) ?? [paragraph]
+    let currentLine = ""
+
+    for (const token of tokens) {
+      const candidate = currentLine + token
+      if (font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
+        currentLine = candidate
+        continue
+      }
+
+      if (currentLine) {
+        lines.push(currentLine.trimEnd())
+        currentLine = ""
+      }
+
+      const trimmedToken = token.trim()
+      if (!trimmedToken) {
+        continue
+      }
+
+      if (font.widthOfTextAtSize(trimmedToken, fontSize) <= maxWidth) {
+        currentLine = token.trimStart()
+        continue
+      }
+
+      let segment = ""
+      for (const character of Array.from(trimmedToken)) {
+        const nextSegment = segment + character
+        if (font.widthOfTextAtSize(nextSegment, fontSize) <= maxWidth) {
+          segment = nextSegment
+          continue
+        }
+
+        if (segment) {
+          lines.push(segment)
+        }
+        segment = character
+      }
+
+      currentLine = segment
+    }
+
+    if (currentLine) {
+      lines.push(currentLine.trimEnd())
+    }
+  }
+
+  return lines
+}
+
+const canvasToPngBytes = async (canvas: HTMLCanvasElement) => {
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((value) => {
+      if (!value) {
+        reject(new Error("Failed to create PNG blob from canvas"))
+        return
+      }
+      resolve(value)
+    }, "image/png")
+  })
+  return new Uint8Array(await blob.arrayBuffer())
+}
+
+const wrapCanvasParagraph = (paragraph: string, ctx: CanvasRenderingContext2D, maxWidth: number) => {
+  if (!paragraph) {
+    return [""]
+  }
+
+  const lines: string[] = []
+  let currentLine = ""
+
+  for (const character of Array.from(paragraph)) {
+    const candidate = currentLine + character
+    if (ctx.measureText(candidate).width <= maxWidth) {
+      currentLine = candidate
+      continue
+    }
+
+    if (currentLine) {
+      lines.push(currentLine)
+    }
+    currentLine = character
+  }
+
+  if (currentLine) {
+    lines.push(currentLine)
+  }
+
+  return lines
+}
+
+const createChinesePdfFromCanvas = async (reportText: string) => {
+  const pdfDoc = await PDFDocument.create()
+
+  const pageWidthPt = 595.28
+  const pageHeightPt = 841.89
+  const canvasWidthPx = 1240
+  const canvasHeightPx = 1754
+  const marginLeftPx = 72
+  const marginTopPx = 96
+  const marginBottomPx = 80
+  const fontSizePx = 30
+  const lineHeightPx = 44
+  const contentWidthPx = canvasWidthPx - marginLeftPx * 2
+
+  const canvas = document.createElement("canvas")
+  canvas.width = canvasWidthPx
+  canvas.height = canvasHeightPx
+  const ctx = canvas.getContext("2d")
+  if (!ctx) {
+    throw new Error("Failed to initialize canvas context")
+  }
+
+  ctx.font = `${fontSizePx}px "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "SimSun", sans-serif`
+  const renderedLines = reportText
+    .split("\n")
+    .flatMap((paragraph) => wrapCanvasParagraph(paragraph, ctx, contentWidthPx))
+
+  const maxLinesPerPage = Math.floor((canvasHeightPx - marginTopPx - marginBottomPx) / lineHeightPx)
+  for (let index = 0; index < renderedLines.length; index += maxLinesPerPage) {
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(0, 0, canvasWidthPx, canvasHeightPx)
+
+    ctx.fillStyle = "#000000"
+    ctx.font = `${fontSizePx}px "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "SimSun", sans-serif`
+    ctx.textBaseline = "top"
+
+    const pageLines = renderedLines.slice(index, index + maxLinesPerPage)
+    pageLines.forEach((line, lineIndex) => {
+      ctx.fillText(line, marginLeftPx, marginTopPx + lineIndex * lineHeightPx)
+    })
+
+    const pagePng = await canvasToPngBytes(canvas)
+    const image = await pdfDoc.embedPng(pagePng)
+    const page = pdfDoc.addPage([pageWidthPt, pageHeightPt])
+    page.drawImage(image, {
+      x: 0,
+      y: 0,
+      width: pageWidthPt,
+      height: pageHeightPt,
+    })
+  }
+
+  return await pdfDoc.save()
+}
+
+const createMedicalReportPdf = async (reportText: string, language: ReportLanguage) => {
+  if (language === "zh-CN" || language === "zh-HK") {
+    return await createChinesePdfFromCanvas(reportText)
+  }
+
+  const pdfDoc = await PDFDocument.create()
+  pdfDoc.registerFontkit(fontkit)
+
+  const pageWidth = 595.28
+  const pageHeight = 841.89
+  const marginLeft = 36
+  const marginTop = 48
+  const marginBottom = 40
+  const contentWidth = pageWidth - marginLeft * 2
+  const fontSize = 11
+  const lineHeight = 15
+
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+
+  const lines = wrapTextToWidth(reportText, font, fontSize, contentWidth)
+  let page = pdfDoc.addPage([pageWidth, pageHeight])
+  let cursorY = pageHeight - marginTop
+
+  for (const line of lines) {
+    if (cursorY < marginBottom) {
+      page = pdfDoc.addPage([pageWidth, pageHeight])
+      cursorY = pageHeight - marginTop
+    }
+
+    page.drawText(line, {
+      x: marginLeft,
+      y: cursorY,
+      size: fontSize,
+      font,
+      color: rgb(0, 0, 0),
+    })
+
+    cursorY -= lineHeight
+  }
+
+  return await pdfDoc.save()
+}
 
 type ReportStatus =
   | "incomplete"
@@ -779,6 +978,12 @@ export function AdminPanel() {
   const [tcmDataLoadIssue, setTcmDataLoadIssue] = useState(false)
 
   useEffect(() => {
+    if (isAuthenticated) {
+      loadData()
+    }
+  }, [isAuthenticated])
+
+  useEffect(() => {
     if (language === "zh") {
       setReportLanguage("zh-CN")
       return
@@ -793,12 +998,6 @@ export function AdminPanel() {
     }
     setReportLanguage("en")
   }, [language])
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadData()
-    }
-  }, [isAuthenticated])
 
   useEffect(() => {
     setGeneratedReport("")
@@ -1595,29 +1794,20 @@ export function AdminPanel() {
     setGeneratedReport(reportText)
   }
 
-  const handleDownloadReport = () => {
+  const handleDownloadReport = async () => {
     if (!selectedUser || !generatedReport) return
     const user = users.find((entry) => entry.id === selectedUser)
     const filePrefix = getUserDisplayName(user).replace(/\s+/g, "_")
-    const doc = new jsPDF({
-      orientation: "p",
-      unit: "pt",
-      format: "a4",
-    })
-    doc.setFontSize(10)
-    const lines = doc.splitTextToSize(generatedReport, 545)
-    let y = 40
-    const lineHeight = 14
-    const pageHeight = doc.internal.pageSize.getHeight()
-    for (const line of lines) {
-      if (y > pageHeight - 30) {
-        doc.addPage()
-        y = 40
-      }
-      doc.text(String(line), 30, y)
-      y += lineHeight
-    }
-    doc.save(`MA_${filePrefix}_${reportLanguage}_report.pdf`)
+    const fileTimestamp = new Date().toISOString().replace(/[:.]/g, "-")
+    const reportText = generatedReport || buildMedicalReport(selectedUser, reportLanguage)
+    const pdfBytes = await createMedicalReportPdf(reportText, reportLanguage)
+    const blob = new Blob([pdfBytes], { type: "application/pdf" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `MA_${filePrefix}_${reportLanguage}_unicode_${fileTimestamp}.pdf`
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   const handlePrintReport = () => {
@@ -1649,27 +1839,18 @@ export function AdminPanel() {
     setGeneratedAllReports(compiledReports)
   }
 
-  const handleDownloadAllReports = () => {
+  const handleDownloadAllReports = async () => {
     if (!generatedAllReports) return
-    const doc = new jsPDF({
-      orientation: "p",
-      unit: "pt",
-      format: "a4",
-    })
-    doc.setFontSize(10)
-    const lines = doc.splitTextToSize(generatedAllReports, 545)
-    let y = 40
-    const lineHeight = 14
-    const pageHeight = doc.internal.pageSize.getHeight()
-    for (const line of lines) {
-      if (y > pageHeight - 30) {
-        doc.addPage()
-        y = 40
-      }
-      doc.text(String(line), 30, y)
-      y += lineHeight
-    }
-    doc.save(`MA_all_patients_${reportLanguage}_reports.pdf`)
+    const fileTimestamp = new Date().toISOString().replace(/[:.]/g, "-")
+    const reportText = generatedAllReports || buildAllMedicalReports(reportLanguage)
+    const pdfBytes = await createMedicalReportPdf(reportText, reportLanguage)
+    const blob = new Blob([pdfBytes], { type: "application/pdf" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `MA_all_patients_${reportLanguage}_unicode_${fileTimestamp}.pdf`
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   const handlePrintAllReports = () => {
