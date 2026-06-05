@@ -100,6 +100,7 @@ type ReportLabels = {
   doctorInputs: string
   treatmentPlan: string
   diagnosis: string
+  tcmNeedsConfirmation: string
   finalSummary: string
   reportDate: string
   name: string
@@ -109,6 +110,7 @@ type ReportLabels = {
   cityProvince: string
   hospital: string
   eegNote: string
+  eegInProcess: string
   mmseDesignScores: string
   unknown: string
 }
@@ -124,6 +126,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     doctorInputs: "Doctor Inputs",
     treatmentPlan: "Treatment Plan",
     diagnosis: "TCM Diagnosis",
+    tcmNeedsConfirmation: "a doctor needs to confirm",
     finalSummary: "Final Clinical Summary",
     reportDate: "Report Date",
     name: "Name",
@@ -133,6 +136,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cityProvince: "City/Province",
     hospital: "Hospital",
     eegNote: "EEG report is still in process",
+    eegInProcess: "still in process",
     mmseDesignScores: "MMSE Reconstruction Design Scores",
     unknown: "Not provided",
   },
@@ -146,6 +150,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     doctorInputs: "医生补充",
     treatmentPlan: "治疗方案",
     diagnosis: "中医诊断",
+    tcmNeedsConfirmation: "需由医生确认",
     finalSummary: "临床总结",
     reportDate: "报告日期",
     name: "姓名",
@@ -155,6 +160,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cityProvince: "城市/省份",
     hospital: "医院",
     eegNote: "脑电图报告仍在处理中",
+    eegInProcess: "仍在处理中",
     mmseDesignScores: "MMSE重建设计分项",
     unknown: "未提供",
   },
@@ -168,6 +174,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     doctorInputs: "醫生補充",
     treatmentPlan: "治療方案",
     diagnosis: "中醫診斷",
+    tcmNeedsConfirmation: "需由醫生確認",
     finalSummary: "臨床總結",
     reportDate: "報告日期",
     name: "姓名",
@@ -177,6 +184,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cityProvince: "城市/省份",
     hospital: "醫院",
     eegNote: "腦電圖報告仍在處理中",
+    eegInProcess: "仍在處理中",
     mmseDesignScores: "MMSE重建設計分項",
     unknown: "未提供",
   },
@@ -190,6 +198,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     doctorInputs: "Saisie medecin",
     treatmentPlan: "Plan therapeutique",
     diagnosis: "Diagnostic MTC",
+    tcmNeedsConfirmation: "un medecin doit confirmer",
     finalSummary: "Synthese clinique finale",
     reportDate: "Date du rapport",
     name: "Nom",
@@ -199,6 +208,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cityProvince: "Ville/Province",
     hospital: "Hopital",
     eegNote: "Le rapport EEG est encore en cours",
+    eegInProcess: "encore en cours",
     mmseDesignScores: "Scores de reconstruction MMSE",
     unknown: "Non renseigne",
   },
@@ -451,6 +461,7 @@ interface TCMAssessment {
   primary_score: number | null
   overall_score: number | null
   completed_at: string | null
+  data_source?: "new_build" | "old_build"
   balanced_score?: number | null
   qi_deficiency_score?: number | null
   yang_deficiency_score?: number | null
@@ -473,6 +484,19 @@ interface TCMAssessment {
     face_image_url?: string | null
     uploaded_image_ids?: string[]
   }
+}
+
+interface LegacyTCMConstitutionResult {
+  id: string
+  session_id: string
+  constitution_primary?: string | null
+  constitution_secondary?: string | null
+  questionnaire?: Record<string, unknown> | null
+  tongue_image_uri?: string | null
+  facial_image_uri?: string | null
+  clinician_comment?: string | null
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 interface TCMDoctorReview {
@@ -517,6 +541,40 @@ function clampCognitiveScore(score: number | null | undefined) {
   return Math.min(30, Math.max(0, numericScore))
 }
 
+function normalizeQuestionnaireResponses(input: unknown): Record<string, number> {
+  if (!input || typeof input !== "object") {
+    return {}
+  }
+
+  return Object.entries(input as Record<string, unknown>).reduce<Record<string, number>>((acc, [key, value]) => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      acc[key] = value
+      return acc
+    }
+
+    if (typeof value === "string") {
+      const parsed = Number(value)
+      if (Number.isFinite(parsed)) {
+        acc[key] = parsed
+      }
+      return acc
+    }
+
+    if (value && typeof value === "object") {
+      const nested = value as Record<string, unknown>
+      const nestedScore = [nested.score, nested.value, nested.answer]
+        .map((candidate) => (typeof candidate === "string" ? Number(candidate) : candidate))
+        .find((candidate) => typeof candidate === "number" && Number.isFinite(candidate))
+
+      if (typeof nestedScore === "number") {
+        acc[key] = nestedScore
+      }
+    }
+
+    return acc
+  }, {})
+}
+
 export function AdminPanel() {
   const { language, t, localizeText } = useLanguage()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -542,6 +600,10 @@ export function AdminPanel() {
   const [tcmDiagnosisInput, setTcmDiagnosisInput] = useState("")
   const [tcmTherapyPlanInput, setTcmTherapyPlanInput] = useState("")
   const [finalSummaryInput, setFinalSummaryInput] = useState("")
+  const [tcmAssessmentConstitutionInput, setTcmAssessmentConstitutionInput] = useState("")
+  const [tcmAssessmentPrimaryScoreInput, setTcmAssessmentPrimaryScoreInput] = useState("")
+  const [tcmAssessmentOverallScoreInput, setTcmAssessmentOverallScoreInput] = useState("")
+  const [tcmAssessmentRecommendationsInput, setTcmAssessmentRecommendationsInput] = useState("")
   const [tcmConstitutionInput, setTcmConstitutionInput] = useState("")
   const [tongueObservationInput, setTongueObservationInput] = useState("")
   const [faceObservationInput, setFaceObservationInput] = useState("")
@@ -556,7 +618,8 @@ export function AdminPanel() {
   const [patientSearch, setPatientSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | ReportStatus>("all")
   const [riskFilter, setRiskFilter] = useState<"all" | "high" | "moderate" | "low">("all")
-  const [tcmImageFilter, setTcmImageFilter] = useState<"all" | "complete" | "missing_images" | "missing_questionnaire">("all")
+  const [tcmImageFilter, setTcmImageFilter] = useState<"all" | "complete" | "missing_images" | "missing_questionnaire" | "data_unavailable">("all")
+  const [tcmDataLoadIssue, setTcmDataLoadIssue] = useState(false)
 
   useEffect(() => {
     if (language === "zh") {
@@ -589,6 +652,20 @@ export function AdminPanel() {
       .filter((review) => review.user_id === selectedUser)
       .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())[0]
     const existingReport = medicalReports.find((report) => report.user_id === selectedUser)
+    const latestTcmAssessment = selectedUser ? getLatestTcmAssessment(selectedUser) : undefined
+
+    setTcmAssessmentConstitutionInput(latestTcmAssessment?.primary_constitution || "")
+    setTcmAssessmentPrimaryScoreInput(
+      typeof latestTcmAssessment?.primary_score === "number" && Number.isFinite(latestTcmAssessment.primary_score)
+        ? String(latestTcmAssessment.primary_score)
+        : "",
+    )
+    setTcmAssessmentOverallScoreInput(
+      typeof latestTcmAssessment?.overall_score === "number" && Number.isFinite(latestTcmAssessment.overall_score)
+        ? String(latestTcmAssessment.overall_score)
+        : "",
+    )
+    setTcmAssessmentRecommendationsInput((latestTcmAssessment?.recommendations || []).join("\n"))
 
     setTcmConstitutionInput(existingReview?.tcm_constitution || "")
     setTongueObservationInput(existingReview?.tongue_observation || "")
@@ -601,7 +678,7 @@ export function AdminPanel() {
     setDoctorNameInput(existingReview?.doctor_name || "")
     setReviewDateInput(existingReview?.review_date || "")
     setFinalSummaryInput(existingReport?.final_diagnostic_analysis || "")
-  }, [selectedUser, doctorReviews, medicalReports])
+  }, [selectedUser, doctorReviews, medicalReports, tcmAssessments])
 
   const handleLogin = async () => {
     // Simple authentication - in production, use proper authentication
@@ -629,6 +706,7 @@ export function AdminPanel() {
     setUserProgress([])
     setSensoryAssessments([])
     setTcmAssessments([])
+    setTcmDataLoadIssue(false)
   }
 
   const loadData = async () => {
@@ -650,10 +728,14 @@ export function AdminPanel() {
         .from("sensory_assessments")
         .select("*")
         .order("test_date", { ascending: false })
-      const { data: tcmData } = await supabase
+      const { data: tcmData, error: tcmError } = await supabase
         .from("tcm_assessments")
         .select("*")
         .order("completed_at", { ascending: false })
+      const { data: legacyTcmData, error: legacyTcmError } = await supabase
+        .from("tcm_constitution_results")
+        .select("*")
+        .order("updated_at", { ascending: false })
       const { data: reviewData, error: reviewError } = await supabase
         .from("tcm_doctor_reviews")
         .select("*")
@@ -720,7 +802,75 @@ export function AdminPanel() {
       setUploadedFiles(filesData || [])
       setUserProgress(progressData || [])
       setSensoryAssessments((sensoryData || []) as SensoryAssessment[])
-      setTcmAssessments((tcmData || []) as TCMAssessment[])
+
+      const newBuildTcmAssessments = ((tcmData || []) as TCMAssessment[]).map((assessment) => ({
+        ...assessment,
+        data_source: "new_build" as const,
+      }))
+
+      const legacyRows = (legacyTcmData || []) as LegacyTCMConstitutionResult[]
+      const legacySessionIds = [...new Set(legacyRows.map((row) => row.session_id).filter(Boolean))]
+
+      const legacySessionsById = new Map<string, string>()
+      if (legacySessionIds.length > 0) {
+        const { data: legacySessionsData, error: legacySessionError } = await supabase
+          .from("assessment_sessions")
+          .select("id, patient_id")
+          .in("id", legacySessionIds)
+
+        if (legacySessionError) {
+          console.warn("Error loading assessment_sessions for legacy TCM records:", legacySessionError)
+        } else {
+          ;(legacySessionsData || []).forEach((session) => {
+            if (session?.id && session?.patient_id) {
+              legacySessionsById.set(session.id, session.patient_id)
+            }
+          })
+        }
+      }
+
+      const legacyAssessments: TCMAssessment[] = legacyRows
+        .map((row) => {
+          const userId = legacySessionsById.get(row.session_id)
+          if (!userId) {
+            return null
+          }
+
+          const questionnaire = normalizeQuestionnaireResponses(row.questionnaire)
+          const clinicianComment = row.clinician_comment?.trim()
+
+          return {
+            id: `legacy-${row.id}`,
+            user_id: userId,
+            primary_constitution: row.constitution_primary || row.constitution_secondary || "Unknown",
+            primary_score: null,
+            overall_score: null,
+            completed_at: row.updated_at || row.created_at || null,
+            recommendations: clinicianComment ? [clinicianComment] : [],
+            answers: {
+              questionnaire,
+              tongue_image_url: row.tongue_image_uri || null,
+              face_image_url: row.facial_image_uri || null,
+            },
+            data_source: "old_build",
+          }
+        })
+        .filter((assessment): assessment is TCMAssessment => Boolean(assessment))
+
+      if (tcmError) {
+        console.warn("TCM assessments table not available or not readable:", tcmError)
+      }
+      if (legacyTcmError) {
+        console.warn("Legacy TCM table not available or not readable:", legacyTcmError)
+      }
+
+      setTcmDataLoadIssue(Boolean(tcmError) && Boolean(legacyTcmError))
+
+      const mergedTcmAssessments = [...newBuildTcmAssessments, ...legacyAssessments].sort(
+        (a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime(),
+      )
+
+      setTcmAssessments(mergedTcmAssessments)
       if (!reviewError) {
         setDoctorReviews((reviewData || []) as TCMDoctorReview[])
       }
@@ -738,6 +888,7 @@ export function AdminPanel() {
       }
     } catch (error) {
       console.error("Error loading data:", error)
+      setTcmDataLoadIssue(true)
     }
   }
 
@@ -797,6 +948,65 @@ export function AdminPanel() {
     const a = document.createElement("a")
     a.href = url
     a.download = "assessment-results.csv"
+    a.click()
+  }
+
+  const exportAllTcmResults = () => {
+    const escapeCsvCell = (value: unknown) => {
+      const text = value == null ? "" : String(value)
+      if (/[",\n]/.test(text)) {
+        return `"${text.replace(/"/g, '""')}"`
+      }
+      return text
+    }
+
+    const rows = tcmAssessments
+      .slice()
+      .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime())
+      .map((assessment) => {
+        const user = users.find((u) => u.id === assessment.user_id)
+        return [
+          user?.name || "",
+          user?.chinese_name || "",
+          user?.phone_number || "",
+          assessment.user_id,
+          assessment.data_source === "old_build" ? "old_build" : "new_build",
+          assessment.completed_at || "",
+          assessment.primary_constitution || "",
+          assessment.primary_score ?? "",
+          assessment.overall_score ?? "",
+          JSON.stringify(assessment.answers?.questionnaire || {}),
+          JSON.stringify(assessment.recommendations || []),
+          assessment.answers?.tongue_image_url || "",
+          assessment.answers?.face_image_url || "",
+        ]
+      })
+
+    const header = [
+      "Name",
+      "Chinese Name",
+      "Phone Number",
+      "User ID",
+      "Source Build",
+      "Completed At",
+      "Primary Constitution",
+      "Primary Score",
+      "Overall Score",
+      "Questionnaire",
+      "Recommendations",
+      "Tongue Image URL",
+      "Face Image URL",
+    ]
+
+    const csv = [header, ...rows]
+      .map((row) => row.map((cell) => escapeCsvCell(cell)).join(","))
+      .join("\n")
+
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "tcm-results-all-builds.csv"
     a.click()
   }
 
@@ -917,7 +1127,17 @@ export function AdminPanel() {
   const getTcmImageState = (userId: string) => {
     const files = getUserFiles(userId)
     const latest = getLatestTcmAssessment(userId)
-    const hasQuestionnaire = getUserTcmAssessments(userId).length > 0
+    const hasQuestionnaire =
+      getUserTcmAssessments(userId).length > 0 ||
+      Boolean(getUserDoctorReview(userId))
+
+    if (!hasQuestionnaire && tcmDataLoadIssue) {
+      return {
+        key: "data_unavailable" as const,
+        label: localizeText("TCM data unavailable", { zh: "中医数据不可用", yue: "中醫數據不可用", fr: "Donnees MTC indisponibles" }),
+      }
+    }
+
     // Images are optional — questionnaire is mandatory for TCM patients
     const hasTongueImage =
       files.some((file) => /tongue/i.test(file.filename)) ||
@@ -1003,6 +1223,7 @@ export function AdminPanel() {
     const tcmImageState = getTcmImageState(userId)
     // Only missing questionnaire blocks workflow; missing images is acceptable
     if (tcmImageState.key === "missing_questionnaire") return "incomplete"
+    if (tcmImageState.key === "data_unavailable") return review ? "pending_final_approval" : "pending_tcm_review"
     if (!review) return "pending_tcm_review"
     if (review.review_status === "reviewed") return "pending_final_approval"
     return "pending_tcm_review"
@@ -1100,12 +1321,15 @@ export function AdminPanel() {
   const buildMedicalReport = (userId: string, language: ReportLanguage) => {
     const labels = REPORT_LABELS[language]
     const contentLabels = REPORT_CONTENT_LABELS[language]
+    const tcmReviewPendingText = labels.tcmNeedsConfirmation
+    const eegPendingText = labels.eegInProcess
     const user = users.find((entry) => entry.id === userId)
     const userAssessments = getUserAssessments(userId)
     const userSensory = getUserSensoryAssessments(userId)
     const userTcm = getUserTcmAssessments(userId)
     // Use saved doctor review when available, fall back to current input state
     const savedReview = getUserDoctorReview(userId)
+    const useDraftInputs = selectedUser === userId
 
     const latestMoca = userAssessments
       .filter((assessment) => assessment.assessment_type === "MOCA")
@@ -1162,16 +1386,16 @@ export function AdminPanel() {
       labels.tcm,
       `${contentLabels.primaryConstitution}: ${latestTcm?.primary_constitution ? getConstitutionLabelForLanguage(latestTcm.primary_constitution, language) : labels.unknown}`,
       `${contentLabels.tcmScore}: ${latestTcm?.overall_score ?? labels.unknown}`,
-      `${contentLabels.tcmConstitutionDoctor}: ${savedReview?.tcm_constitution || tcmConstitutionInput || labels.unknown}`,
-      `${contentLabels.tongueObservation}: ${savedReview?.tongue_observation || tongueObservationInput || labels.unknown}`,
-      `${contentLabels.faceObservation}: ${savedReview?.face_observation || faceObservationInput || labels.unknown}`,
-      `${contentLabels.questionnaireInterpretation}: ${savedReview?.questionnaire_interpretation || questionnaireInterpretationInput || labels.unknown}`,
-      `${labels.diagnosis}: ${savedReview?.tcm_diagnosis || tcmDiagnosisInput || labels.unknown}`,
-      `${labels.treatmentPlan}: ${savedReview?.therapy_plan || tcmTherapyPlanInput || labels.unknown}`,
-      `${contentLabels.dietaryAdvice}: ${savedReview?.dietary_advice || dietaryAdviceInput || labels.unknown}`,
-      `${contentLabels.followUpRecommendation}: ${savedReview?.follow_up_recommendation || followUpRecommendationInput || labels.unknown}`,
-      `${contentLabels.doctorName}: ${savedReview?.doctor_name || doctorNameInput || labels.unknown}`,
-      `${contentLabels.reviewDate}: ${savedReview?.review_date || reviewDateInput || labels.unknown}`,
+      `${contentLabels.tcmConstitutionDoctor}: ${savedReview?.tcm_constitution || (useDraftInputs ? tcmConstitutionInput : "") || labels.unknown}`,
+      `${contentLabels.tongueObservation}: ${savedReview?.tongue_observation || (useDraftInputs ? tongueObservationInput : "") || labels.unknown}`,
+      `${contentLabels.faceObservation}: ${savedReview?.face_observation || (useDraftInputs ? faceObservationInput : "") || labels.unknown}`,
+      `${contentLabels.questionnaireInterpretation}: ${savedReview?.questionnaire_interpretation || (useDraftInputs ? questionnaireInterpretationInput : "") || labels.unknown}`,
+      `${labels.diagnosis}: ${tcmReviewPendingText}`,
+      `${labels.treatmentPlan}: ${savedReview?.therapy_plan || (useDraftInputs ? tcmTherapyPlanInput : "") || labels.unknown}`,
+      `${contentLabels.dietaryAdvice}: ${savedReview?.dietary_advice || (useDraftInputs ? dietaryAdviceInput : "") || labels.unknown}`,
+      `${contentLabels.followUpRecommendation}: ${tcmReviewPendingText}`,
+      `${contentLabels.doctorName}: ${savedReview?.doctor_name || (useDraftInputs ? doctorNameInput : "") || labels.unknown}`,
+      `${contentLabels.reviewDate}: ${savedReview?.review_date || (useDraftInputs ? reviewDateInput : "") || labels.unknown}`,
       "",
       // Questionnaire Q&A section
       `── ${contentLabels.questionnaireResponses} ──`,
@@ -1207,8 +1431,8 @@ export function AdminPanel() {
       "",
       labels.finalPlan,
       `${contentLabels.riskTier}: ${finalRisk}`,
-      `${labels.finalSummary}: ${finalSummaryInput || labels.unknown}`,
-      `${labels.eegNote}.`,
+      `${labels.finalSummary}: ${useDraftInputs ? (finalSummaryInput || labels.unknown) : labels.unknown}`,
+      `${eegPendingText}.`,
       "",
       `-- ${labels.doctorInputs} --`,
     ].join("\n")
@@ -1310,6 +1534,91 @@ export function AdminPanel() {
     setTimeout(() => {
       printWindow.print()
     }, 150)
+  }
+
+  const saveTcmAssessmentResult = async () => {
+    if (!selectedUser) return
+
+    const parseNullableNumber = (value: string) => {
+      const trimmed = value.trim()
+      if (!trimmed) return null
+      const parsed = Number(trimmed)
+      return Number.isFinite(parsed) ? parsed : null
+    }
+
+    try {
+      const latestAnyAssessment = getLatestTcmAssessment(selectedUser)
+      const latestNewBuildAssessment = getUserTcmAssessments(selectedUser)
+        .filter((assessment) => assessment.data_source !== "old_build")
+        .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime())[0]
+
+      const recommendationList = tcmAssessmentRecommendationsInput
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+
+      const primaryScore = parseNullableNumber(tcmAssessmentPrimaryScoreInput)
+      const overallScore = parseNullableNumber(tcmAssessmentOverallScoreInput)
+
+      const payload = {
+        user_id: selectedUser,
+        primary_constitution: tcmAssessmentConstitutionInput.trim() || "Unknown",
+        primary_score: primaryScore,
+        overall_score: overallScore,
+        recommendations: recommendationList,
+        answers: {
+          questionnaire: latestAnyAssessment?.answers?.questionnaire || {},
+          pulse_assessment: latestAnyAssessment?.answers?.pulse_assessment,
+          tongue_image_url: latestAnyAssessment?.answers?.tongue_image_url || null,
+          face_image_url: latestAnyAssessment?.answers?.face_image_url || null,
+          uploaded_image_ids: latestAnyAssessment?.answers?.uploaded_image_ids || [],
+        },
+        completed_at: new Date().toISOString(),
+      }
+
+      let savedRecord: TCMAssessment | null = null
+
+      if (latestNewBuildAssessment?.id) {
+        const { data, error } = await supabase
+          .from("tcm_assessments")
+          .update(payload)
+          .eq("id", latestNewBuildAssessment.id)
+          .select("*")
+          .single()
+        if (error) throw error
+        savedRecord = { ...(data as TCMAssessment), data_source: "new_build" }
+      } else {
+        const { data, error } = await supabase.from("tcm_assessments").insert(payload).select("*").single()
+        if (error) throw error
+        savedRecord = { ...(data as TCMAssessment), data_source: "new_build" }
+      }
+
+      if (savedRecord) {
+        setTcmAssessments((prev) => {
+          const withoutSaved = prev.filter((assessment) => assessment.id !== savedRecord!.id)
+          return [savedRecord as TCMAssessment, ...withoutSaved].sort(
+            (a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime(),
+          )
+        })
+      }
+
+      setWorkflowMessage(
+        localizeText("TCM assessment results saved for this patient.", {
+          zh: "该患者的中医评估结果已保存。",
+          yue: "該患者的中醫評估結果已保存。",
+          fr: "Les resultats d'evaluation MTC de ce patient ont ete enregistres.",
+        }),
+      )
+    } catch (error) {
+      console.error("Failed to save TCM assessment results:", error)
+      setWorkflowMessage(
+        localizeText("Could not save TCM assessment results.", {
+          zh: "无法保存中医评估结果。",
+          yue: "無法保存中醫評估結果。",
+          fr: "Impossible d'enregistrer les resultats d'evaluation MTC.",
+        }),
+      )
+    }
   }
 
   const saveDoctorReview = async (reviewStatus: TCMReviewStatus) => {
@@ -1497,6 +1806,10 @@ export function AdminPanel() {
             <Button onClick={exportData} className="flex items-center space-x-2">
               <Download className="w-4 h-4" />
               <span>{t("admin.export_csv")}</span>
+            </Button>
+            <Button onClick={exportAllTcmResults} variant="outline" className="flex items-center space-x-2 bg-transparent">
+              <Download className="w-4 h-4" />
+              <span>{localizeText("Export TCM (all builds)", { zh: "导出中医（全部版本）", yue: "導出中醫（全部版本）", fr: "Exporter MTC (toutes versions)" })}</span>
             </Button>
             <ThemeToggle />
             <Button onClick={handleLogout} variant="outline" className="flex items-center space-x-2 bg-transparent">
@@ -1694,7 +2007,7 @@ export function AdminPanel() {
                     value={tcmImageFilter}
                     onChange={(event) =>
                       setTcmImageFilter(
-                        event.target.value as "all" | "complete" | "missing_images" | "missing_questionnaire",
+                        event.target.value as "all" | "complete" | "missing_images" | "missing_questionnaire" | "data_unavailable",
                       )
                     }
                     className="h-10 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:ring-2 focus:ring-blue-300"
@@ -1703,9 +2016,23 @@ export function AdminPanel() {
                     <option value="complete">{localizeText("Questionnaire + Images", { zh: "问卷+图片完整", yue: "問卷+圖片完整", fr: "Questionnaire + images" })}</option>
                     <option value="missing_images">{localizeText("Missing images (questionnaire OK)", { zh: "缺少图片（问卷已完成）", yue: "缺少圖片（問卷已完成）", fr: "Images manquantes (questionnaire OK)" })}</option>
                     <option value="missing_questionnaire">{localizeText("Missing questionnaire", { zh: "缺少问卷", yue: "缺少問卷", fr: "Questionnaire manquant" })}</option>
+                    <option value="data_unavailable">{localizeText("TCM data unavailable", { zh: "中医数据不可用", yue: "中醫數據不可用", fr: "Donnees MTC indisponibles" })}</option>
                   </select>
                 </div>
               </div>
+
+              {tcmDataLoadIssue && (
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  {localizeText(
+                    "TCM questionnaire data could not be loaded. Patient status may be incomplete until data access is restored.",
+                    {
+                      zh: "中医问卷数据暂时无法加载。在恢复数据访问前，患者状态可能显示不完整。",
+                      yue: "中醫問卷數據暫時無法加載。在恢復數據訪問前，患者狀態可能顯示不完整。",
+                      fr: "Les donnees du questionnaire MTC n'ont pas pu etre chargees. Le statut patient peut rester incomplet tant que l'acces aux donnees n'est pas retabli.",
+                    },
+                  )}
+                </div>
+              )}
 
               <div className="mb-4 overflow-auto rounded-lg border border-slate-200">
                 <table className="min-w-full text-sm">
@@ -2015,9 +2342,16 @@ export function AdminPanel() {
                       {getUserTcmAssessments(selectedUser).map((assessment) => (
                         <div key={assessment.id} className="border rounded-lg p-4 space-y-3 bg-emerald-50/60">
                           <div className="flex justify-between items-center flex-wrap gap-2">
-                            <Badge variant="outline" className="bg-emerald-100 text-emerald-800">
-                              {getConstitutionLabelForLanguage(assessment.primary_constitution, reportLanguage)}
-                            </Badge>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="outline" className="bg-emerald-100 text-emerald-800">
+                                {getConstitutionLabelForLanguage(assessment.primary_constitution, reportLanguage)}
+                              </Badge>
+                              <Badge variant="outline" className="bg-white text-slate-700 border-slate-300">
+                                {assessment.data_source === "old_build"
+                                  ? localizeText("Old build", { zh: "旧版本", yue: "舊版本", fr: "Ancienne version" })
+                                  : localizeText("New build", { zh: "新版本", yue: "新版本", fr: "Nouvelle version" })}
+                              </Badge>
+                            </div>
                             <span className="text-sm text-gray-600">
                               {assessment.completed_at
                                 ? new Date(assessment.completed_at).toLocaleDateString()
@@ -2405,6 +2739,59 @@ export function AdminPanel() {
                         </div>
 
                         <div className="mt-4 grid gap-4 md:grid-cols-3">
+                          <div className="space-y-2 md:col-span-3">
+                            <Label htmlFor="tcm-assessment-constitution">{localizeText("TCM assessment primary constitution", { zh: "中医评估主要体质", yue: "中醫評估主要體質", fr: "Constitution principale de l'evaluation MTC" })}</Label>
+                            <AssessmentInput
+                              id="tcm-assessment-constitution"
+                              value={tcmAssessmentConstitutionInput}
+                              onChange={(event) => setTcmAssessmentConstitutionInput(event.target.value)}
+                              placeholder={localizeText("Example: Qi Deficiency", { zh: "例如：气虚质", yue: "例如：氣虛質", fr: "Exemple : Deficience du Qi" })}
+                            />
+                          </div>
+
+                          <div className="space-y-2 md:col-span-1">
+                            <Label htmlFor="tcm-assessment-primary-score">{localizeText("Primary constitution score (%)", { zh: "主要体质分（%）", yue: "主要體質分（%）", fr: "Score de constitution principale (%)" })}</Label>
+                            <AssessmentInput
+                              id="tcm-assessment-primary-score"
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={tcmAssessmentPrimaryScoreInput}
+                              onChange={(event) => setTcmAssessmentPrimaryScoreInput(event.target.value)}
+                              placeholder="0-100"
+                            />
+                          </div>
+
+                          <div className="space-y-2 md:col-span-1">
+                            <Label htmlFor="tcm-assessment-overall-score">{localizeText("Overall balance score (/100)", { zh: "总体平衡分（/100）", yue: "總體平衡分（/100）", fr: "Score d'equilibre global (/100)" })}</Label>
+                            <AssessmentInput
+                              id="tcm-assessment-overall-score"
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={tcmAssessmentOverallScoreInput}
+                              onChange={(event) => setTcmAssessmentOverallScoreInput(event.target.value)}
+                              placeholder="0-100"
+                            />
+                          </div>
+
+                          <div className="space-y-2 md:col-span-1 flex items-end">
+                            <Button onClick={saveTcmAssessmentResult} variant="outline" className="w-full">
+                              {localizeText("Save TCM assessment results", { zh: "保存中医评估结果", yue: "保存中醫評估結果", fr: "Enregistrer les resultats MTC" })}
+                            </Button>
+                          </div>
+
+                          <div className="space-y-2 md:col-span-3">
+                            <Label htmlFor="tcm-assessment-recommendations">{localizeText("Patient recommendations (one per line)", { zh: "患者建议（每行一条）", yue: "患者建議（每行一條）", fr: "Recommandations patient (une par ligne)" })}</Label>
+                            <AssessmentTextarea
+                              id="tcm-assessment-recommendations"
+                              value={tcmAssessmentRecommendationsInput}
+                              onChange={(event) => setTcmAssessmentRecommendationsInput(event.target.value)}
+                              placeholder={localizeText("Lifestyle, diet and regimen recommendations", { zh: "生活方式、饮食与调理建议", yue: "生活方式、飲食與調理建議", fr: "Recommandations mode de vie, alimentation et regimen" })}
+                              rows={3}
+                            />
+                          </div>
+
                           <div className="space-y-2 md:col-span-1">
                             <Label htmlFor="report-language">{localizeText("Report language", { zh: "报告语言", yue: "報告語言", fr: "Langue du rapport" })}</Label>
                             <select
