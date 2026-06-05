@@ -218,6 +218,8 @@ type ReportContentLabels = {
   cityProvinceValue: string
   hospitalValue: string
   olfactory: string
+  olfactoryDiagnosis: string
+  olfactoryRecommendation: string
   auditory: string
   visual: string
   primaryConstitution: string
@@ -243,6 +245,8 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     cityProvinceValue: "Guangzhou / Guangdong",
     hospitalValue: "Nanfang Hospital of Integrated Traditional Chinese and Western Medicine",
     olfactory: "Olfactory",
+    olfactoryDiagnosis: "Olfactory Diagnosis",
+    olfactoryRecommendation: "Olfactory Recommendation",
     auditory: "Auditory",
     visual: "Visual",
     primaryConstitution: "Primary Constitution",
@@ -266,6 +270,8 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     cityProvinceValue: "广州 / 广东",
     hospitalValue: "南方医科大学中西医结合医院",
     olfactory: "嗅觉",
+    olfactoryDiagnosis: "嗅觉诊断",
+    olfactoryRecommendation: "嗅觉建议",
     auditory: "听觉",
     visual: "视觉",
     primaryConstitution: "主要体质",
@@ -289,6 +295,8 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     cityProvinceValue: "廣州 / 廣東",
     hospitalValue: "南方醫科大學中西醫結合醫院",
     olfactory: "嗅覺",
+    olfactoryDiagnosis: "嗅覺診斷",
+    olfactoryRecommendation: "嗅覺建議",
     auditory: "聽覺",
     visual: "視覺",
     primaryConstitution: "主要體質",
@@ -312,6 +320,8 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     cityProvinceValue: "Guangzhou / Guangdong",
     hospitalValue: "Hopital integre de medecine chinoise et occidentale de Nanfang",
     olfactory: "Olfactif",
+    olfactoryDiagnosis: "Diagnostic olfactif",
+    olfactoryRecommendation: "Recommandation olfactive",
     auditory: "Auditif",
     visual: "Visuel",
     primaryConstitution: "Constitution principale",
@@ -369,6 +379,108 @@ const getLikertLabelForUi = (score: number, language: "en" | "zh" | "yue" | "fr"
   if (language === "yue") return labels.yue
   if (language === "fr") return labels.fr
   return labels.en
+}
+
+const getOlfactoryDiagnosisAndRecommendation = (
+  classification: string | null | undefined,
+  language: ReportLanguage,
+): { diagnosis: string; recommendation: string } => {
+  const normalized = (classification || "").toLowerCase()
+
+  if (!normalized) {
+    return {
+      diagnosis: language === "zh-CN" ? "未提供" : language === "zh-HK" ? "未提供" : language === "fr" ? "Non renseigne" : "Not provided",
+      recommendation:
+        language === "zh-CN"
+          ? "未提供"
+          : language === "zh-HK"
+            ? "未提供"
+            : language === "fr"
+              ? "Non renseigne"
+              : "Not provided",
+    }
+  }
+
+  const severe = normalized.includes("severe") || normalized.includes("anosmia")
+  const mild = normalized.includes("mild") || normalized.includes("moderate") || normalized.includes("hyposmia")
+
+  if (language === "zh-CN") {
+    if (severe) {
+      return {
+        diagnosis: "重度嗅觉减退/缺失",
+        recommendation: "建议尽快转诊耳鼻喉科及神经科，进行进一步嗅觉与神经系统评估，并加强居家安全防护。",
+      }
+    }
+    if (mild) {
+      return {
+        diagnosis: "轻中度嗅觉减退",
+        recommendation: "建议进行嗅觉训练并于4-8周后复测；若持续下降，建议专科随访。",
+      }
+    }
+    return {
+      diagnosis: "嗅觉功能基本正常",
+      recommendation: "建议保持规律复查与健康生活方式，继续监测嗅觉变化。",
+    }
+  }
+
+  if (language === "zh-HK") {
+    if (severe) {
+      return {
+        diagnosis: "重度嗅覺減退/缺失",
+        recommendation: "建議儘快轉介耳鼻喉科及神經科作進一步評估，並加強家居安全防護。",
+      }
+    }
+    if (mild) {
+      return {
+        diagnosis: "輕中度嗅覺減退",
+        recommendation: "建議進行嗅覺訓練並於4-8週後複測；如持續下降，建議專科跟進。",
+      }
+    }
+    return {
+      diagnosis: "嗅覺功能基本正常",
+      recommendation: "建議保持定期複查及健康生活方式，持續監測嗅覺變化。",
+    }
+  }
+
+  if (language === "fr") {
+    if (severe) {
+      return {
+        diagnosis: "Hyposmie severe ou anosmie",
+        recommendation:
+          "Orientation rapide en ORL et neurologie pour evaluation complementaire, avec consignes de securite a domicile.",
+      }
+    }
+    if (mild) {
+      return {
+        diagnosis: "Hyposmie legere a moderee",
+        recommendation:
+          "Reeducation olfactive et recontrole dans 4 a 8 semaines; suivi specialise si aggravation persistante.",
+      }
+    }
+    return {
+      diagnosis: "Fonction olfactive globalement preservee",
+      recommendation: "Poursuivre la surveillance clinique et les mesures d'hygiene de vie.",
+    }
+  }
+
+  if (severe) {
+    return {
+      diagnosis: "Severe olfactory dysfunction / anosmia",
+      recommendation:
+        "Prompt ENT and neurology referral is advised for further workup, with reinforced home safety precautions.",
+    }
+  }
+  if (mild) {
+    return {
+      diagnosis: "Mild-to-moderate olfactory dysfunction",
+      recommendation:
+        "Recommend structured smell training and repeat screening in 4-8 weeks; escalate to specialty follow-up if persistent.",
+    }
+  }
+  return {
+    diagnosis: "Olfactory function broadly preserved",
+    recommendation: "Maintain routine follow-up and continue monitoring for smell changes.",
+  }
 }
 
 export interface Assessment {
@@ -1348,6 +1460,7 @@ export function AdminPanel() {
       .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
     const latestTcm = userTcm
       .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime())[0]
+    const olfactoryPlan = getOlfactoryDiagnosisAndRecommendation(latestOlfactory?.classification, language)
 
     const mocaRisk = latestMoca && latestMoca.total_score <= 25
     const mmseRisk = latestMmse && latestMmse.total_score <= 24
@@ -1380,59 +1493,18 @@ export function AdminPanel() {
       "",
       labels.sensory,
       `${contentLabels.olfactory}: ${latestOlfactory ? `${latestOlfactory.raw_score ?? "-"} (${latestOlfactory.classification || "-"})` : labels.unknown}`,
+      `${contentLabels.olfactoryDiagnosis}: ${olfactoryPlan.diagnosis}`,
+      `${contentLabels.olfactoryRecommendation}: ${olfactoryPlan.recommendation}`,
       `${contentLabels.auditory}: ${latestAuditory ? `${latestAuditory.normalized_score ?? "-"} (${latestAuditory.classification || "-"})` : labels.unknown}`,
       `${contentLabels.visual}: ${latestVisual ? `${latestVisual.normalized_score ?? "-"} (${latestVisual.classification || "-"})` : labels.unknown}`,
       "",
       labels.tcm,
-      `${contentLabels.primaryConstitution}: ${latestTcm?.primary_constitution ? getConstitutionLabelForLanguage(latestTcm.primary_constitution, language) : labels.unknown}`,
-      `${contentLabels.tcmScore}: ${latestTcm?.overall_score ?? labels.unknown}`,
-      `${contentLabels.tcmConstitutionDoctor}: ${savedReview?.tcm_constitution || (useDraftInputs ? tcmConstitutionInput : "") || labels.unknown}`,
-      `${contentLabels.tongueObservation}: ${savedReview?.tongue_observation || (useDraftInputs ? tongueObservationInput : "") || labels.unknown}`,
-      `${contentLabels.faceObservation}: ${savedReview?.face_observation || (useDraftInputs ? faceObservationInput : "") || labels.unknown}`,
-      `${contentLabels.questionnaireInterpretation}: ${savedReview?.questionnaire_interpretation || (useDraftInputs ? questionnaireInterpretationInput : "") || labels.unknown}`,
-      `${labels.diagnosis}: ${tcmReviewPendingText}`,
-      `${labels.treatmentPlan}: ${savedReview?.therapy_plan || (useDraftInputs ? tcmTherapyPlanInput : "") || labels.unknown}`,
-      `${contentLabels.dietaryAdvice}: ${savedReview?.dietary_advice || (useDraftInputs ? dietaryAdviceInput : "") || labels.unknown}`,
-      `${contentLabels.followUpRecommendation}: ${tcmReviewPendingText}`,
-      `${contentLabels.doctorName}: ${savedReview?.doctor_name || (useDraftInputs ? doctorNameInput : "") || labels.unknown}`,
-      `${contentLabels.reviewDate}: ${savedReview?.review_date || (useDraftInputs ? reviewDateInput : "") || labels.unknown}`,
-      "",
-      // Questionnaire Q&A section
-      `── ${contentLabels.questionnaireResponses} ──`,
-      ...(latestTcm?.answers?.questionnaire
-        ? (() => {
-            const qa = latestTcm.answers!.questionnaire!
-            const grouped: Record<string, string[]> = {}
-            for (const [qid, score] of Object.entries(qa)) {
-              const q = TCM_QUESTIONS_MAP[qid]
-              if (!q) continue
-              if (!grouped[q.constitution]) grouped[q.constitution] = []
-              grouped[q.constitution].push(
-                `  • ${language === "en" ? q.text : language === "fr" ? q.text : q.textZh}: ${getLikertLabelForReport(score as number, language)}`
-              )
-            }
-            const lines: string[] = []
-            for (const [constitution, answers] of Object.entries(grouped)) {
-              lines.push(`[${getConstitutionLabelForLanguage(constitution, language)}]`)
-              lines.push(...answers)
-            }
-            return lines
-          })()
-        : [`  ${labels.unknown}`]),
-      "",
-      // Auto-generated recommendations from questionnaire
-      ...(latestTcm?.recommendations && latestTcm.recommendations.length > 0
-        ? [
-            `── ${contentLabels.autoRecommendations} ──`,
-            ...latestTcm.recommendations.map((r) => `  • ${r}`),
-            "",
-          ]
-        : []),
+      tcmReviewPendingText,
+      `${labels.eegNote}: ${eegPendingText}`,
       "",
       labels.finalPlan,
       `${contentLabels.riskTier}: ${finalRisk}`,
       `${labels.finalSummary}: ${useDraftInputs ? (finalSummaryInput || labels.unknown) : labels.unknown}`,
-      `${eegPendingText}.`,
       "",
       `-- ${labels.doctorInputs} --`,
     ].join("\n")
