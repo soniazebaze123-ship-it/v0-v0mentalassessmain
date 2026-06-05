@@ -235,6 +235,7 @@ type ReportContentLabels = {
   questionnaireResponses: string
   autoRecommendations: string
   riskTier: string
+  dementiaRiskRecommendation: string
   riskHigh: string
   riskModerate: string
   riskLow: string
@@ -262,6 +263,7 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     questionnaireResponses: "TCM Questionnaire Responses",
     autoRecommendations: "Auto-generated Health Recommendations",
     riskTier: "Risk Tier",
+    dementiaRiskRecommendation: "Dementia Risk Recommendation",
     riskHigh: "HIGH",
     riskModerate: "MODERATE",
     riskLow: "LOW",
@@ -287,6 +289,7 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     questionnaireResponses: "中医问卷作答",
     autoRecommendations: "问卷自动生成健康建议",
     riskTier: "风险等级",
+    dementiaRiskRecommendation: "痴呆风险建议",
     riskHigh: "高",
     riskModerate: "中",
     riskLow: "低",
@@ -312,6 +315,7 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     questionnaireResponses: "中醫問卷作答",
     autoRecommendations: "問卷自動生成健康建議",
     riskTier: "風險等級",
+    dementiaRiskRecommendation: "認知風險建議",
     riskHigh: "高",
     riskModerate: "中",
     riskLow: "低",
@@ -337,10 +341,42 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     questionnaireResponses: "Reponses au questionnaire MTC",
     autoRecommendations: "Recommandations de sante auto-generees",
     riskTier: "Niveau de risque",
+    dementiaRiskRecommendation: "Recommandation de risque de demence",
     riskHigh: "ELEVE",
     riskModerate: "MODERE",
     riskLow: "FAIBLE",
   },
+}
+
+const getDementiaRiskRecommendation = (
+  riskLevel: "high" | "moderate" | "low",
+  language: ReportLanguage,
+) => {
+  if (language === "zh-CN") {
+    if (riskLevel === "high") return "建议尽快转诊记忆门诊/神经科，4周内完成全面认知评估并启动家庭照护计划。"
+    if (riskLevel === "moderate") return "建议8-12周内复评认知功能，优化睡眠、运动与慢病管理，必要时专科随访。"
+    return "当前风险较低，建议每6-12个月常规筛查并保持健康生活方式。"
+  }
+  if (language === "zh-HK") {
+    if (riskLevel === "high") return "建議盡快轉介記憶門診/神經科，於4週內完成全面認知評估並啟動家庭照護計劃。"
+    if (riskLevel === "moderate") return "建議8-12週內重評認知功能，改善睡眠、運動及慢病管理，必要時專科跟進。"
+    return "目前風險較低，建議每6-12個月常規篩查並維持健康生活方式。"
+  }
+  if (language === "fr") {
+    if (riskLevel === "high")
+      return "Orientation rapide en consultation memoire/neurologie, evaluation cognitive complete sous 4 semaines et plan d'accompagnement familial."
+    if (riskLevel === "moderate")
+      return "Reevaluation cognitive dans 8 a 12 semaines, optimisation du sommeil, de l'activite physique et des comorbidites; suivi specialise si besoin."
+    return "Risque actuel faible; depistage de routine tous les 6 a 12 mois et maintien d'une hygiene de vie protectrice."
+  }
+
+  if (riskLevel === "high") {
+    return "Recommend urgent memory clinic/neurology referral, full cognitive workup within 4 weeks, and initiation of a family care plan."
+  }
+  if (riskLevel === "moderate") {
+    return "Recommend cognitive reassessment in 8-12 weeks, optimization of sleep/exercise/chronic disease control, and specialist follow-up if concerns persist."
+  }
+  return "Current risk is low; continue routine screening every 6-12 months and maintain protective lifestyle measures."
 }
 
 const CONSTITUTION_LABELS: Record<string, { "zh-CN": string; "zh-HK": string; fr: string }> = {
@@ -1466,12 +1502,11 @@ export function AdminPanel() {
     const mmseRisk = latestMmse && latestMmse.total_score <= 24
     const olfactoryRisk = latestOlfactory?.classification?.toLowerCase().includes("severe")
     const riskFlagCount = [mocaRisk, mmseRisk, olfactoryRisk].filter(Boolean).length
+    const riskLevel: "high" | "moderate" | "low" =
+      riskFlagCount >= 2 ? "high" : riskFlagCount === 1 ? "moderate" : "low"
     const finalRisk =
-      riskFlagCount >= 2
-        ? contentLabels.riskHigh
-        : riskFlagCount === 1
-          ? contentLabels.riskModerate
-          : contentLabels.riskLow
+      riskLevel === "high" ? contentLabels.riskHigh : riskLevel === "moderate" ? contentLabels.riskModerate : contentLabels.riskLow
+    const dementiaRiskRecommendation = getDementiaRiskRecommendation(riskLevel, language)
 
     return [
       labels.reportTitle,
@@ -1504,6 +1539,7 @@ export function AdminPanel() {
       "",
       labels.finalPlan,
       `${contentLabels.riskTier}: ${finalRisk}`,
+      `${contentLabels.dementiaRiskRecommendation}: ${dementiaRiskRecommendation}`,
       `${labels.finalSummary}: ${useDraftInputs ? (finalSummaryInput || labels.unknown) : labels.unknown}`,
       "",
       `-- ${labels.doctorInputs} --`,
