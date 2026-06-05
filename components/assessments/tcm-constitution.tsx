@@ -516,7 +516,7 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
       // Persist full TCM result and uploaded image URLs so face/tongue photos are automatically saved with the assessment.
       if (user?.id) {
         try {
-          await supabase.from("tcm_assessments").insert({
+          const { error: saveError } = await supabase.from("tcm_assessments").insert({
             user_id: user.id,
             primary_constitution: results.primaryConstitution,
             primary_score: results.constitutionScores[results.primaryConstitution],
@@ -539,8 +539,16 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
             recommendations: results.recommendations,
             overall_score: overallScore,
           })
+
+          if (saveError) {
+            throw saveError
+          }
         } catch (error) {
           console.error("Error saving TCM assessment:", error)
+          if (typeof window !== "undefined") {
+            window.alert(uiText("TCM questionnaire results could not be saved. Please retry.", "中医问卷结果未能保存到数据库，请重试。"))
+          }
+          return
         }
       }
 
