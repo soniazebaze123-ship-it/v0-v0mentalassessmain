@@ -777,7 +777,75 @@ const getOlfactoryDiagnosisAndRecommendation = (
   }
 }
 
-const getOlfactoryScoreDisplay = (assessment: SensoryAssessment | undefined, unknownLabel: string) => {
+const getLocalizedGender = (value: string | null | undefined, language: ReportLanguage, unknownLabel: string) => {
+  if (!value) return unknownLabel
+  const normalized = value.toLowerCase()
+  if (language === "zh-CN") {
+    if (normalized === "female") return "女"
+    if (normalized === "male") return "男"
+    if (normalized === "other") return "其他"
+  }
+  if (language === "zh-HK") {
+    if (normalized === "female") return "女"
+    if (normalized === "male") return "男"
+    if (normalized === "other") return "其他"
+  }
+  if (language === "fr") {
+    if (normalized === "female") return "Femme"
+    if (normalized === "male") return "Homme"
+    if (normalized === "other") return "Autre"
+  }
+  return value
+}
+
+const getLocalizedSensoryClassification = (value: string | null | undefined, language: ReportLanguage) => {
+  if (!value) return "-"
+  const normalized = value.toLowerCase()
+  if (language === "zh-CN") {
+    if (normalized.includes("normal")) return "正常"
+    if (normalized.includes("impaired")) return "受损"
+    if (normalized.includes("mild")) return "轻度受损"
+    if (normalized.includes("moderate")) return "中度受损"
+    if (normalized.includes("severe")) return "重度受损"
+  }
+  if (language === "zh-HK") {
+    if (normalized.includes("normal")) return "正常"
+    if (normalized.includes("impaired")) return "受損"
+    if (normalized.includes("mild")) return "輕度受損"
+    if (normalized.includes("moderate")) return "中度受損"
+    if (normalized.includes("severe")) return "重度受損"
+  }
+  if (language === "fr") {
+    if (normalized.includes("normal")) return "Normal"
+    if (normalized.includes("impaired")) return "Altere"
+  }
+  return value
+}
+
+const getSensoryScoreDisplay = (
+  assessment: SensoryAssessment | undefined,
+  language: ReportLanguage,
+  unknownLabel: string,
+  preferredScore: "raw" | "normalized" = "normalized",
+) => {
+  if (!assessment) return unknownLabel
+
+  const scoreCandidates =
+    preferredScore === "raw"
+      ? [assessment.raw_score, assessment.normalized_score]
+      : [assessment.normalized_score, assessment.raw_score]
+
+  const numericScore = scoreCandidates.find((value) => typeof value === "number" && Number.isFinite(value))
+  const localizedClass = getLocalizedSensoryClassification(assessment.classification, language)
+
+  if (typeof numericScore !== "number") {
+    return localizedClass || unknownLabel
+  }
+
+  return `${numericScore} (${localizedClass || "-"})`
+}
+
+const getOlfactoryScoreDisplay = (assessment: SensoryAssessment | undefined, language: ReportLanguage, unknownLabel: string) => {
   if (!assessment) return unknownLabel
 
   const directScore =
@@ -790,10 +858,10 @@ const getOlfactoryScoreDisplay = (assessment: SensoryAssessment | undefined, unk
           : null
 
   if (directScore === null) {
-    return assessment.classification || unknownLabel
+    return getLocalizedSensoryClassification(assessment.classification, language) || unknownLabel
   }
 
-  return `${directScore} (${assessment.classification || "-"})`
+  return `${directScore} (${getLocalizedSensoryClassification(assessment.classification, language) || "-"})`
 }
 
 export interface Assessment {
@@ -1927,7 +1995,7 @@ export function AdminPanel() {
         <div class="grid">
           <div class="field"><div class="label">${escapeHtml(labels.name)}</div><div class="value">${escapeHtml(getUserDisplayName(user))}</div></div>
           <div class="field"><div class="label">${escapeHtml(labels.idNumber)}</div><div class="value">${escapeHtml(user?.national_id || unknown)}</div></div>
-          <div class="field"><div class="label">${escapeHtml(labels.sex)}</div><div class="value">${escapeHtml(user?.gender || unknown)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(labels.sex)}</div><div class="value">${escapeHtml(getLocalizedGender(user?.gender, language, unknown))}</div></div>
           <div class="field"><div class="label">${escapeHtml(labels.dateOfBirth)}</div><div class="value">${escapeHtml(user?.date_of_birth || unknown)}</div></div>
           <div class="field"><div class="label">${escapeHtml(labels.cityProvince)}</div><div class="value">${escapeHtml(contentLabels.cityProvinceValue)}</div></div>
           <div class="field"><div class="label">${escapeHtml(labels.hospital)}</div><div class="value">${escapeHtml(contentLabels.hospitalValue)}</div></div>
@@ -1956,9 +2024,9 @@ export function AdminPanel() {
       <div class="section">
         <div class="section-title">${escapeHtml(labels.sensory)}</div>
         <div class="grid">
-          <div class="field"><div class="label">${escapeHtml(contentLabels.olfactory)}</div><div class="value">${escapeHtml(getOlfactoryScoreDisplay(latestOlfactory, unknown))}</div></div>
-          <div class="field"><div class="label">${escapeHtml(contentLabels.auditory)}</div><div class="value">${escapeHtml(latestAuditory ? `${latestAuditory.normalized_score ?? "-"} (${latestAuditory.classification || "-"})` : unknown)}</div></div>
-          <div class="field"><div class="label">${escapeHtml(contentLabels.visual)}</div><div class="value">${escapeHtml(latestVisual ? `${latestVisual.normalized_score ?? "-"} (${latestVisual.classification || "-"})` : unknown)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(contentLabels.olfactory)}</div><div class="value">${escapeHtml(getOlfactoryScoreDisplay(latestOlfactory, language, unknown))}</div></div>
+          <div class="field"><div class="label">${escapeHtml(contentLabels.auditory)}</div><div class="value">${escapeHtml(getSensoryScoreDisplay(latestAuditory, language, unknown, "normalized"))}</div></div>
+          <div class="field"><div class="label">${escapeHtml(contentLabels.visual)}</div><div class="value">${escapeHtml(getSensoryScoreDisplay(latestVisual, language, unknown, "normalized"))}</div></div>
         </div>
       </div>
 
@@ -2069,7 +2137,7 @@ export function AdminPanel() {
       labels.patientInfo,
       `${labels.name}: ${getUserDisplayName(user)}`,
       `${labels.idNumber}: ${user?.national_id || labels.unknown}`,
-      `${labels.sex}: ${user?.gender || labels.unknown}`,
+      `${labels.sex}: ${getLocalizedGender(user?.gender, language, labels.unknown)}`,
       `${labels.dateOfBirth}: ${user?.date_of_birth || labels.unknown}`,
       `${labels.cityProvince}: ${contentLabels.cityProvinceValue}`,
       `${labels.hospital}: ${contentLabels.hospitalValue}`,
@@ -2083,11 +2151,11 @@ export function AdminPanel() {
         : [`- ${labels.unknown}`]),
       "",
       labels.sensory,
-      `${contentLabels.olfactory}: ${getOlfactoryScoreDisplay(latestOlfactory, labels.unknown)}`,
+      `${contentLabels.olfactory}: ${getOlfactoryScoreDisplay(latestOlfactory, language, labels.unknown)}`,
       `${contentLabels.olfactoryDiagnosis}: ${olfactoryPlan.diagnosis}`,
       `${contentLabels.olfactoryRecommendation}: ${olfactoryPlan.recommendation}`,
-      `${contentLabels.auditory}: ${latestAuditory ? `${latestAuditory.normalized_score ?? "-"} (${latestAuditory.classification || "-"})` : labels.unknown}`,
-      `${contentLabels.visual}: ${latestVisual ? `${latestVisual.normalized_score ?? "-"} (${latestVisual.classification || "-"})` : labels.unknown}`,
+      `${contentLabels.auditory}: ${getSensoryScoreDisplay(latestAuditory, language, labels.unknown, "normalized")}`,
+      `${contentLabels.visual}: ${getSensoryScoreDisplay(latestVisual, language, labels.unknown, "normalized")}`,
       "",
       labels.tcm,
       labels.tcmNeedsConfirmation,
