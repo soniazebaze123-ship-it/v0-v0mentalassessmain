@@ -295,6 +295,7 @@ type ReportLabels = {
   cognitive: string
   sensory: string
   tcm: string
+  eegSection: string
   finalPlan: string
   doctorInputs: string
   treatmentPlan: string
@@ -321,11 +322,12 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cognitive: "Section 2: Cognitive Assessment",
     sensory: "Section 3: Sensory Assessment",
     tcm: "Section 4: TCM Assessment",
-    finalPlan: "Section 5: Final Recommendation",
+    eegSection: "Section 5: EEG Report",
+    finalPlan: "Section 6: Final Recommendation",
     doctorInputs: "Doctor Inputs",
     treatmentPlan: "Treatment Plan",
     diagnosis: "TCM Diagnosis",
-    tcmNeedsConfirmation: "a doctor needs to confirm",
+    tcmNeedsConfirmation: "A doctor need to confirm",
     finalSummary: "Final Clinical Summary",
     reportDate: "Report Date",
     name: "Name",
@@ -345,7 +347,8 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cognitive: "第二部分：认知评估",
     sensory: "第三部分：感觉评估",
     tcm: "第四部分：中医评估",
-    finalPlan: "第五部分：最终建议",
+    eegSection: "第五部分：脑电图报告",
+    finalPlan: "第六部分：最终建议",
     doctorInputs: "医生补充",
     treatmentPlan: "治疗方案",
     diagnosis: "中医诊断",
@@ -369,7 +372,8 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cognitive: "第二部分：認知評估",
     sensory: "第三部分：感官評估",
     tcm: "第四部分：中醫評估",
-    finalPlan: "第五部分：最終建議",
+    eegSection: "第五部分：腦電圖報告",
+    finalPlan: "第六部分：最終建議",
     doctorInputs: "醫生補充",
     treatmentPlan: "治療方案",
     diagnosis: "中醫診斷",
@@ -393,7 +397,8 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cognitive: "Section 2: Evaluation cognitive",
     sensory: "Section 3: Evaluation sensorielle",
     tcm: "Section 4: Evaluation MTC",
-    finalPlan: "Section 5: Recommandation finale",
+    eegSection: "Section 5: Rapport EEG",
+    finalPlan: "Section 6: Recommandation finale",
     doctorInputs: "Saisie medecin",
     treatmentPlan: "Plan therapeutique",
     diagnosis: "Diagnostic MTC",
@@ -439,6 +444,13 @@ type ReportContentLabels = {
   riskHigh: string
   riskModerate: string
   riskLow: string
+  mocaFinal: string
+  mmseFinal: string
+  mocaTasks: string
+  mmseTasks: string
+  score: string
+  eegStatus: string
+  eegSummary: string
 }
 
 const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
@@ -468,6 +480,13 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     riskHigh: "HIGH",
     riskModerate: "MODERATE",
     riskLow: "LOW",
+    mocaFinal: "MoCA Final",
+    mmseFinal: "MMSE Final",
+    mocaTasks: "MoCA Tasks",
+    mmseTasks: "MMSE Tasks",
+    score: "Score",
+    eegStatus: "Status",
+    eegSummary: "Preliminary summary",
   },
   "zh-CN": {
     cityProvinceValue: "广州 / 广东",
@@ -495,6 +514,13 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     riskHigh: "高",
     riskModerate: "中",
     riskLow: "低",
+    mocaFinal: "MoCA 总分",
+    mmseFinal: "MMSE 总分",
+    mocaTasks: "MoCA 分项",
+    mmseTasks: "MMSE 分项",
+    score: "分数",
+    eegStatus: "状态",
+    eegSummary: "初步说明",
   },
   "zh-HK": {
     cityProvinceValue: "廣州 / 廣東",
@@ -522,6 +548,13 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     riskHigh: "高",
     riskModerate: "中",
     riskLow: "低",
+    mocaFinal: "MoCA 總分",
+    mmseFinal: "MMSE 總分",
+    mocaTasks: "MoCA 分項",
+    mmseTasks: "MMSE 分項",
+    score: "分數",
+    eegStatus: "狀態",
+    eegSummary: "初步說明",
   },
   fr: {
     cityProvinceValue: "Guangzhou / Guangdong",
@@ -549,6 +582,13 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     riskHigh: "ELEVE",
     riskModerate: "MODERE",
     riskLow: "FAIBLE",
+    mocaFinal: "MoCA final",
+    mmseFinal: "MMSE final",
+    mocaTasks: "Taches MoCA",
+    mmseTasks: "Taches MMSE",
+    score: "Score",
+    eegStatus: "Statut",
+    eegSummary: "Resume preliminaire",
   },
 }
 
@@ -1794,14 +1834,8 @@ export function AdminPanel() {
 
     const doctorName = (useDraftInputs ? doctorNameInput : savedReview?.doctor_name) || unknown
     const reviewDate = (useDraftInputs ? reviewDateInput : savedReview?.review_date) || unknown
-    const tcmConstitution = (useDraftInputs ? tcmConstitutionInput : savedReview?.tcm_constitution) || latestTcm?.primary_constitution || unknown
-    const tcmPrimaryScore = typeof latestTcm?.primary_score === "number" ? String(latestTcm.primary_score) : unknown
-    const tcmOverallScore = typeof latestTcm?.overall_score === "number" ? String(latestTcm.overall_score) : unknown
-    const questionnaireInterpretation =
-      (useDraftInputs ? questionnaireInterpretationInput : savedReview?.questionnaire_interpretation) || unknown
-    const eegStatusLabel = language === "zh-CN" ? "状态" : language === "zh-HK" ? "狀態" : language === "fr" ? "Statut" : "Status"
-    const eegSummaryLabel =
-      language === "zh-CN" ? "初步说明" : language === "zh-HK" ? "初步說明" : language === "fr" ? "Resume preliminaire" : "Preliminary summary"
+    const eegStatusLabel = contentLabels.eegStatus
+    const eegSummaryLabel = contentLabels.eegSummary
     const eegSummary =
       riskLevel === "high"
         ? language === "zh-CN"
@@ -1903,17 +1937,17 @@ export function AdminPanel() {
       <div class="section">
         <div class="section-title">${escapeHtml(labels.cognitive)}</div>
         <div class="kpis">
-          <div class="kpi"><div class="k">MoCA Final</div><div class="v">${latestMoca ? `${latestMoca.total_score}/30` : "-"}</div></div>
-          <div class="kpi"><div class="k">MMSE Final</div><div class="v">${latestMmse ? `${latestMmse.total_score}/30` : "-"}</div></div>
+          <div class="kpi"><div class="k">${escapeHtml(contentLabels.mocaFinal)}</div><div class="v">${latestMoca ? `${latestMoca.total_score}/30` : "-"}</div></div>
+          <div class="kpi"><div class="k">${escapeHtml(contentLabels.mmseFinal)}</div><div class="v">${latestMmse ? `${latestMmse.total_score}/30` : "-"}</div></div>
           <div class="kpi"><div class="k">${escapeHtml(contentLabels.riskTier)}</div><div class="v">${escapeHtml(riskLabel)}</div></div>
         </div>
         <div class="score-layout">
           <table>
-            <thead><tr><th>MoCA Tasks</th><th class="score-cell">Score</th></tr></thead>
+            <thead><tr><th>${escapeHtml(contentLabels.mocaTasks)}</th><th class="score-cell">${escapeHtml(contentLabels.score)}</th></tr></thead>
             <tbody>${mocaRows}</tbody>
           </table>
           <table>
-            <thead><tr><th>MMSE Tasks</th><th class="score-cell">Score</th></tr></thead>
+            <thead><tr><th>${escapeHtml(contentLabels.mmseTasks)}</th><th class="score-cell">${escapeHtml(contentLabels.score)}</th></tr></thead>
             <tbody>${mmseRows}</tbody>
           </table>
         </div>
@@ -1930,12 +1964,13 @@ export function AdminPanel() {
 
       <div class="section">
         <div class="section-title">${escapeHtml(labels.tcm)}</div>
+        <div class="textarea">${escapeHtml(labels.tcmNeedsConfirmation)}</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">${escapeHtml(labels.eegSection)}</div>
         <div class="grid">
-          <div class="field"><div class="label">${escapeHtml(contentLabels.primaryConstitution)}</div><div class="value">${escapeHtml(tcmConstitution)}</div></div>
-          <div class="field"><div class="label">${escapeHtml(contentLabels.tcmScore)}</div><div class="value">${escapeHtml(tcmPrimaryScore)}</div></div>
-          <div class="field"><div class="label">Overall TCM Score</div><div class="value">${escapeHtml(tcmOverallScore)}</div></div>
-          <div class="field"><div class="label">${escapeHtml(contentLabels.questionnaireInterpretation)}</div><div class="value">${escapeHtml(questionnaireInterpretation)}</div></div>
-          <div class="field"><div class="label">${escapeHtml(labels.eegNote)}</div><div class="value">${escapeHtml(`${eegStatusLabel}: ${labels.eegInProcess}`)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(eegStatusLabel)}</div><div class="value">${escapeHtml(labels.eegInProcess)}</div></div>
         </div>
         <div class="textarea"><strong>${escapeHtml(eegSummaryLabel)}:</strong> ${escapeHtml(eegSummary)}</div>
       </div>
@@ -2000,21 +2035,8 @@ export function AdminPanel() {
       riskLevel === "high" ? contentLabels.riskHigh : riskLevel === "moderate" ? contentLabels.riskModerate : contentLabels.riskLow
     const dementiaRiskRecommendation = getDementiaRiskRecommendation(riskLevel, language)
 
-    const tcmConstitution = (useDraftInputs ? tcmConstitutionInput : savedReview?.tcm_constitution) || latestTcm?.primary_constitution || labels.unknown
-    const tcmPrimaryScore = typeof latestTcm?.primary_score === "number" ? String(latestTcm.primary_score) : labels.unknown
-    const tcmOverallScore = typeof latestTcm?.overall_score === "number" ? String(latestTcm.overall_score) : labels.unknown
-    const tongueObservation = (useDraftInputs ? tongueObservationInput : savedReview?.tongue_observation) || labels.unknown
-    const faceObservation = (useDraftInputs ? faceObservationInput : savedReview?.face_observation) || labels.unknown
-    const questionnaireInterpretation =
-      (useDraftInputs ? questionnaireInterpretationInput : savedReview?.questionnaire_interpretation) || labels.unknown
-    const dietaryAdvice = (useDraftInputs ? dietaryAdviceInput : savedReview?.dietary_advice) || labels.unknown
-    const followUpRecommendation =
-      (useDraftInputs ? followUpRecommendationInput : savedReview?.follow_up_recommendation) || labels.unknown
-    const tcmAutoRecommendations =
-      tcmAssessmentRecommendationsInput || (latestTcm?.recommendations || []).join("; ") || labels.unknown
-    const eegStatusLabel = language === "zh-CN" ? "状态" : language === "zh-HK" ? "狀態" : language === "fr" ? "Statut" : "Status"
-    const eegSummaryLabel =
-      language === "zh-CN" ? "初步说明" : language === "zh-HK" ? "初步說明" : language === "fr" ? "Resume preliminaire" : "Preliminary summary"
+    const eegStatusLabel = contentLabels.eegStatus
+    const eegSummaryLabel = contentLabels.eegSummary
     const eegSummary =
       riskLevel === "high"
         ? language === "zh-CN"
@@ -2053,8 +2075,8 @@ export function AdminPanel() {
       `${labels.hospital}: ${contentLabels.hospitalValue}`,
       "",
       labels.cognitive,
-      `MMSE SCORE: ${latestMmse ? `${latestMmse.total_score}/30` : labels.unknown}`,
-      `MoCA SCORE: ${latestMoca ? `${latestMoca.total_score}/30` : labels.unknown}`,
+      `${contentLabels.mmseFinal}: ${latestMmse ? `${latestMmse.total_score}/30` : labels.unknown}`,
+      `${contentLabels.mocaFinal}: ${latestMoca ? `${latestMoca.total_score}/30` : labels.unknown}`,
       `${contentLabels.mocaScoreDistribution}:`,
       ...(formatMocaScoreDistribution(latestMoca).length > 0
         ? formatMocaScoreDistribution(latestMoca)
@@ -2068,16 +2090,9 @@ export function AdminPanel() {
       `${contentLabels.visual}: ${latestVisual ? `${latestVisual.normalized_score ?? "-"} (${latestVisual.classification || "-"})` : labels.unknown}`,
       "",
       labels.tcm,
-      `${contentLabels.tcmConstitutionDoctor}: ${tcmConstitution}`,
-      `${contentLabels.tcmScore}: ${tcmPrimaryScore}`,
-      `Overall TCM Score: ${tcmOverallScore}`,
-      `${contentLabels.tongueObservation}: ${tongueObservation}`,
-      `${contentLabels.faceObservation}: ${faceObservation}`,
-      `${contentLabels.questionnaireInterpretation}: ${questionnaireInterpretation}`,
-      `${contentLabels.autoRecommendations}: ${tcmAutoRecommendations}`,
-      `${contentLabels.dietaryAdvice}: ${dietaryAdvice}`,
-      `${contentLabels.followUpRecommendation}: ${followUpRecommendation}`,
-      `${labels.eegNote}:`,
+      labels.tcmNeedsConfirmation,
+      "",
+      labels.eegSection,
       `${eegStatusLabel}: ${labels.eegInProcess}`,
       `${eegSummaryLabel}: ${eegSummary}`,
       "",
