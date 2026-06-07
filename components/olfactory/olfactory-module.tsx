@@ -61,6 +61,7 @@ export function OlfactoryModule({ protocolVersion = "sat_v2", onResultSaved }: O
     resultSaved: activeLanguage === "zh" ? "结果已保存。" : activeLanguage === "yue" ? "結果已保存。" : activeLanguage === "fr" ? "Resultat enregistre." : "Result saved.",
     unknownError: activeLanguage === "zh" ? "未知错误" : activeLanguage === "yue" ? "未知錯誤" : activeLanguage === "fr" ? "erreur inconnue" : "unknown error",
     saveFailedPrefix: activeLanguage === "zh" ? "保存失败：" : activeLanguage === "yue" ? "保存失敗：" : activeLanguage === "fr" ? "Echec de l'enregistrement : " : "Save failed: ",
+    saving: activeLanguage === "zh" ? "保存中..." : activeLanguage === "yue" ? "保存中..." : activeLanguage === "fr" ? "Enregistrement..." : "Saving...",
   }
 
   const [phase, setPhase] = useState<Phase>("intro")
@@ -188,7 +189,9 @@ export function OlfactoryModule({ protocolVersion = "sat_v2", onResultSaved }: O
 
   function saveResult() {
     if (!user?.id) {
-      setSaveMessage(`${localizedText.saveFailedPrefix}${activeLanguage === "zh" ? "未检测到用户登录" : activeLanguage === "yue" ? "未檢測到用戶登入" : activeLanguage === "fr" ? "utilisateur non connecte" : "user not logged in"}`)
+      const message = `${localizedText.saveFailedPrefix}${activeLanguage === "zh" ? "未检测到用户登录" : activeLanguage === "yue" ? "未檢測到用戶登入" : activeLanguage === "fr" ? "utilisateur non connecte" : "user not logged in"}`
+      setSaveMessage(message)
+      alert(message)
       return
     }
 
@@ -229,12 +232,15 @@ export function OlfactoryModule({ protocolVersion = "sat_v2", onResultSaved }: O
       })
 
       if (error) {
-        setSaveMessage(`${localizedText.saveFailedPrefix}${error.message}`)
+        const message = `${localizedText.saveFailedPrefix}${error.message}`
+        setSaveMessage(message)
+        alert(message)
         setIsSaving(false)
         return
       }
 
       setSaveMessage(localizedText.resultSaved)
+      alert(localizedText.resultSaved)
       await onResultSaved?.()
       setIsSaving(false)
     })()
@@ -572,7 +578,7 @@ export function OlfactoryModule({ protocolVersion = "sat_v2", onResultSaved }: O
                 {copy.restart[activeLanguage]}
               </Button>
               <Button onClick={saveResult} disabled={isSaving}>
-                {copy.save[activeLanguage]}
+                {isSaving ? localizedText.saving : copy.save[activeLanguage]}
               </Button>
             </div>
 

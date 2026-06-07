@@ -773,7 +773,10 @@ export function Dashboard({
                         : localizeText("Review recommended", { zh: "建议复核", yue: "建議覆核", fr: "Révision recommandée" })}
                     </p>
                   </div>
-                  <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300" onClick={() => handleRetake("olfactory")}>{t("common.retake")}</Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md rounded-xl font-medium" onClick={() => handleResumeModule("olfactory")}>{t("common.resume")}</Button>
+                    <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300" onClick={() => handleRetake("olfactory")}>{t("common.retake")}</Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
