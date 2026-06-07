@@ -1330,7 +1330,22 @@ export function AdminPanel() {
       setAssessments(mappedAssessments)
       setUploadedFiles(filesData || [])
       setUserProgress(progressData || [])
-      setSensoryAssessments((sensoryData || []) as SensoryAssessment[])
+      // Postgres `numeric` columns are returned as strings by the Supabase JS client.
+      // Coerce them to real numbers so the report logic (which checks typeof === "number") works.
+      const toNumber = (value: unknown): number | null => {
+        if (typeof value === "number") return Number.isFinite(value) ? value : null
+        if (typeof value === "string" && value.trim() !== "") {
+          const parsed = Number(value)
+          return Number.isFinite(parsed) ? parsed : null
+        }
+        return null
+      }
+      const mappedSensory = ((sensoryData || []) as Record<string, unknown>[]).map((row) => ({
+        ...row,
+        raw_score: toNumber(row.raw_score),
+        normalized_score: toNumber(row.normalized_score),
+      }))
+      setSensoryAssessments(mappedSensory as unknown as SensoryAssessment[])
 
       const newBuildTcmAssessments = ((tcmData || []) as TCMAssessment[]).map((assessment) => ({
         ...assessment,
