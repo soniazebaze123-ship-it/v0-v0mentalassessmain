@@ -587,6 +587,14 @@ const getDementiaRiskRecommendation = (
   return "Low risk: continue routine screening every 6-12 months with ongoing cognitive-social stimulation and protective lifestyle measures."
 }
 
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+
 const CONSTITUTION_LABELS: Record<string, { "zh-CN": string; "zh-HK": string; fr: string }> = {
   balanced: { "zh-CN": "平和质", "zh-HK": "平和質", fr: "Constitution equilibree" },
   "qi deficiency": { "zh-CN": "气虚质", "zh-HK": "氣虛質", fr: "Deficience du qi" },
@@ -1706,6 +1714,189 @@ export function AdminPanel() {
     return user.chinese_name || user.name || user.phone_number || user.id
   }
 
+  const formatSectionRows = (assessment: Assessment | undefined, assessmentType: "MOCA" | "MMSE", language: ReportLanguage) => {
+    if (!assessment) return ""
+
+    const labels = getSectionNames(assessmentType)
+    const sourceScores = assessment.section_scores || {}
+    const rows = Object.entries(sourceScores)
+      .map(([key, score]) => {
+        const sectionLabel = labels[key as keyof typeof labels] || key
+        const numericScore = typeof score === "number" ? score : 0
+        return `<tr><td>${escapeHtml(sectionLabel)}</td><td class="score-cell">${numericScore}</td></tr>`
+      })
+      .join("")
+
+    if (rows) return rows
+
+    const emptyText = language === "zh-CN" || language === "zh-HK" ? "未提供" : language === "fr" ? "Non renseigne" : "Not provided"
+    return `<tr><td>${escapeHtml(emptyText)}</td><td class="score-cell">-</td></tr>`
+  }
+
+  const buildMedicalReportHtml = (userId: string, language: ReportLanguage) => {
+    const labels = REPORT_LABELS[language]
+    const contentLabels = REPORT_CONTENT_LABELS[language]
+    const unknown = labels.unknown
+
+    const user = users.find((entry) => entry.id === userId)
+    const userAssessments = getUserAssessments(userId)
+    const userSensory = getUserSensoryAssessments(userId)
+    const userTcm = getUserTcmAssessments(userId)
+    const savedReview = getUserDoctorReview(userId)
+    const useDraftInputs = selectedUser === userId
+
+    const latestMoca = userAssessments
+      .filter((assessment) => assessment.assessment_type === "MOCA")
+      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
+    const latestMmse = userAssessments
+      .filter((assessment) => assessment.assessment_type === "MMSE")
+      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
+    const latestOlfactory = userSensory
+      .filter((assessment) => assessment.test_type === "olfactory")
+      .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
+    const latestAuditory = userSensory
+      .filter((assessment) => assessment.test_type === "auditory")
+      .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
+    const latestVisual = userSensory
+      .filter((assessment) => assessment.test_type === "visual")
+      .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
+    const latestTcm = userTcm
+      .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime())[0]
+
+    const mocaRisk = latestMoca && latestMoca.total_score <= 25
+    const mmseRisk = latestMmse && latestMmse.total_score <= 24
+    const olfactoryRisk = latestOlfactory?.classification?.toLowerCase().includes("severe")
+    const riskFlagCount = [mocaRisk, mmseRisk, olfactoryRisk].filter(Boolean).length
+    const riskLevel: "high" | "moderate" | "low" = riskFlagCount >= 2 ? "high" : riskFlagCount === 1 ? "moderate" : "low"
+    const dementiaRiskRecommendation = getDementiaRiskRecommendation(riskLevel, language)
+    const riskClass = riskLevel === "high" ? "risk-high" : riskLevel === "moderate" ? "risk-mid" : "risk-low"
+    const riskLabel = riskLevel === "high" ? contentLabels.riskHigh : riskLevel === "moderate" ? contentLabels.riskModerate : contentLabels.riskLow
+
+    const doctorName = (useDraftInputs ? doctorNameInput : savedReview?.doctor_name) || unknown
+    const reviewDate = (useDraftInputs ? reviewDateInput : savedReview?.review_date) || unknown
+    const diagnosis = (useDraftInputs ? tcmDiagnosisInput : savedReview?.tcm_diagnosis) || unknown
+    const therapyPlan = (useDraftInputs ? tcmTherapyPlanInput : savedReview?.therapy_plan) || unknown
+    const finalSummary = (useDraftInputs ? finalSummaryInput : savedReview?.final_summary) || unknown
+
+    const mmseRows = formatSectionRows(latestMmse, "MMSE", language)
+    const mocaRows = formatSectionRows(latestMoca, "MOCA", language)
+
+    const reportDate = new Date().toLocaleDateString()
+    const reportTitle = labels.reportTitle
+    const pageTitle = `${reportTitle} - ${getUserDisplayName(user)}`
+
+    return `<!DOCTYPE html>
+<html lang="${escapeHtml(language === "zh-CN" ? "zh-CN" : language === "zh-HK" ? "zh-HK" : language)}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escapeHtml(pageTitle)}</title>
+  <style>
+    :root { --primary:#1a4a6e; --accent:#c8960c; --bg:#f7f4ef; --border:#d9cfae; --text:#1a1a2e; --muted:#5b5b74; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif; background:#e5e0d5; }
+    .page { width:794px; min-height:1123px; margin:18px auto; background:#fff; box-shadow:0 8px 28px rgba(0,0,0,.14); overflow:hidden; }
+    .header { background:var(--primary); color:#fff; padding:16px 26px 14px; border-bottom:4px solid var(--accent); }
+    .header h1 { margin:0; font-size:22px; letter-spacing:1px; }
+    .header .sub { margin-top:4px; font-size:11px; opacity:.85; }
+    .header .meta { margin-top:8px; font-size:12px; color:#f5d779; }
+    .content { padding:14px 18px 16px; color:var(--text); }
+    .section { margin-bottom:10px; border:1px solid var(--border); }
+    .section-title { background:#eef4fb; color:var(--primary); padding:5px 10px; font-size:12px; font-weight:700; letter-spacing:.4px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; }
+    .field { display:flex; border-top:1px solid #eee7d5; }
+    .label { width:108px; background:#faf8f2; color:var(--muted); font-size:11px; padding:6px 8px; border-right:1px solid #eee7d5; }
+    .value { flex:1; font-size:11px; padding:6px 8px; }
+    .kpis { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding:8px; border-top:1px solid #eee7d5; }
+    .kpi { border:1px solid #e4d9b8; border-radius:8px; padding:8px; background:#fffdf8; text-align:center; }
+    .kpi .k { font-size:10px; color:var(--muted); }
+    .kpi .v { margin-top:2px; font-size:17px; font-weight:700; color:var(--primary); }
+    .score-layout { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:8px; border-top:1px solid #eee7d5; }
+    table { width:100%; border-collapse:collapse; font-size:10.5px; }
+    th { text-align:left; background:var(--primary); color:#fff; font-weight:600; padding:5px 8px; }
+    td { padding:4px 8px; border-bottom:1px solid #efe7d4; }
+    .score-cell { text-align:right; font-weight:700; color:var(--primary); width:66px; }
+    .risk-box { padding:8px; border-top:1px solid #eee7d5; display:grid; grid-template-columns:190px 1fr; gap:8px; align-items:start; }
+    .risk-badge { display:inline-block; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:700; letter-spacing:.7px; }
+    .risk-high { background:#ffebee; color:#b71c1c; border:1px solid #ef9a9a; }
+    .risk-mid { background:#fff8e1; color:#e65100; border:1px solid #ffcc80; }
+    .risk-low { background:#e8f5e9; color:#2e7d32; border:1px solid #a5d6a7; }
+    .note { font-size:10.5px; line-height:1.45; color:#2f2f45; }
+    .textarea { border-top:1px solid #eee7d5; padding:8px; font-size:10.5px; line-height:1.4; min-height:58px; white-space:pre-wrap; }
+    .footer { padding:10px 18px 16px; font-size:10px; color:#777; display:flex; justify-content:space-between; }
+    @page { size: A4 portrait; margin: 0; }
+    @media print { body { background:#fff; } .page { margin:0; box-shadow:none; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <h1>${escapeHtml(reportTitle)}</h1>
+      <div class="sub">南方医科大学中西医结合医院 • Southern Medical University - Integrated Medicine Hospital</div>
+      <div class="meta">${escapeHtml(labels.reportDate)}: ${escapeHtml(reportDate)}</div>
+    </div>
+    <div class="content">
+      <div class="section">
+        <div class="section-title">${escapeHtml(labels.patientInfo)}</div>
+        <div class="grid">
+          <div class="field"><div class="label">${escapeHtml(labels.name)}</div><div class="value">${escapeHtml(getUserDisplayName(user))}</div></div>
+          <div class="field"><div class="label">${escapeHtml(labels.idNumber)}</div><div class="value">${escapeHtml(user?.national_id || unknown)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(labels.sex)}</div><div class="value">${escapeHtml(user?.gender || unknown)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(labels.dateOfBirth)}</div><div class="value">${escapeHtml(user?.date_of_birth || unknown)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(labels.cityProvince)}</div><div class="value">${escapeHtml(contentLabels.cityProvinceValue)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(labels.hospital)}</div><div class="value">${escapeHtml(contentLabels.hospitalValue)}</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">${escapeHtml(labels.cognitive)}</div>
+        <div class="kpis">
+          <div class="kpi"><div class="k">MoCA Final</div><div class="v">${latestMoca ? `${latestMoca.total_score}/30` : "-"}</div></div>
+          <div class="kpi"><div class="k">MMSE Final</div><div class="v">${latestMmse ? `${latestMmse.total_score}/30` : "-"}</div></div>
+          <div class="kpi"><div class="k">${escapeHtml(contentLabels.riskTier)}</div><div class="v">${escapeHtml(riskLabel)}</div></div>
+        </div>
+        <div class="score-layout">
+          <table>
+            <thead><tr><th>MoCA Tasks</th><th class="score-cell">Score</th></tr></thead>
+            <tbody>${mocaRows}</tbody>
+          </table>
+          <table>
+            <thead><tr><th>MMSE Tasks</th><th class="score-cell">Score</th></tr></thead>
+            <tbody>${mmseRows}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">${escapeHtml(labels.sensory)} / ${escapeHtml(labels.tcm)}</div>
+        <div class="grid">
+          <div class="field"><div class="label">${escapeHtml(contentLabels.olfactory)}</div><div class="value">${escapeHtml(latestOlfactory ? `${latestOlfactory.raw_score ?? "-"} (${latestOlfactory.classification || "-"})` : unknown)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(contentLabels.auditory)}</div><div class="value">${escapeHtml(latestAuditory ? `${latestAuditory.normalized_score ?? "-"} (${latestAuditory.classification || "-"})` : unknown)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(contentLabels.visual)}</div><div class="value">${escapeHtml(latestVisual ? `${latestVisual.normalized_score ?? "-"} (${latestVisual.classification || "-"})` : unknown)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(contentLabels.primaryConstitution)}</div><div class="value">${escapeHtml(latestTcm?.primary_constitution || unknown)}</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">${escapeHtml(labels.finalPlan)}</div>
+        <div class="risk-box">
+          <div><span class="risk-badge ${riskClass}">${escapeHtml(contentLabels.riskTier)}: ${escapeHtml(riskLabel)}</span></div>
+          <div class="note"><strong>${escapeHtml(contentLabels.dementiaRiskRecommendation)}:</strong> ${escapeHtml(dementiaRiskRecommendation)}</div>
+        </div>
+        <div class="textarea"><strong>${escapeHtml(labels.diagnosis)}:</strong> ${escapeHtml(diagnosis)}</div>
+        <div class="textarea"><strong>${escapeHtml(labels.treatmentPlan)}:</strong> ${escapeHtml(therapyPlan)}</div>
+        <div class="textarea"><strong>${escapeHtml(labels.finalSummary)}:</strong> ${escapeHtml(finalSummary)}</div>
+      </div>
+    </div>
+    <div class="footer">
+      <div>${escapeHtml(contentLabels.doctorName)}: ${escapeHtml(doctorName)}</div>
+      <div>${escapeHtml(contentLabels.reviewDate)}: ${escapeHtml(reviewDate)}</div>
+    </div>
+  </div>
+</body>
+</html>`
+  }
+
   const buildMedicalReport = (userId: string, language: ReportLanguage) => {
     const labels = REPORT_LABELS[language]
     const contentLabels = REPORT_CONTENT_LABELS[language]
@@ -1795,30 +1986,26 @@ export function AdminPanel() {
   }
 
   const handleDownloadReport = async () => {
-    if (!selectedUser || !generatedReport) return
+    if (!selectedUser) return
     const user = users.find((entry) => entry.id === selectedUser)
     const filePrefix = getUserDisplayName(user).replace(/\s+/g, "_")
     const fileTimestamp = new Date().toISOString().replace(/[:.]/g, "-")
-    const reportText = generatedReport || buildMedicalReport(selectedUser, reportLanguage)
-    const pdfBytes = await createMedicalReportPdf(reportText, reportLanguage)
-    const blob = new Blob([pdfBytes], { type: "application/pdf" })
+    const reportHtml = buildMedicalReportHtml(selectedUser, reportLanguage)
+    const blob = new Blob([reportHtml], { type: "text/html;charset=utf-8" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
-    link.download = `MA_${filePrefix}_${reportLanguage}_unicode_${fileTimestamp}.pdf`
+    link.download = `MA_${filePrefix}_${reportLanguage}_onepage_${fileTimestamp}.html`
     link.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   const handlePrintReport = () => {
     if (!selectedUser) return
-    const reportText = generatedReport || buildMedicalReport(selectedUser, reportLanguage)
-    if (!generatedReport) {
-      setGeneratedReport(reportText)
-    }
+    const reportHtml = buildMedicalReportHtml(selectedUser, reportLanguage)
     const printWindow = window.open("", "_blank", "noopener,noreferrer,width=900,height=700")
     if (!printWindow) return
-    printWindow.document.write(`<pre style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; padding: 24px; line-height: 1.6;">${reportText.replace(/</g, "&lt;")}</pre>`)
+    printWindow.document.write(reportHtml)
     printWindow.document.close()
     printWindow.focus()
     setTimeout(() => {
@@ -3290,9 +3477,9 @@ export function AdminPanel() {
                             <FileText className="mr-2 h-4 w-4" />
                             {localizeText("Generate report draft", { zh: "生成报告草稿", yue: "生成報告草稿", fr: "Generer le brouillon du rapport" })}
                           </Button>
-                          <Button onClick={handleDownloadReport} variant="outline" disabled={!generatedReport}>
+                          <Button onClick={handleDownloadReport} variant="outline" disabled={!selectedUser}>
                             <Download className="mr-2 h-4 w-4" />
-                            {localizeText("Download report", { zh: "下载报告", yue: "下載報告", fr: "Telecharger le rapport" })}
+                            {localizeText("Download one-page report", { zh: "下载单页报告", yue: "下載單頁報告", fr: "Telecharger le rapport une page" })}
                           </Button>
                           <Button onClick={handlePrintReport} variant="outline" disabled={!selectedUser}>
                             <Printer className="mr-2 h-4 w-4" />
