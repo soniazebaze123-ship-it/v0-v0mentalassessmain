@@ -1774,6 +1774,38 @@ export function AdminPanel() {
 
     const doctorName = (useDraftInputs ? doctorNameInput : savedReview?.doctor_name) || unknown
     const reviewDate = (useDraftInputs ? reviewDateInput : savedReview?.review_date) || unknown
+    const tcmConstitution = (useDraftInputs ? tcmConstitutionInput : savedReview?.tcm_constitution) || latestTcm?.primary_constitution || unknown
+    const tcmPrimaryScore = typeof latestTcm?.primary_score === "number" ? String(latestTcm.primary_score) : unknown
+    const tcmOverallScore = typeof latestTcm?.overall_score === "number" ? String(latestTcm.overall_score) : unknown
+    const questionnaireInterpretation =
+      (useDraftInputs ? questionnaireInterpretationInput : savedReview?.questionnaire_interpretation) || unknown
+    const eegStatusLabel = language === "zh-CN" ? "状态" : language === "zh-HK" ? "狀態" : language === "fr" ? "Statut" : "Status"
+    const eegSummaryLabel =
+      language === "zh-CN" ? "初步说明" : language === "zh-HK" ? "初步說明" : language === "fr" ? "Resume preliminaire" : "Preliminary summary"
+    const eegSummary =
+      riskLevel === "high"
+        ? language === "zh-CN"
+          ? "认知风险较高，建议优先安排EEG检查以辅助鉴别病因。"
+          : language === "zh-HK"
+            ? "認知風險較高，建議優先安排EEG檢查以輔助鑑別病因。"
+            : language === "fr"
+              ? "Risque cognitif eleve; EEG prioritaire recommande pour appuyer le diagnostic differentiel."
+              : "Higher cognitive risk detected; prioritize EEG scheduling to support differential diagnosis."
+        : riskLevel === "moderate"
+          ? language === "zh-CN"
+            ? "中等风险，建议在近期复评前完成EEG基线检查。"
+            : language === "zh-HK"
+              ? "中等風險，建議於近期重評前完成EEG基線檢查。"
+              : language === "fr"
+                ? "Risque modere; EEG de reference conseille avant la prochaine reevaluation."
+                : "Moderate risk; baseline EEG is recommended before the next reassessment."
+          : language === "zh-CN"
+            ? "当前风险较低，可根据临床判断择期完成EEG。"
+            : language === "zh-HK"
+              ? "當前風險較低，可按臨床判斷擇期完成EEG。"
+              : language === "fr"
+                ? "Risque faible actuellement; EEG a programmer selon le jugement clinique."
+                : "Current risk is low; EEG may be scheduled electively based on clinical judgment."
     const diagnosis = (useDraftInputs ? tcmDiagnosisInput : savedReview?.tcm_diagnosis) || unknown
     const therapyPlan = (useDraftInputs ? tcmTherapyPlanInput : savedReview?.therapy_plan) || unknown
     const finalSummary = (useDraftInputs ? finalSummaryInput : savedReview?.final_summary) || unknown
@@ -1873,8 +1905,13 @@ export function AdminPanel() {
           <div class="field"><div class="label">${escapeHtml(contentLabels.olfactory)}</div><div class="value">${escapeHtml(latestOlfactory ? `${latestOlfactory.raw_score ?? "-"} (${latestOlfactory.classification || "-"})` : unknown)}</div></div>
           <div class="field"><div class="label">${escapeHtml(contentLabels.auditory)}</div><div class="value">${escapeHtml(latestAuditory ? `${latestAuditory.normalized_score ?? "-"} (${latestAuditory.classification || "-"})` : unknown)}</div></div>
           <div class="field"><div class="label">${escapeHtml(contentLabels.visual)}</div><div class="value">${escapeHtml(latestVisual ? `${latestVisual.normalized_score ?? "-"} (${latestVisual.classification || "-"})` : unknown)}</div></div>
-          <div class="field"><div class="label">${escapeHtml(contentLabels.primaryConstitution)}</div><div class="value">${escapeHtml(latestTcm?.primary_constitution || unknown)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(contentLabels.primaryConstitution)}</div><div class="value">${escapeHtml(tcmConstitution)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(contentLabels.tcmScore)}</div><div class="value">${escapeHtml(tcmPrimaryScore)}</div></div>
+          <div class="field"><div class="label">Overall TCM Score</div><div class="value">${escapeHtml(tcmOverallScore)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(contentLabels.questionnaireInterpretation)}</div><div class="value">${escapeHtml(questionnaireInterpretation)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(labels.eegNote)}</div><div class="value">${escapeHtml(`${eegStatusLabel}: ${labels.eegInProcess}`)}</div></div>
         </div>
+        <div class="textarea"><strong>${escapeHtml(eegSummaryLabel)}:</strong> ${escapeHtml(eegSummary)}</div>
       </div>
 
       <div class="section">
@@ -1900,8 +1937,6 @@ export function AdminPanel() {
   const buildMedicalReport = (userId: string, language: ReportLanguage) => {
     const labels = REPORT_LABELS[language]
     const contentLabels = REPORT_CONTENT_LABELS[language]
-    const tcmReviewPendingText = labels.tcmNeedsConfirmation
-    const eegPendingText = labels.eegInProcess
     const user = users.find((entry) => entry.id === userId)
     const userAssessments = getUserAssessments(userId)
     const userSensory = getUserSensoryAssessments(userId)
@@ -1939,6 +1974,46 @@ export function AdminPanel() {
       riskLevel === "high" ? contentLabels.riskHigh : riskLevel === "moderate" ? contentLabels.riskModerate : contentLabels.riskLow
     const dementiaRiskRecommendation = getDementiaRiskRecommendation(riskLevel, language)
 
+    const tcmConstitution = (useDraftInputs ? tcmConstitutionInput : savedReview?.tcm_constitution) || latestTcm?.primary_constitution || labels.unknown
+    const tcmPrimaryScore = typeof latestTcm?.primary_score === "number" ? String(latestTcm.primary_score) : labels.unknown
+    const tcmOverallScore = typeof latestTcm?.overall_score === "number" ? String(latestTcm.overall_score) : labels.unknown
+    const tongueObservation = (useDraftInputs ? tongueObservationInput : savedReview?.tongue_observation) || labels.unknown
+    const faceObservation = (useDraftInputs ? faceObservationInput : savedReview?.face_observation) || labels.unknown
+    const questionnaireInterpretation =
+      (useDraftInputs ? questionnaireInterpretationInput : savedReview?.questionnaire_interpretation) || labels.unknown
+    const dietaryAdvice = (useDraftInputs ? dietaryAdviceInput : savedReview?.dietary_advice) || labels.unknown
+    const followUpRecommendation =
+      (useDraftInputs ? followUpRecommendationInput : savedReview?.follow_up_recommendation) || labels.unknown
+    const tcmAutoRecommendations =
+      tcmAssessmentRecommendationsInput || (latestTcm?.recommendations || []).join("; ") || labels.unknown
+    const eegStatusLabel = language === "zh-CN" ? "状态" : language === "zh-HK" ? "狀態" : language === "fr" ? "Statut" : "Status"
+    const eegSummaryLabel =
+      language === "zh-CN" ? "初步说明" : language === "zh-HK" ? "初步說明" : language === "fr" ? "Resume preliminaire" : "Preliminary summary"
+    const eegSummary =
+      riskLevel === "high"
+        ? language === "zh-CN"
+          ? "认知风险较高，建议优先安排EEG检查以辅助鉴别病因。"
+          : language === "zh-HK"
+            ? "認知風險較高，建議優先安排EEG檢查以輔助鑑別病因。"
+            : language === "fr"
+              ? "Risque cognitif eleve; EEG prioritaire recommande pour appuyer le diagnostic differentiel."
+              : "Higher cognitive risk detected; prioritize EEG scheduling to support differential diagnosis."
+        : riskLevel === "moderate"
+          ? language === "zh-CN"
+            ? "中等风险，建议在近期复评前完成EEG基线检查。"
+            : language === "zh-HK"
+              ? "中等風險，建議於近期重評前完成EEG基線檢查。"
+              : language === "fr"
+                ? "Risque modere; EEG de reference conseille avant la prochaine reevaluation."
+                : "Moderate risk; baseline EEG is recommended before the next reassessment."
+          : language === "zh-CN"
+            ? "当前风险较低，可根据临床判断择期完成EEG。"
+            : language === "zh-HK"
+              ? "當前風險較低，可按臨床判斷擇期完成EEG。"
+              : language === "fr"
+                ? "Risque faible actuellement; EEG a programmer selon le jugement clinique."
+                : "Current risk is low; EEG may be scheduled electively based on clinical judgment."
+
     return [
       labels.reportTitle,
       `${labels.reportDate}: ${new Date().toLocaleDateString()}`,
@@ -1967,8 +2042,18 @@ export function AdminPanel() {
       `${contentLabels.visual}: ${latestVisual ? `${latestVisual.normalized_score ?? "-"} (${latestVisual.classification || "-"})` : labels.unknown}`,
       "",
       labels.tcm,
-      tcmReviewPendingText,
-      `${labels.eegNote}: ${eegPendingText}`,
+      `${contentLabels.tcmConstitutionDoctor}: ${tcmConstitution}`,
+      `${contentLabels.tcmScore}: ${tcmPrimaryScore}`,
+      `Overall TCM Score: ${tcmOverallScore}`,
+      `${contentLabels.tongueObservation}: ${tongueObservation}`,
+      `${contentLabels.faceObservation}: ${faceObservation}`,
+      `${contentLabels.questionnaireInterpretation}: ${questionnaireInterpretation}`,
+      `${contentLabels.autoRecommendations}: ${tcmAutoRecommendations}`,
+      `${contentLabels.dietaryAdvice}: ${dietaryAdvice}`,
+      `${contentLabels.followUpRecommendation}: ${followUpRecommendation}`,
+      `${labels.eegNote}:`,
+      `${eegStatusLabel}: ${labels.eegInProcess}`,
+      `${eegSummaryLabel}: ${eegSummary}`,
       "",
       labels.finalPlan,
       `${contentLabels.riskTier}: ${finalRisk}`,
