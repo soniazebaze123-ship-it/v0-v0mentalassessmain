@@ -2834,6 +2834,18 @@ export function AdminPanel() {
                   const userFiles = getUserFiles(user.id)
                   const userCurrentProgress = getUserProgress(user.id)
                   const workflowStatus = getWorkflowStatusForUser(user.id)
+                  const userOlfactory = getUserSensoryAssessments(user.id)
+                    .filter((assessment) => assessment.test_type === "olfactory")
+                    .sort(
+                      (a, b) =>
+                        new Date(b.test_date ?? 0).getTime() - new Date(a.test_date ?? 0).getTime(),
+                    )[0]
+                  const olfactoryUnknownLabel = localizeText("无", { zh: "无", yue: "無", fr: "Aucun" })
+                  const olfactoryScoreText = getOlfactoryScoreDisplay(
+                    userOlfactory,
+                    reportLanguage,
+                    olfactoryUnknownLabel,
+                  )
                   return (
                     <div
                       key={user.id}
@@ -2847,6 +2859,15 @@ export function AdminPanel() {
                           <p className="font-medium">{user.name || user.phone_number}</p>
                           <p className="text-sm text-gray-600">
                             {t("admin.registered")}: {new Date(user.created_at).toLocaleDateString()}
+                          </p>
+                          <p className="text-sm text-gray-700 mt-1">
+                            {localizeText("Olfactory Score", {
+                              zh: "嗅觉评分",
+                              yue: "嗅覺評分",
+                              fr: "Score olfactif",
+                            })}
+                            {": "}
+                            <span className="font-semibold">{olfactoryScoreText}</span>
                           </p>
                         </div>
                         <div className="flex flex-col items-end space-y-1">
