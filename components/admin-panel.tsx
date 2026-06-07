@@ -675,11 +675,24 @@ const getLikertLabelForUi = (score: number, language: "en" | "zh" | "yue" | "fr"
   return labels.en
 }
 
+const getOlfactoryRiskStatus = (assessment: SensoryAssessment | undefined) => {
+  if (!assessment) return ""
+
+  const classification = typeof assessment.classification === "string" ? assessment.classification.trim().toLowerCase() : ""
+  if (classification) return classification
+
+  const testData = assessment.test_data as Record<string, unknown> | undefined
+  const riskLevel = typeof testData?.risk_level === "string" ? testData.risk_level.trim().toLowerCase() : ""
+  if (riskLevel) return riskLevel
+
+  return ""
+}
+
 const getOlfactoryDiagnosisAndRecommendation = (
-  classification: string | null | undefined,
+  assessment: SensoryAssessment | undefined,
   language: ReportLanguage,
 ): { diagnosis: string; recommendation: string } => {
-  const normalized = (classification || "").toLowerCase()
+  const normalized = getOlfactoryRiskStatus(assessment)
 
   if (!normalized) {
     return {
@@ -695,7 +708,7 @@ const getOlfactoryDiagnosisAndRecommendation = (
     }
   }
 
-  const severe = normalized.includes("severe") || normalized.includes("anosmia")
+  const severe = normalized.includes("severe") || normalized.includes("anosmia") || normalized.includes("high")
   const mild = normalized.includes("mild") || normalized.includes("moderate") || normalized.includes("hyposmia")
 
   if (language === "zh-CN") {
@@ -1914,9 +1927,10 @@ export function AdminPanel() {
     const latestTcm = userTcm
       .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime())[0]
 
+    const olfactoryStatus = getOlfactoryRiskStatus(latestOlfactory)
     const mocaRisk = latestMoca && latestMoca.total_score <= 25
     const mmseRisk = latestMmse && latestMmse.total_score <= 24
-    const olfactoryRisk = latestOlfactory?.classification?.toLowerCase().includes("severe")
+    const olfactoryRisk = olfactoryStatus.includes("severe") || olfactoryStatus.includes("high")
     const riskFlagCount = [mocaRisk, mmseRisk, olfactoryRisk].filter(Boolean).length
     const riskLevel: "high" | "moderate" | "low" = riskFlagCount >= 2 ? "high" : riskFlagCount === 1 ? "moderate" : "low"
     const dementiaRiskRecommendation = getDementiaRiskRecommendation(riskLevel, language)
@@ -2114,11 +2128,12 @@ export function AdminPanel() {
       .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
     const latestTcm = userTcm
       .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime())[0]
-    const olfactoryPlan = getOlfactoryDiagnosisAndRecommendation(latestOlfactory?.classification, language)
+    const olfactoryPlan = getOlfactoryDiagnosisAndRecommendation(latestOlfactory, language)
 
+    const olfactoryStatus = getOlfactoryRiskStatus(latestOlfactory)
     const mocaRisk = latestMoca && latestMoca.total_score <= 25
     const mmseRisk = latestMmse && latestMmse.total_score <= 24
-    const olfactoryRisk = latestOlfactory?.classification?.toLowerCase().includes("severe")
+    const olfactoryRisk = olfactoryStatus.includes("severe") || olfactoryStatus.includes("high")
     const riskFlagCount = [mocaRisk, mmseRisk, olfactoryRisk].filter(Boolean).length
     const riskLevel: "high" | "moderate" | "low" =
       riskFlagCount >= 2 ? "high" : riskFlagCount === 1 ? "moderate" : "low"
