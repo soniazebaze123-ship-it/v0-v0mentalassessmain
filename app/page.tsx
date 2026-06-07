@@ -65,6 +65,18 @@ type CompletedAssessment = {
   completedAt: string
 }
 
+type AssessmentRow = {
+  id: string
+  type?: string | null
+  assessment_type?: string | null
+  score?: number | null
+  total_score?: number | null
+  data?: Record<string, unknown> | null
+  section_scores?: Record<string, unknown> | null
+  completed_at?: string | null
+  created_at?: string | null
+}
+
 type SectionMetadata = Record<string, Record<string, unknown>>
 
 type AssessmentStep = {
@@ -152,6 +164,17 @@ function getNumericScore(value: unknown) {
   }
 
   return 0
+}
+
+function getAssessmentKind(row: AssessmentRow): "MOCA" | "MMSE" | null {
+  const raw = (row.type || row.assessment_type || "").toUpperCase()
+  if (raw === "MOCA") return "MOCA"
+  if (raw === "MMSE") return "MMSE"
+  return null
+}
+
+function getAssessmentTimestamp(row: AssessmentRow) {
+  return row.completed_at || row.created_at || new Date().toISOString()
 }
 
 const LEGACY_MOCA_SECTION_MAP: Record<string, string[]> = {
@@ -271,17 +294,24 @@ function AppContent() {
       const completed: Record<string, CompletedAssessment> = {}
 
       if (assessments) {
-        assessments.forEach((assessment) => {
-          if (!isSameCalendarDay(assessment.completed_at)) {
+        ;(assessments as AssessmentRow[]).forEach((assessment) => {
+          const assessmentKind = getAssessmentKind(assessment)
+          if (!assessmentKind) {
             return
           }
 
-          const assessmentKind = assessment.type as "MOCA" | "MMSE"
+          const completedAt = getAssessmentTimestamp(assessment)
+          if (!isSameCalendarDay(completedAt)) {
+            return
+          }
+
           const stepsForAssessment = assessmentKind === "MOCA" ? mocaSteps : mmseSteps
           const sectionKeys = stepsForAssessment.map((step) => step.sectionKey)
           const sourceSectionScores =
             assessment.data && typeof assessment.data === "object"
               ? (assessment.data as Record<string, unknown>)
+              : assessment.section_scores && typeof assessment.section_scores === "object"
+                ? (assessment.section_scores as Record<string, unknown>)
               : {}
 
           const normalizedSectionScores = sectionKeys.reduce(
@@ -293,15 +323,15 @@ function AppContent() {
             {} as Record<string, number>,
           )
 
-          const normalizedTotalScore =
-            assessmentKind === "MOCA"
-              ? Math.min(30, Object.values(normalizedSectionScores).reduce((sum, value) => sum + value, 0))
-              : Math.min(30, Object.values(normalizedSectionScores).reduce((sum, value) => sum + value, 0))
+          const normalizedTotalScore = clampAssessmentTotal(
+            assessmentKind,
+            getNumericScore(assessment.score ?? assessment.total_score ?? Object.values(normalizedSectionScores).reduce((sum, value) => sum + value, 0)),
+          )
 
           completed[assessmentKind] = {
             totalScore: normalizedTotalScore,
             sectionScores: normalizedSectionScores,
-            completedAt: assessment.completed_at,
+            completedAt,
           }
         })
       }
@@ -443,7 +473,7 @@ function AppContent() {
           data: assessmentPayloadData,
         })
 
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from("assessments")
           .insert({
             user_id: user!.id,
@@ -452,6 +482,21 @@ function AppContent() {
             data: assessmentPayloadData,
           })
           .select()
+
+        if (error) {
+          const fallback = await supabase
+            .from("assessments")
+            .insert({
+              user_id: user!.id,
+              assessment_type: assessmentType,
+              total_score: totalScore,
+              section_scores: assessmentPayloadData,
+            })
+            .select()
+
+          data = fallback.data
+          error = fallback.error
+        }
 
         console.log("[v0] Assessment save result:", { data, error })
 
@@ -479,6 +524,18 @@ function AppContent() {
             .from("assessments")
             .update({
               data: {
+                ...assessmentPayloadData,
+                risk_classification: risk.risk_classification,
+                recommendation: risk.recommendation_text,
+                referral_needed: risk.referral_needed,
+              },
+            })
+            .eq("id", data[0].id)
+
+          await supabase
+            .from("assessments")
+            .update({
+              section_scores: {
                 ...assessmentPayloadData,
                 risk_classification: risk.risk_classification,
                 recommendation: risk.recommendation_text,

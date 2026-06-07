@@ -41,6 +41,26 @@ interface AssessmentStatus {
   tcm: { completed: boolean; score?: number }
 }
 
+type AssessmentRow = {
+  type?: string | null
+  assessment_type?: string | null
+  score?: number | null
+  total_score?: number | null
+  completed_at?: string | null
+  created_at?: string | null
+}
+
+function getAssessmentKind(row: AssessmentRow): "MOCA" | "MMSE" | null {
+  const raw = (row.type || row.assessment_type || "").toUpperCase()
+  if (raw === "MOCA") return "MOCA"
+  if (raw === "MMSE") return "MMSE"
+  return null
+}
+
+function getAssessmentTimestamp(row: AssessmentRow) {
+  return row.completed_at || row.created_at || null
+}
+
 interface DashboardProps {
   onStartAssessment: (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm") => void
   onResumeAssessment?: (type: "moca" | "mmse", step: number, scores: number[]) => void
@@ -112,22 +132,27 @@ export function Dashboard({
       let hasCompleted = false
 
       if (assessments) {
-        assessments.forEach((assessment) => {
-          const completedToday = isSameCalendarDay(assessment.completed_at)
+        ;(assessments as AssessmentRow[]).forEach((assessment) => {
+          const kind = getAssessmentKind(assessment)
+          if (!kind) return
 
-          if (assessment.type === "MOCA" || assessment.type === "MoCA") {
+          const completedToday = isSameCalendarDay(getAssessmentTimestamp(assessment))
+          const score = clampCognitiveScore(assessment.score ?? assessment.total_score)
+
+          if (kind === "MOCA") {
             if (completedToday) {
-              newStatus.moca = { completed: true, score: clampCognitiveScore(assessment.score) }
+              newStatus.moca = { completed: true, score }
             }
             hasCompleted = true
-            console.log("[v0] Dashboard: MoCA completed with score:", assessment.score)
-          } else if (assessment.type === "MMSE") {
-            if (completedToday) {
-              newStatus.mmse = { completed: true, score: clampCognitiveScore(assessment.score) }
-            }
-            hasCompleted = true
-            console.log("[v0] Dashboard: MMSE completed with score:", assessment.score)
+            console.log("[v0] Dashboard: MoCA completed with score:", score)
+            return
           }
+
+          if (completedToday) {
+            newStatus.mmse = { completed: true, score }
+          }
+          hasCompleted = true
+          console.log("[v0] Dashboard: MMSE completed with score:", score)
         })
       }
 
@@ -210,11 +235,15 @@ export function Dashboard({
       } else {
         const { data } = await supabase
           .from("assessments")
-          .select("completed_at")
+          .select("*")
           .eq("user_id", user.id)
-          .eq("type", testType.toUpperCase())
 
-        return !(data ?? []).some((assessment) => isSameCalendarDay(assessment.completed_at))
+        return !((data as AssessmentRow[] | null) ?? []).some((assessment) => {
+          const kind = getAssessmentKind(assessment)
+          if (!kind) return false
+          if (kind !== testType.toUpperCase()) return false
+          return isSameCalendarDay(getAssessmentTimestamp(assessment))
+        })
       }
     } catch (error) {
       console.error("Error checking test availability:", error)
