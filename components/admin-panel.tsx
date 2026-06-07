@@ -595,6 +595,8 @@ const escapeHtml = (value: string) =>
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;")
 
+  const MMSE_LEGACY_KEYS = new Set(["legacy_mmse_score", "legacy_mmse_max_score", "legacy_score", "legacy_max_score"])
+
 const CONSTITUTION_LABELS: Record<string, { "zh-CN": string; "zh-HK": string; fr: string }> = {
   balanced: { "zh-CN": "平和质", "zh-HK": "平和質", fr: "Constitution equilibree" },
   "qi deficiency": { "zh-CN": "气虚质", "zh-HK": "氣虛質", fr: "Deficience du qi" },
@@ -733,6 +735,25 @@ const getOlfactoryDiagnosisAndRecommendation = (
     diagnosis: "Olfactory function broadly preserved",
     recommendation: "Maintain routine follow-up and continue monitoring for smell changes.",
   }
+}
+
+const getOlfactoryScoreDisplay = (assessment: SensoryAssessment | undefined, unknownLabel: string) => {
+  if (!assessment) return unknownLabel
+
+  const directScore =
+    typeof assessment.raw_score === "number" && Number.isFinite(assessment.raw_score)
+      ? assessment.raw_score
+      : typeof assessment.normalized_score === "number" && Number.isFinite(assessment.normalized_score)
+        ? assessment.normalized_score
+        : typeof assessment.test_data?.percent_correct === "number" && Number.isFinite(assessment.test_data.percent_correct)
+          ? Math.round(assessment.test_data.percent_correct)
+          : null
+
+  if (directScore === null) {
+    return assessment.classification || unknownLabel
+  }
+
+  return `${directScore} (${assessment.classification || "-"})`
 }
 
 export interface Assessment {
@@ -1646,8 +1667,6 @@ export function AdminPanel() {
         reading_command: t("mmse.reading_command"),
         writing: t("mmse.writing"),
         copying: t("mmse.copying"),
-        legacy_mmse_score: localizeText("Legacy MMSE score", { zh: "旧版 MMSE 分数", yue: "舊版 MMSE 分數", fr: "Score MMSE legacy" }),
-        legacy_mmse_max_score: localizeText("Legacy MMSE max score", { zh: "旧版 MMSE 满分", yue: "舊版 MMSE 滿分", fr: "Score max MMSE legacy" }),
       }
     }
   }
@@ -1720,6 +1739,7 @@ export function AdminPanel() {
     const labels = getSectionNames(assessmentType)
     const sourceScores = assessment.section_scores || {}
     const rows = Object.entries(sourceScores)
+      .filter(([key]) => !(assessmentType === "MMSE" && MMSE_LEGACY_KEYS.has(key)))
       .map(([key, score]) => {
         const sectionLabel = labels[key as keyof typeof labels] || key
         const numericScore = typeof score === "number" ? score : 0
@@ -1900,11 +1920,17 @@ export function AdminPanel() {
       </div>
 
       <div class="section">
-        <div class="section-title">${escapeHtml(labels.sensory)} / ${escapeHtml(labels.tcm)}</div>
+        <div class="section-title">${escapeHtml(labels.sensory)}</div>
         <div class="grid">
-          <div class="field"><div class="label">${escapeHtml(contentLabels.olfactory)}</div><div class="value">${escapeHtml(latestOlfactory ? `${latestOlfactory.raw_score ?? "-"} (${latestOlfactory.classification || "-"})` : unknown)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(contentLabels.olfactory)}</div><div class="value">${escapeHtml(getOlfactoryScoreDisplay(latestOlfactory, unknown))}</div></div>
           <div class="field"><div class="label">${escapeHtml(contentLabels.auditory)}</div><div class="value">${escapeHtml(latestAuditory ? `${latestAuditory.normalized_score ?? "-"} (${latestAuditory.classification || "-"})` : unknown)}</div></div>
           <div class="field"><div class="label">${escapeHtml(contentLabels.visual)}</div><div class="value">${escapeHtml(latestVisual ? `${latestVisual.normalized_score ?? "-"} (${latestVisual.classification || "-"})` : unknown)}</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">${escapeHtml(labels.tcm)}</div>
+        <div class="grid">
           <div class="field"><div class="label">${escapeHtml(contentLabels.primaryConstitution)}</div><div class="value">${escapeHtml(tcmConstitution)}</div></div>
           <div class="field"><div class="label">${escapeHtml(contentLabels.tcmScore)}</div><div class="value">${escapeHtml(tcmPrimaryScore)}</div></div>
           <div class="field"><div class="label">Overall TCM Score</div><div class="value">${escapeHtml(tcmOverallScore)}</div></div>
@@ -2035,7 +2061,7 @@ export function AdminPanel() {
         : [`- ${labels.unknown}`]),
       "",
       labels.sensory,
-      `${contentLabels.olfactory}: ${latestOlfactory ? `${latestOlfactory.raw_score ?? "-"} (${latestOlfactory.classification || "-"})` : labels.unknown}`,
+      `${contentLabels.olfactory}: ${getOlfactoryScoreDisplay(latestOlfactory, labels.unknown)}`,
       `${contentLabels.olfactoryDiagnosis}: ${olfactoryPlan.diagnosis}`,
       `${contentLabels.olfactoryRecommendation}: ${olfactoryPlan.recommendation}`,
       `${contentLabels.auditory}: ${latestAuditory ? `${latestAuditory.normalized_score ?? "-"} (${latestAuditory.classification || "-"})` : labels.unknown}`,
