@@ -779,45 +779,45 @@ const getOlfactoryDiagnosisAndRecommendation = (
 
 const getLocalizedGender = (value: string | null | undefined, language: ReportLanguage, unknownLabel: string) => {
   if (!value) return unknownLabel
-  const normalized = value.toLowerCase()
+  const normalized = value.trim().toLowerCase()
   if (language === "zh-CN") {
-    if (normalized === "female") return "女"
-    if (normalized === "male") return "男"
-    if (normalized === "other") return "其他"
+    if (normalized.includes("female")) return "女"
+    if (normalized.includes("male")) return "男"
+    if (normalized.includes("other")) return "其他"
   }
   if (language === "zh-HK") {
-    if (normalized === "female") return "女"
-    if (normalized === "male") return "男"
-    if (normalized === "other") return "其他"
+    if (normalized.includes("female")) return "女"
+    if (normalized.includes("male")) return "男"
+    if (normalized.includes("other")) return "其他"
   }
   if (language === "fr") {
-    if (normalized === "female") return "Femme"
-    if (normalized === "male") return "Homme"
-    if (normalized === "other") return "Autre"
+    if (normalized.includes("female")) return "Femme"
+    if (normalized.includes("male")) return "Homme"
+    if (normalized.includes("other")) return "Autre"
   }
   return value
 }
 
 const getLocalizedSensoryClassification = (value: string | null | undefined, language: ReportLanguage) => {
   if (!value) return "-"
-  const normalized = value.toLowerCase()
+  const normalized = value.trim().toLowerCase().replace(/[_-]+/g, " ")
   if (language === "zh-CN") {
     if (normalized.includes("normal")) return "正常"
-    if (normalized.includes("impaired")) return "受损"
+    if (normalized.includes("impaired") || normalized.includes("impairment")) return "受损"
     if (normalized.includes("mild")) return "轻度受损"
     if (normalized.includes("moderate")) return "中度受损"
     if (normalized.includes("severe")) return "重度受损"
   }
   if (language === "zh-HK") {
     if (normalized.includes("normal")) return "正常"
-    if (normalized.includes("impaired")) return "受損"
+    if (normalized.includes("impaired") || normalized.includes("impairment")) return "受損"
     if (normalized.includes("mild")) return "輕度受損"
     if (normalized.includes("moderate")) return "中度受損"
     if (normalized.includes("severe")) return "重度受損"
   }
   if (language === "fr") {
     if (normalized.includes("normal")) return "Normal"
-    if (normalized.includes("impaired")) return "Altere"
+    if (normalized.includes("impaired") || normalized.includes("impairment")) return "Altere"
   }
   return value
 }
@@ -848,20 +848,43 @@ const getSensoryScoreDisplay = (
 const getOlfactoryScoreDisplay = (assessment: SensoryAssessment | undefined, language: ReportLanguage, unknownLabel: string) => {
   if (!assessment) return unknownLabel
 
-  const directScore =
+  const correctCount =
     typeof assessment.raw_score === "number" && Number.isFinite(assessment.raw_score)
       ? assessment.raw_score
-      : typeof assessment.normalized_score === "number" && Number.isFinite(assessment.normalized_score)
-        ? assessment.normalized_score
-        : typeof assessment.test_data?.percent_correct === "number" && Number.isFinite(assessment.test_data.percent_correct)
-          ? Math.round(assessment.test_data.percent_correct)
+      : typeof assessment.test_data?.total_correct === "number" && Number.isFinite(assessment.test_data.total_correct)
+        ? assessment.test_data.total_correct
+        : typeof assessment.test_data?.correct_count === "number" && Number.isFinite((assessment.test_data as Record<string, unknown>).correct_count)
+          ? Number((assessment.test_data as Record<string, unknown>).correct_count)
           : null
 
-  if (directScore === null) {
+  const totalQuestions =
+    typeof assessment.test_data?.total_trials === "number" && Number.isFinite(assessment.test_data.total_trials)
+      ? assessment.test_data.total_trials
+      : typeof assessment.test_data?.total_questions === "number" && Number.isFinite((assessment.test_data as Record<string, unknown>).total_questions)
+        ? Number((assessment.test_data as Record<string, unknown>).total_questions)
+        : null
+
+  const fallbackPercent =
+    typeof assessment.normalized_score === "number" && Number.isFinite(assessment.normalized_score)
+      ? Math.round(assessment.normalized_score)
+      : typeof assessment.normalized_score === "number" && Number.isFinite(assessment.normalized_score)
+        ? Math.round(assessment.normalized_score)
+        : typeof assessment.test_data?.percent_correct === "number" && Number.isFinite(assessment.test_data.percent_correct)
+          ? Math.round(assessment.test_data.percent_correct)
+          : typeof assessment.test_data?.score_percent === "number" && Number.isFinite((assessment.test_data as Record<string, unknown>).score_percent)
+            ? Math.round(Number((assessment.test_data as Record<string, unknown>).score_percent))
+          : null
+
+  if (correctCount !== null) {
+    const scoreText = totalQuestions !== null ? `${correctCount}/${totalQuestions}` : String(correctCount)
+    return `${scoreText} (${getLocalizedSensoryClassification(assessment.classification, language) || "-"})`
+  }
+
+  if (fallbackPercent === null) {
     return getLocalizedSensoryClassification(assessment.classification, language) || unknownLabel
   }
 
-  return `${directScore} (${getLocalizedSensoryClassification(assessment.classification, language) || "-"})`
+  return `${fallbackPercent}% (${getLocalizedSensoryClassification(assessment.classification, language) || "-"})`
 }
 
 export interface Assessment {
