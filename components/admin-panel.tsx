@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { AssessmentTextarea } from "@/components/ui/assessment-textarea"
 import { supabase } from "@/lib/supabase"
-import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp, Leaf, ChevronDown, ChevronUp, Phone, Calendar } from "lucide-react"
+import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp, Leaf, ChevronDown, ChevronUp, Phone, Calendar, Wind } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 
 // Add imports for new chart components and data utilities
@@ -398,6 +398,13 @@ export function AdminPanel() {
       (s) => s.raw_score !== null && s.normalized_score !== null,
     )
     return withScore || userOlfactory[0]
+  }
+
+  // Get all olfactory assessments for a user (newest first), for the report
+  const getUserOlfactoryAssessments = (userId: string) => {
+    return sensoryAssessments
+      .filter((s) => s.user_id === userId && s.test_type === "olfactory")
+      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())
   }
 
   const getUserTCMImages = (userId: string) => {
@@ -1030,6 +1037,76 @@ export function AdminPanel() {
                   ) : (
                     // Assessments View (Completed and In Progress)
                     <div className="space-y-4">
+                      {/* Olfactory Screening Results */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                          <Wind className="w-5 h-5" />
+                          {"嗅觉筛查结果 / Olfactory Screening"}
+                        </h3>
+                        {getUserOlfactoryAssessments(selectedUser).length === 0 ? (
+                          <p className="text-gray-600 border rounded-lg p-4 bg-gray-50">
+                            {"无嗅觉数据 / No olfactory data"}
+                          </p>
+                        ) : (
+                          <div className="space-y-3">
+                            {getUserOlfactoryAssessments(selectedUser).map((olf) => {
+                              const hasScore = olf.normalized_score !== null
+                              return (
+                                <div key={olf.id} className="border rounded-lg p-4 space-y-3">
+                                  <div className="flex justify-between items-center flex-wrap gap-2">
+                                    <Badge variant="default" className="bg-teal-600">
+                                      {"嗅觉 / Olfactory"}
+                                    </Badge>
+                                    <span className="text-sm text-gray-600">
+                                      {new Date(olf.completed_at).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div className="bg-gray-50 p-2 rounded">
+                                      <span className="text-gray-600">{"标准化评分: "}</span>
+                                      <span className="font-medium">
+                                        {hasScore ? `${olf.normalized_score}/100` : "无"}
+                                      </span>
+                                    </div>
+                                    <div className="bg-gray-50 p-2 rounded">
+                                      <span className="text-gray-600">{"原始评分: "}</span>
+                                      <span className="font-medium">
+                                        {olf.raw_score !== null ? olf.raw_score : "无"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {hasScore && (
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                        <div
+                                          className={`h-full rounded-full ${
+                                            (olf.normalized_score ?? 0) >= 60
+                                              ? "bg-teal-500"
+                                              : (olf.normalized_score ?? 0) >= 40
+                                              ? "bg-yellow-500"
+                                              : "bg-red-500"
+                                          }`}
+                                          style={{ width: `${olf.normalized_score}%` }}
+                                        />
+                                      </div>
+                                      <span className="text-sm font-medium w-12 text-right">
+                                        {olf.normalized_score}/100
+                                      </span>
+                                    </div>
+                                  )}
+                                  {olf.classification && (
+                                    <div className="text-sm">
+                                      <span className="text-gray-600">{"分类: "}</span>
+                                      <span className="font-medium">{olf.classification}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+
                       <h3 className="text-lg font-semibold">{t("admin.completed_assessments")}</h3>
                       {getUserAssessments(selectedUser).map((assessment) => (
                         <div key={assessment.id} className="border rounded-lg p-4 space-y-4">
