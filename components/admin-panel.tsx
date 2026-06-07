@@ -55,6 +55,16 @@ interface UserProgress {
   updated_at: string
 }
 
+interface SensoryAssessment {
+  id: string
+  user_id: string
+  test_type: string
+  raw_score: number | null
+  normalized_score: number | null
+  classification: string | null
+  completed_at: string
+}
+
 interface TCMAssessment {
   id: string
   user_id: string
@@ -97,6 +107,7 @@ export function AdminPanel() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [userProgress, setUserProgress] = useState<UserProgress[]>([])
   const [tcmAssessments, setTcmAssessments] = useState<TCMAssessment[]>([])
+  const [sensoryAssessments, setSensoryAssessments] = useState<SensoryAssessment[]>([])
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
   const [labAnalysis, setLabAnalysis] = useState("")
   const [loading, setLoading] = useState(false)
@@ -158,6 +169,12 @@ export function AdminPanel() {
         .select("*")
         .order("completed_at", { ascending: false })
 
+      // Load sensory assessments (olfactory, visual, auditory)
+      const { data: sensoryData } = await supabase
+        .from("sensory_assessments")
+        .select("*")
+        .order("completed_at", { ascending: false })
+
       const mappedAssessments = (assessmentsData || []).map((assessment) => ({
         id: assessment.id,
         user_id: assessment.user_id,
@@ -173,6 +190,7 @@ export function AdminPanel() {
       setUploadedFiles(filesData || [])
       setUserProgress(progressData || [])
       setTcmAssessments(tcmData || [])
+      setSensoryAssessments(sensoryData || [])
     } catch (error) {
       console.error("Error loading data:", error)
     } finally {
@@ -365,6 +383,21 @@ export function AdminPanel() {
 
   const getUserTCMAssessments = (userId: string) => {
     return tcmAssessments.filter((t) => t.user_id === userId)
+  }
+
+  // Get the latest olfactory assessment for a user (most recent valid score)
+  const getUserOlfactoryScore = (userId: string) => {
+    const userOlfactory = sensoryAssessments
+      .filter((s) => s.user_id === userId && s.test_type === "olfactory")
+      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())
+
+    if (userOlfactory.length === 0) return null
+
+    // Prefer the most recent record that has an actual score
+    const withScore = userOlfactory.find(
+      (s) => s.raw_score !== null && s.normalized_score !== null,
+    )
+    return withScore || userOlfactory[0]
   }
 
   const getUserTCMImages = (userId: string) => {
@@ -776,6 +809,7 @@ export function AdminPanel() {
                   const userFiles = getUserFiles(user.id)
                   const userCurrentProgress = getUserProgress(user.id)
                   const userTCM = getUserTCMAssessments(user.id)
+                  const olfactory = getUserOlfactoryScore(user.id)
                   return (
                     <div
                       key={user.id}
@@ -789,6 +823,14 @@ export function AdminPanel() {
                           <p className="font-medium">{user.phone_number}</p>
                           <p className="text-sm text-gray-600">
                             {t("admin.registered")}: {new Date(user.created_at).toLocaleDateString()}
+                          </p>
+                          <p className="text-sm text-gray-700 mt-1">
+                            {"嗅觉评分: "}
+                            <span className="font-semibold">
+                              {olfactory && olfactory.normalized_score !== null
+                                ? `${olfactory.normalized_score}/100`
+                                : "无"}
+                            </span>
                           </p>
                         </div>
                         <div className="flex flex-col items-end space-y-1">
