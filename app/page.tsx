@@ -502,7 +502,10 @@ function AppContent() {
         return
       }
 
-      setCurrentView("results")
+      setCurrentView("dashboard")
+      setCurrentStep(0)
+      setScores([])
+      setSectionMetadata({})
     }
   }
 
