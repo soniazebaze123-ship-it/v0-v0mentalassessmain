@@ -15,7 +15,7 @@ interface User {
 }
 
 interface AssessmentProgress {
-  assessment_type: "MOCA" | "MMSE"
+  assessment_type: string
   current_step: number
   scores: number[]
 }
@@ -34,8 +34,8 @@ interface UserContextType {
   ) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   progress: Record<string, AssessmentProgress>
-  saveProgress: (assessmentType: "MOCA" | "MMSE", step: number, scores: number[]) => Promise<void>
-  clearProgress: (assessmentType: "MOCA" | "MMSE") => Promise<void>
+  saveProgress: (assessmentType: string, step: number, scores: number[]) => Promise<void>
+  clearProgress: (assessmentType: string) => Promise<void>
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined)
@@ -284,7 +284,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const saveProgress = async (assessmentType: "MOCA" | "MMSE", step: number, scores: number[]) => {
+  const saveProgress = async (assessmentType: string, step: number, scores: number[]) => {
     if (!user?.id) {
       return
     }
@@ -320,7 +320,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const clearProgress = async (assessmentType: "MOCA" | "MMSE") => {
+  const clearProgress = async (assessmentType: string) => {
     if (!user?.id) {
       return
     }

@@ -229,6 +229,10 @@ function getSourceSectionScore(
   return getNumericScore(sourceSectionScores[sectionKey] || 0)
 }
 
+function toProgressAssessmentType(type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm") {
+  return type.toUpperCase()
+}
+
 function AppContent() {
   const { user, loading, saveProgress, clearProgress } = useUser()
   const { t, localizeText } = useLanguage()
@@ -363,11 +367,13 @@ function AppContent() {
 
   const handleStartAssessment = (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm") => {
     if (type === "visual" || type === "auditory" || type === "olfactory" || type === "tcm") {
+      void saveProgress(toProgressAssessmentType(type), 0, [])
       setCurrentView(type)
       return
     }
 
     if (type === "upload") {
+      void saveProgress(toProgressAssessmentType(type), 0, [])
       setCurrentView("upload")
     } else {
       const assessmentKey = type.toUpperCase() as "MOCA" | "MMSE"
@@ -397,16 +403,24 @@ function AppContent() {
     setScores(savedScores)
   }
 
-  const handleResetAssessmentSession = async (type: "moca" | "mmse") => {
-    const assessmentKey = type.toUpperCase() as "MOCA" | "MMSE"
+  const handleResetAssessmentSession = async (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm") => {
+    const progressKey = toProgressAssessmentType(type)
 
-    await clearProgress(assessmentKey)
-    setAssessmentType(assessmentKey)
-    setCurrentStep(0)
-    setScores([])
-    setSectionMetadata({})
+    await clearProgress(progressKey)
+
+    if (type === "moca" || type === "mmse") {
+      const assessmentKey = type.toUpperCase() as "MOCA" | "MMSE"
+      setAssessmentType(assessmentKey)
+      setCurrentStep(0)
+      setScores([])
+      setSectionMetadata({})
+      setCurrentView(type)
+      await saveProgress(assessmentKey, 0, [])
+      return
+    }
+
     setCurrentView(type)
-    await saveProgress(assessmentKey, 0, [])
+    await saveProgress(progressKey, 0, [])
   }
 
   const handleViewResults = (type: "moca" | "mmse") => {
@@ -570,7 +584,8 @@ function AppContent() {
     handleStepComplete(0)
   }
 
-  const handleUploadComplete = () => {
+  const handleUploadComplete = async () => {
+    await clearProgress("UPLOAD")
     setCurrentView("dashboard")
   }
 
@@ -605,15 +620,36 @@ function AppContent() {
   }
 
   if (currentView === "visual") {
-    return <VisualScreening onComplete={() => handleBackToDashboard()} />
+    return (
+      <VisualScreening
+        onComplete={async () => {
+          await clearProgress("VISUAL")
+          handleBackToDashboard()
+        }}
+      />
+    )
   }
 
   if (currentView === "auditory") {
-    return <AuditoryScreening onComplete={() => handleBackToDashboard()} />
+    return (
+      <AuditoryScreening
+        onComplete={async () => {
+          await clearProgress("AUDITORY")
+          handleBackToDashboard()
+        }}
+      />
+    )
   }
 
   if (currentView === "olfactory") {
-    return <OlfactoryModule protocolVersion="sat_v3_14" />
+    return (
+      <OlfactoryModule
+        protocolVersion="sat_v3_14"
+        onResultSaved={async () => {
+          await clearProgress("OLFACTORY")
+        }}
+      />
+    )
   }
 
   if (currentView === "tcm") {
@@ -621,6 +657,7 @@ function AppContent() {
       <TCMConstitution
         onComplete={(score, data) => {
           console.log("[v0] TCM Constitution completed:", { score, data })
+          void clearProgress("TCM")
           handleBackToDashboard()
         }}
         onBack={handleBackToDashboard}

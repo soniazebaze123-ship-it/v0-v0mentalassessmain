@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo, useState, useTransition } from "react"
+import { useMemo, useState } from "react"
 import { ArrowLeft, Sparkles } from "lucide-react"
 import { OLFACTORY_COPY, OLFACTORY_PROTOCOL_QUESTION_SET, SCENT_LABELS } from "@/lib/olfactory/config"
 import { buildOlfactoryResult } from "@/lib/olfactory/scoring"
@@ -10,10 +10,10 @@ import type {
   OlfactoryProtocolVersion,
   OlfactoryResponseItem,
   OlfactoryScentKey,
-  OlfactorySubmission,
 } from "@/lib/olfactory/types"
-import { saveOlfactoryResult } from "@/app/actions/olfactory-actions"
 import { useLanguage } from "@/contexts/language-context"
+import { useUser } from "@/contexts/user-context"
+import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
@@ -28,6 +28,7 @@ type Phase = "intro" | "testing" | "results"
 
 interface OlfactoryModuleProps {
   protocolVersion?: OlfactoryProtocolVersion
+  onResultSaved?: () => void | Promise<void>
 }
 
 function asOlfactoryLanguage(language: string): LanguageCode {
@@ -35,11 +36,12 @@ function asOlfactoryLanguage(language: string): LanguageCode {
   return "en"
 }
 
-export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleProps) {
+export function OlfactoryModule({ protocolVersion = "sat_v2", onResultSaved }: OlfactoryModuleProps) {
   const { language } = useLanguage()
   const activeLanguage = asOlfactoryLanguage(language)
   const questions = OLFACTORY_PROTOCOL_QUESTION_SET[protocolVersion]
   const copy = OLFACTORY_COPY
+  const { user } = useUser()
 
   const localizedText = {
     patientId: activeLanguage === "zh" ? "受试者编号" : activeLanguage === "yue" ? "受試者編號" : activeLanguage === "fr" ? "ID patient" : "Patient ID",
@@ -67,7 +69,7 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
   const [notes, setNotes] = useState("")
   const [startTime, setStartTime] = useState<number | null>(null)
   const [startedAtISO, setStartedAtISO] = useState<string>("")
-  const [isPending, startTransition] = useTransition()
+  const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string>("")
 
   const [answers, setAnswers] = useState<Record<number, OlfactoryScentKey | null>>(
@@ -185,40 +187,57 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
   }
 
   function saveResult() {
-    const itemSetVersionByProtocol: Record<OlfactoryProtocolVersion, string> = {
-      temp_v1: "temp_v1_items_8",
-      sat_v2: "sat_v2_items_12",
-      sat_v3_14: "sat_v3_14_items_14",
+    if (!user?.id) {
+      setSaveMessage(`${localizedText.saveFailedPrefix}${activeLanguage === "zh" ? "未检测到用户登录" : activeLanguage === "yue" ? "未檢測到用戶登入" : activeLanguage === "fr" ? "utilisateur non connecte" : "user not logged in"}`)
+      return
     }
 
-    const scoringVersionByProtocol: Record<OlfactoryProtocolVersion, string> = {
-      temp_v1: "temp_v1_scoring",
-      sat_v2: "sat_v2_scoring",
-      sat_v3_14: "sat_v3_14_scoring",
-    }
+    setIsSaving(true)
 
-    const payload: OlfactorySubmission = {
-      patientId: patientId || undefined,
-      language: activeLanguage,
-      testName: copy.testNameByProtocol[protocolVersion][activeLanguage],
-      testedAt: startedAtISO || new Date().toISOString(),
-      protocolVersion,
-      itemSetVersion: itemSetVersionByProtocol[protocolVersion],
-      scoringVersion: scoringVersionByProtocol[protocolVersion],
-      notes: notes || undefined,
-      result,
-    }
+    void (async () => {
+      const testDate = (startedAtISO || new Date().toISOString()).split("T")[0]
+      const classification = result.riskLevel === "normal" ? "normal" : "mild_impairment"
 
-    startTransition(async () => {
-      const response = await saveOlfactoryResult(payload)
+      const { error } = await supabase.from("sensory_assessments").insert({
+        user_id: user.id,
+        test_type: "olfactory",
+        raw_score: result.correctCount,
+        normalized_score: result.scorePercent,
+        classification,
+        test_date: testDate,
+        test_data: {
+          protocol_version: protocolVersion,
+          test_name: copy.testNameByProtocol[protocolVersion][activeLanguage],
+          language: activeLanguage,
+          patient_id: patientId || null,
+          notes: notes || null,
+          total_questions: result.totalQuestions,
+          correct_count: result.correctCount,
+          score_percent: result.scorePercent,
+          risk_level: result.riskLevel,
+          interpretation: result.interpretation,
+          items: result.items,
+        },
+        device_info: {
+          userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
+          platform: typeof navigator !== "undefined" ? navigator.platform : "unknown",
+        },
+        environment_data: {
+          test_mode: "olfactory_module",
+          self_administered: true,
+        },
+      })
 
-      if (response.success) {
-        setSaveMessage(localizedText.resultSaved)
+      if (error) {
+        setSaveMessage(`${localizedText.saveFailedPrefix}${error.message}`)
+        setIsSaving(false)
         return
       }
 
-      setSaveMessage(`${localizedText.saveFailedPrefix}${response.error ?? localizedText.unknownError}`)
-    })
+      setSaveMessage(localizedText.resultSaved)
+      await onResultSaved?.()
+      setIsSaving(false)
+    })()
   }
 
   return (
@@ -552,7 +571,7 @@ export function OlfactoryModule({ protocolVersion = "sat_v2" }: OlfactoryModuleP
               <Button variant="outline" onClick={restart}>
                 {copy.restart[activeLanguage]}
               </Button>
-              <Button onClick={saveResult} disabled={isPending}>
+              <Button onClick={saveResult} disabled={isSaving}>
                 {copy.save[activeLanguage]}
               </Button>
             </div>
