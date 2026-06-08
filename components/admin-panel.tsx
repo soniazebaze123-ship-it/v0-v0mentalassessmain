@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { AssessmentTextarea } from "@/components/ui/assessment-textarea"
 import { supabase } from "@/lib/supabase"
-import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp, Leaf, ChevronDown, ChevronUp, Phone, Calendar, Wind } from "lucide-react"
+import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp, Leaf, ChevronDown, ChevronUp, Phone, Calendar, Wind, AlertTriangle } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 
 // Add imports for new chart components and data utilities
@@ -113,6 +113,7 @@ export function AdminPanel() {
   const [loading, setLoading] = useState(false)
   const [viewingFiles, setViewingFiles] = useState(false)
   const [viewingTCM, setViewingTCM] = useState(false)
+  const [viewingMissingTCM, setViewingMissingTCM] = useState(false)
   const [viewingProgressTracker, setViewingProgressTracker] = useState(false)
   const [expandedTCMAssessment, setExpandedTCMAssessment] = useState<string | null>(null)
 
@@ -385,6 +386,19 @@ export function AdminPanel() {
     return tcmAssessments.filter((t) => t.user_id === userId)
   }
 
+  // Patients who have NO saved TCM constitution result. These are the patients
+  // who need to redo the TCM test so their data can be traced. Some may have
+  // uploaded tongue/face images without a saved questionnaire result.
+  const getPatientsMissingTCM = () => {
+    return users
+      .filter((u) => getUserTCMAssessments(u.id).length === 0)
+      .map((u) => {
+        const hasImages = uploadedFiles.some((f) => f.user_id === u.id)
+        return { user: u, hasImages }
+      })
+      .sort((a, b) => new Date(b.user.created_at).getTime() - new Date(a.user.created_at).getTime())
+  }
+
   // Get the latest olfactory assessment for a user (most recent valid score)
   const getUserOlfactoryScore = (userId: string) => {
     const userOlfactory = sensoryAssessments
@@ -513,9 +527,16 @@ export function AdminPanel() {
               <TrendingUp className="w-4 h-4 mr-2" />
               Patient Progress
             </Button>
-            <Button onClick={() => { setViewingTCM(!viewingTCM); setViewingFiles(false); }} variant="outline">
+            <Button onClick={() => { setViewingTCM(!viewingTCM); setViewingFiles(false); setViewingMissingTCM(false); }} variant="outline">
               <Leaf className="w-4 h-4 mr-2" />
               {viewingTCM ? t("admin.view_assessments") : "TCM Data"}
+            </Button>
+            <Button
+              onClick={() => { setViewingMissingTCM(!viewingMissingTCM); setViewingTCM(false); setViewingFiles(false); }}
+              variant="outline"
+            >
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              {viewingMissingTCM ? t("admin.view_assessments") : `Missing TCM (${getPatientsMissingTCM().length})`}
             </Button>
             <Button onClick={() => { setViewingFiles(!viewingFiles); setViewingTCM(false); }} variant="outline">
               <Eye className="w-4 h-4 mr-2" />
@@ -620,6 +641,58 @@ export function AdminPanel() {
             users={users}
           />
         </div>
+
+        {/* Missing TCM Tracker Section */}
+        {viewingMissingTCM && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-6 h-6 text-amber-600" />
+                Patients Missing TCM Test ({getPatientsMissingTCM().length})
+              </CardTitle>
+              <p className="text-sm text-gray-500 mt-1">
+                These patients have no saved TCM constitution result. Ask them to open the app and complete only the
+                TCM Constitution test. Patients with uploaded images completed an earlier test that was not saved.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {getPatientsMissingTCM().length === 0 ? (
+                <p className="text-emerald-600 text-center py-8 font-medium">
+                  All patients have a saved TCM result.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {getPatientsMissingTCM().map(({ user, hasImages }) => (
+                    <div
+                      key={user.id}
+                      className="flex items-center justify-between flex-wrap gap-3 border rounded-lg p-3 bg-amber-50/50"
+                    >
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="w-4 h-4 text-gray-500" />
+                          <span className="font-medium">{user.phone_number || "Unknown"}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Calendar className="w-4 h-4" />
+                          <span>Registered {new Date(user.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      {hasImages ? (
+                        <Badge variant="outline" className="border-amber-500 text-amber-700">
+                          Uploaded images - result not saved
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-gray-400 text-gray-600">
+                          No TCM activity
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* All TCM Patients Data Section */}
         {viewingTCM && (
