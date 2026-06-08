@@ -24,6 +24,9 @@ interface User {
   id: string
   phone_number: string
   created_at: string
+  Name?: string | null
+  date_of_birth?: string | null
+  gender?: string | null
 }
 
 export interface Assessment {
@@ -218,6 +221,7 @@ export function AdminPanel() {
     const csvData = assessments.map((assessment) => {
       const user = users.find((u) => u.id === assessment.user_id)
       return {
+        name: user?.Name || "",
         phone_number: user?.phone_number || "",
         assessment_type: assessment.assessment_type,
         total_score: assessment.total_score,
@@ -228,8 +232,9 @@ export function AdminPanel() {
     })
 
     const csv = [
-      ["Phone Number", "Assessment Type", "Total Score", "Section Scores", "Completed At", "Laboratory Analysis"],
+      ["Name", "Phone Number", "Assessment Type", "Total Score", "Section Scores", "Completed At", "Laboratory Analysis"],
       ...csvData.map((row) => [
+        row.name,
         row.phone_number,
         row.assessment_type,
         row.total_score.toString(),
@@ -253,6 +258,7 @@ export function AdminPanel() {
     const csvData = tcmAssessments.map((tcm) => {
       const user = users.find((u) => u.id === tcm.user_id)
       return {
+        name: user?.Name || "",
         phone_number: user?.phone_number || "",
         primary_constitution: TCM_CONSTITUTION_NAMES[tcm.primary_constitution]?.en || tcm.primary_constitution,
         primary_constitution_zh: TCM_CONSTITUTION_NAMES[tcm.primary_constitution]?.zh || "",
@@ -273,6 +279,7 @@ export function AdminPanel() {
 
     const csv = [
       [
+        "Name",
         "Phone Number",
         "Primary Constitution (EN)",
         "Primary Constitution (ZH)",
@@ -290,6 +297,7 @@ export function AdminPanel() {
         "Completed At",
       ],
       ...csvData.map((row) => [
+        row.name,
         row.phone_number,
         row.primary_constitution,
         row.primary_constitution_zh,
@@ -669,6 +677,7 @@ export function AdminPanel() {
                       className="flex items-center justify-between flex-wrap gap-3 border rounded-lg p-3 bg-amber-50/50"
                     >
                       <div className="flex items-center gap-4 flex-wrap">
+                        <span className="font-semibold text-gray-900">{user.Name || "Unnamed"}</span>
                         <div className="flex items-center gap-2 text-sm">
                           <Phone className="w-4 h-4 text-gray-500" />
                           <span className="font-medium">{user.phone_number || "Unknown"}</span>
@@ -741,7 +750,9 @@ export function AdminPanel() {
                               )}
                               <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <Phone className="w-4 h-4" />
-                                <span className="font-medium">{patientData.patient?.phone_number || "Unknown"}</span>
+                                <span className="font-medium">{patientData.patient?.Name || "Unnamed"}</span>
+                                <span className="text-gray-400">·</span>
+                                <span>{patientData.patient?.phone_number || "Unknown"}</span>
                               </div>
                               <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <Calendar className="w-4 h-4" />
@@ -907,7 +918,8 @@ export function AdminPanel() {
                     >
                       <div className="flex justify-between items-center flex-wrap gap-2">
                         <div>
-                          <p className="font-medium">{user.phone_number}</p>
+                          <p className="font-semibold text-gray-900">{user.Name || "Unnamed"}</p>
+                          <p className="text-sm text-gray-600">{user.phone_number}</p>
                           <p className="text-sm text-gray-600">
                             {t("admin.registered")}: {new Date(user.created_at).toLocaleDateString()}
                           </p>
