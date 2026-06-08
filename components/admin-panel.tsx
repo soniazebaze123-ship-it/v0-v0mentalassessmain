@@ -386,16 +386,17 @@ export function AdminPanel() {
     return tcmAssessments.filter((t) => t.user_id === userId)
   }
 
-  // Patients who have NO saved TCM constitution result. These are the patients
-  // who need to redo the TCM test so their data can be traced. Some may have
-  // uploaded tongue/face images without a saved questionnaire result.
+  // Patients missing some part of their TCM record. A complete TCM record needs
+  // BOTH a saved questionnaire result (tcm_assessments row) AND tongue/face images.
+  // We flag exactly what each patient is missing so staff know what to collect.
   const getPatientsMissingTCM = () => {
     return users
-      .filter((u) => getUserTCMAssessments(u.id).length === 0)
       .map((u) => {
-        const hasImages = uploadedFiles.some((f) => f.user_id === u.id)
-        return { user: u, hasImages }
+        const missingQuestionnaire = getUserTCMAssessments(u.id).length === 0
+        const missingImage = getUserTCMImages(u.id).length === 0
+        return { user: u, missingQuestionnaire, missingImage }
       })
+      .filter((p) => p.missingQuestionnaire || p.missingImage)
       .sort((a, b) => new Date(b.user.created_at).getTime() - new Date(a.user.created_at).getTime())
   }
 
@@ -648,21 +649,21 @@ export function AdminPanel() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="w-6 h-6 text-amber-600" />
-                Patients Missing TCM Test ({getPatientsMissingTCM().length})
+                Patients Missing TCM Data ({getPatientsMissingTCM().length})
               </CardTitle>
               <p className="text-sm text-gray-500 mt-1">
-                These patients have no saved TCM constitution result. Ask them to open the app and complete only the
-                TCM Constitution test. Patients with uploaded images completed an earlier test that was not saved.
+                A complete TCM record needs both the questionnaire result and tongue/face images. Each patient below is
+                marked with what is missing. Ask them to open the app and complete only the TCM Constitution test.
               </p>
             </CardHeader>
             <CardContent>
               {getPatientsMissingTCM().length === 0 ? (
                 <p className="text-emerald-600 text-center py-8 font-medium">
-                  All patients have a saved TCM result.
+                  All patients have a complete TCM record.
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {getPatientsMissingTCM().map(({ user, hasImages }) => (
+                  {getPatientsMissingTCM().map(({ user, missingQuestionnaire, missingImage }) => (
                     <div
                       key={user.id}
                       className="flex items-center justify-between flex-wrap gap-3 border rounded-lg p-3 bg-amber-50/50"
@@ -677,15 +678,21 @@ export function AdminPanel() {
                           <span>Registered {new Date(user.created_at).toLocaleDateString()}</span>
                         </div>
                       </div>
-                      {hasImages ? (
-                        <Badge variant="outline" className="border-amber-500 text-amber-700">
-                          Uploaded images - result not saved
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="border-gray-400 text-gray-600">
-                          No TCM activity
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {missingQuestionnaire && missingImage ? (
+                          <Badge variant="outline" className="border-red-500 text-red-700">
+                            Missing both (questionnaire + image)
+                          </Badge>
+                        ) : missingQuestionnaire ? (
+                          <Badge variant="outline" className="border-amber-500 text-amber-700">
+                            Missing questionnaire
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-blue-500 text-blue-700">
+                            Missing image
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
