@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, ArrowRight, CheckCircle2, Leaf, Heart, Droplets, Wind, Flame, Moon, Sun, Sparkles, Upload, Camera, X, ImageIcon, Activity, ChevronDown, ChevronUp, Check } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle2, Leaf, Heart, Droplets, Wind, Flame, Moon, Sun, Sparkles, Upload, Camera, X, ImageIcon, Activity, ChevronDown, ChevronUp, Check, AlertTriangle, Loader2 } from "lucide-react"
 import { InstructionAudio } from "@/components/ui/instruction-audio"
 import { useLanguage } from "@/contexts/language-context"
 import { useUser } from "@/contexts/user-context"
@@ -230,7 +230,7 @@ const PULSE_TYPES: PulseType[] = [
     nameZh: "弱",
     category: "sinking",
     description: "Sinking, thin, soft and lacks strength",
-    descriptionZh: "沉细而软，应指无力",
+    descriptionZh: "沉细而软，应指无��",
     clinicalSignificance: "Qi and blood deficiency",
     clinicalSignificanceZh: "主气血不足",
   },
@@ -640,6 +640,10 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
   const [pulseNotes, setPulseNotes] = useState("")
   const [expandedCategory, setExpandedCategory] = useState<PulseCategory | null>(null)
 
+  // Persistence state — used to guarantee a completed test is never silently lost
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
+  const [saveError, setSaveError] = useState<string>("")
+
   const progress = (currentQuestion / TCM_QUESTIONS.length) * 100
 
   // Image upload handlers
@@ -838,40 +842,121 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
       recommendations,
     }
 
-    // Save to Supabase tcm_assessments table
-    if (user) {
-      try {
-        const { error } = await supabase.from("tcm_assessments").insert({
-          user_id: user.id,
-          primary_constitution: primaryConstitution,
-          balanced_score: normalizedScores.balanced,
-          qi_deficiency_score: normalizedScores.qi_deficiency,
-          yang_deficiency_score: normalizedScores.yang_deficiency,
-          yin_deficiency_score: normalizedScores.yin_deficiency,
-          phlegm_dampness_score: normalizedScores.phlegm_dampness,
-          damp_heat_score: normalizedScores.damp_heat,
-          blood_stasis_score: normalizedScores.blood_stasis,
-          qi_stagnation_score: normalizedScores.qi_stagnation,
-          special_constitution_score: normalizedScores.special_constitution,
-          primary_score: normalizedScores[primaryConstitution],
-          overall_score: overallScore,
-          answers: responses,
-          recommendations: recommendations,
-          completed_at: new Date().toISOString(),
-        })
-        
-        if (error) {
-          console.error("[v0] Error saving TCM assessment:", error)
-        } else {
-          console.log("[v0] TCM assessment saved successfully")
-        }
-      } catch (err) {
-        console.error("[v0] Exception saving TCM assessment:", err)
-      }
-    }
-
+    // Show results immediately, then persist. Persistence runs through a
+    // dedicated function that surfaces failures instead of silently dropping data.
     setResults(resultData)
     setPhase("results")
+
+    await persistAssessment({
+      primaryConstitution,
+      normalizedScores,
+      overallScore,
+      recommendations,
+    })
+  }
+
+  // Persist a completed TCM assessment. Retries transient failures and records
+  // the outcome in saveStatus so the UI can warn the patient/clinician if the
+  // result was NOT stored (this is what previously caused untraceable tests).
+  const persistAssessment = async ({
+    primaryConstitution,
+    normalizedScores,
+    overallScore,
+    recommendations,
+  }: {
+    primaryConstitution: TCMConstitution
+    normalizedScores: Record<TCMConstitution, number>
+    overallScore: number
+    recommendations: string[]
+  }) => {
+    if (!user) {
+      console.error("[v0] TCM assessment NOT saved: no authenticated user")
+      setSaveError(
+        uiText(
+          "You are not signed in, so this result could not be saved. Please sign in and retake, or contact staff.",
+          "您未登录，结果无法保存。请登录后重新测试，或联系工作人员。",
+        ),
+      )
+      setSaveStatus("error")
+      return
+    }
+
+    const payload = {
+      user_id: user.id,
+      primary_constitution: primaryConstitution,
+      balanced_score: normalizedScores.balanced,
+      qi_deficiency_score: normalizedScores.qi_deficiency,
+      yang_deficiency_score: normalizedScores.yang_deficiency,
+      yin_deficiency_score: normalizedScores.yin_deficiency,
+      phlegm_dampness_score: normalizedScores.phlegm_dampness,
+      damp_heat_score: normalizedScores.damp_heat,
+      blood_stasis_score: normalizedScores.blood_stasis,
+      qi_stagnation_score: normalizedScores.qi_stagnation,
+      special_constitution_score: normalizedScores.special_constitution,
+      primary_score: normalizedScores[primaryConstitution],
+      overall_score: overallScore,
+      answers: {
+        responses,
+        // Persist pulse diagnosis alongside answers so it is never lost,
+        // even though it has no dedicated columns yet.
+        pulse_diagnosis: {
+          selected_pulses: selectedPulses,
+          notes: pulseNotes,
+        },
+        uploaded_images: uploadedImages.map((img) => ({
+          type: img.type,
+          url: img.url,
+        })),
+      },
+      recommendations,
+      completed_at: new Date().toISOString(),
+    }
+
+    setSaveStatus("saving")
+    setSaveError("")
+
+    const maxAttempts = 3
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const { error } = await supabase.from("tcm_assessments").insert(payload)
+        if (!error) {
+          console.log("[v0] TCM assessment saved successfully on attempt", attempt)
+          setSaveStatus("saved")
+          return
+        }
+        console.error(`[v0] Error saving TCM assessment (attempt ${attempt}):`, error.message)
+        if (attempt === maxAttempts) {
+          setSaveError(error.message)
+          setSaveStatus("error")
+        }
+      } catch (err) {
+        console.error(`[v0] Exception saving TCM assessment (attempt ${attempt}):`, err)
+        if (attempt === maxAttempts) {
+          setSaveError(err instanceof Error ? err.message : String(err))
+          setSaveStatus("error")
+        }
+      }
+      // Backoff before retrying
+      await new Promise((resolve) => setTimeout(resolve, attempt * 600))
+    }
+  }
+
+  // Allow the patient/clinician to retry a failed save without redoing the test.
+  const retrySave = async () => {
+    if (!results) return
+    const balancedScore = results.constitutionScores.balanced
+    const imbalanceScores = Object.entries(results.constitutionScores)
+      .filter(([key]) => key !== "balanced")
+      .map(([, score]) => score)
+    const avgImbalance =
+      imbalanceScores.reduce((a, b) => a + b, 0) / imbalanceScores.length
+    const overallScore = Math.round((balancedScore + (100 - avgImbalance)) / 2)
+    await persistAssessment({
+      primaryConstitution: results.primaryConstitution,
+      normalizedScores: results.constitutionScores,
+      overallScore,
+      recommendations: results.recommendations,
+    })
   }
 
   const getConstitutionInfo = (type: TCMConstitution) => {
@@ -880,6 +965,18 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
 
   const handleComplete = () => {
     if (results) {
+      // If the result was not persisted, warn before leaving so the patient/clinician
+      // knows the test will be untraceable unless they retry the save.
+      if (saveStatus === "error") {
+        const proceed = window.confirm(
+          uiText(
+            "This result was not saved to the database and will not be traceable. Continue anyway?",
+            "此结果未保存到数据库，将无法追溯。仍要继续吗？",
+          ),
+        )
+        if (!proceed) return
+      }
+
       // Calculate overall score (100 = perfectly balanced, lower = more imbalanced)
       const balancedScore = results.constitutionScores.balanced
       const imbalanceScores = Object.entries(results.constitutionScores)
@@ -1392,7 +1489,39 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Primary Constitution */}
+          {/* Save status — guarantees a failed save is never invisible */}
+          {saveStatus === "saving" && (
+            <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+              <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+              <span>{uiText("Saving your result...", "正在保存您的结果...")}</span>
+            </div>
+          )}
+          {saveStatus === "saved" && (
+            <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{uiText("Result saved to your record.", "结果已保存到您的档案。")}</span>
+            </div>
+          )}
+          {saveStatus === "error" && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span className="font-medium">
+                  {uiText("This result was NOT saved.", "此结果未能保存。")}
+                </span>
+              </div>
+              {saveError && <p className="mt-1 text-xs opacity-80">{saveError}</p>}
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 bg-transparent"
+                onClick={retrySave}
+              >
+                {uiText("Retry save", "重试保存")}
+              </Button>
+            </div>
+          )}
+
           {primaryInfo && (
             <div className={`p-4 rounded-lg border-2 ${primaryInfo.color}`}>
               <div className="flex items-center gap-3 mb-2">
@@ -1455,8 +1584,15 @@ export function TCMConstitution({ onComplete, onBack }: TCMConstitutionProps) {
             </ul>
           </div>
 
-          <Button onClick={handleComplete} className="w-full" size="lg">
-            {uiText("Complete and Continue", "完成并继续")}
+          <Button
+            onClick={handleComplete}
+            className="w-full"
+            size="lg"
+            disabled={saveStatus === "saving"}
+          >
+            {saveStatus === "saving"
+              ? uiText("Saving...", "保存中...")
+              : uiText("Complete and Continue", "完成并继续")}
           </Button>
         </CardContent>
       </Card>
