@@ -657,6 +657,113 @@ const getConstitutionLabelForLanguage = (value: string, language: ReportLanguage
   return mapping[language]
 }
 
+// Cognitive classification helpers per spec
+const classifyMmse = (score: number | null | undefined) => {
+  const s = typeof score === "number" && Number.isFinite(score) ? score : null
+  if (s === null) return "Unknown"
+  if (s >= 27 && s <= 30) return "Normal"
+  if (s >= 21 && s <= 26) return "Mild"
+  if (s >= 11 && s <= 20) return "Moderate"
+  return "Severe"
+}
+
+const classifyMoca = (score: number | null | undefined) => {
+  const s = typeof score === "number" && Number.isFinite(score) ? score : null
+  if (s === null) return "Unknown"
+  if (s >= 26 && s <= 30) return "Normal"
+  if (s >= 18 && s <= 25) return "Mild"
+  if (s >= 10 && s <= 17) return "Moderate"
+  return "Severe"
+}
+
+const severityRank = (label: string) => {
+  switch ((label || "").toLowerCase()) {
+    case "severe":
+      return 4
+    case "moderate":
+      return 3
+    case "mild":
+      return 2
+    case "normal":
+      return 1
+    default:
+      return 0
+  }
+}
+
+const chooseHigherSeverity = (a: string, b: string) => {
+  return severityRank(a) >= severityRank(b) ? a : b
+}
+
+const getEegCorrelationText = (severity: string, language: ReportLanguage) => {
+  const key = (severity || "").toLowerCase()
+  if (language === "zh-CN") {
+    if (key === "normal") return "脑电图相关性提示无明显异常。"
+    if (key === "mild") return "脑电图相关性提示轻度异常。"
+    if (key === "moderate") return "脑电图相关性提示中度异常。"
+    return "脑电图相关性提示重度异常。"
+  }
+  if (language === "zh-HK") {
+    if (key === "normal") return "腦電圖相關性提示無明顯異常。"
+    if (key === "mild") return "腦電圖相關性提示輕度異常。"
+    if (key === "moderate") return "腦電圖相關性提示中度異常。"
+    return "腦電圖相關性提示重度異常。"
+  }
+  if (language === "fr") {
+    if (key === "normal") return "La correlation EEG n'indique pas d'anomalie significative."
+    if (key === "mild") return "La correlation EEG suggere une anomalie legere."
+    if (key === "moderate") return "La correlation EEG suggere une anomalie moderee."
+    return "La correlation EEG suggere une anomalie severe."
+  }
+  if (key === "normal") return "Electroencephalogram correlation indicates no significant abnormality."
+  if (key === "mild") return "Electroencephalogram correlation suggests mild abnormality."
+  if (key === "moderate") return "Electroencephalogram correlation suggests moderate abnormality."
+  return "Electroencephalogram correlation suggests severe abnormality."
+}
+
+const buildAutoFinalSummary = (
+  latestMmse: Assessment | undefined,
+  latestMoca: Assessment | undefined,
+  latestTcm: TCMAssessment | undefined,
+  latestOlfactory: SensoryAssessment | undefined,
+  language: ReportLanguage,
+) => {
+  const mmseScore = latestMmse?.total_score ?? null
+  const mocaScore = latestMoca?.total_score ?? null
+  const mmseClass = classifyMmse(mmseScore)
+  const mocaClass = classifyMoca(mocaScore)
+  const overall = chooseHigherSeverity(mmseClass, mocaClass)
+  const eegText = getEegCorrelationText(overall, language)
+
+  const tcmText = latestTcm?.primary_constitution
+    ? (language === "zh-CN" ? `中医评估表明患者的状况与体质相关：${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : `Traditional Chinese Medicine assessment indicates that the patient's condition is related to physical constitution: ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}`)
+    : language === "zh-CN"
+      ? "中医评估表明患者的状况与体质相关。"
+      : language === "zh-HK"
+        ? "中醫評估表明患者的狀況與體質相關。"
+        : language === "fr"
+          ? "L'evaluation MTC indique que l'etat du patient est lie a sa constitution physique."
+          : "Traditional Chinese Medicine assessment indicates that the patient's condition is related to physical constitution."
+
+  const sensoryText = (() => {
+    if (!latestOlfactory) return language === "zh-CN" ? "感觉评估未提供。" : language === "zh-HK" ? "感官評估未提供。" : language === "fr" ? "Evaluation sensorielle non renseignee." : "Sensory assessment not provided."
+    const olf = getOlfactoryScoreDisplay(latestOlfactory, language, language === "zh-CN" ? "未提供" : language === "zh-HK" ? "未提供" : language === "fr" ? "Non renseigne" : "Not provided")
+    return language === "zh-CN" ? `感觉评估：${olf}` : language === "zh-HK" ? `感官評估：${olf}` : language === "fr" ? `Evaluation sensorielle: ${olf}` : `Sensory assessment: ${olf}`
+  })()
+
+  if (language === "zh-CN") {
+    return `患者的认知筛查结果：MMSE ${mmseScore ?? "未提供"} (${mmseClass})，MoCA ${mocaScore ?? "未提供"} (${mocaClass})。综合评估为${overall}。${eegText} ${tcmText} ${sensoryText}`
+  }
+  if (language === "zh-HK") {
+    return `患者的認知篩查結果：MMSE ${mmseScore ?? "未提供"} (${mmseClass})，MoCA ${mocaScore ?? "未提供"} (${mocaClass})。綜合評估為${overall}。${eegText} ${tcmText} ${sensoryText}`
+  }
+  if (language === "fr") {
+    return `Evaluation cognitive: MMSE ${mmseScore ?? "Non renseigne"} (${mmseClass}), MoCA ${mocaScore ?? "Non renseigne"} (${mocaClass}). Classification globale: ${overall}. ${eegText} ${tcmText} ${sensoryText}`
+  }
+
+  return `The patient's cognitive assessment demonstrates ${overall.toLowerCase()} cognitive impairment based on MMSE (${mmseScore ?? "N/A"}, ${mmseClass}) and MoCA (${mocaScore ?? "N/A"}, ${mocaClass}). ${eegText} ${tcmText} ${sensoryText}`
+}
+
 const getLikertLabelForReport = (score: number, language: ReportLanguage) => {
   const labels = LIKERT_LABELS[score]
   if (!labels) return String(score)
@@ -1128,7 +1235,7 @@ export function AdminPanel() {
   const [reportLanguage, setReportLanguage] = useState<ReportLanguage>("en")
   const [tcmDiagnosisInput, setTcmDiagnosisInput] = useState("")
   const [tcmTherapyPlanInput, setTcmTherapyPlanInput] = useState("")
-  const [finalSummaryInput, setFinalSummaryInput] = useState("")
+  
   const [tcmAssessmentConstitutionInput, setTcmAssessmentConstitutionInput] = useState("")
   const [tcmAssessmentPrimaryScoreInput, setTcmAssessmentPrimaryScoreInput] = useState("")
   const [tcmAssessmentOverallScoreInput, setTcmAssessmentOverallScoreInput] = useState("")
@@ -1206,7 +1313,7 @@ export function AdminPanel() {
     setFollowUpRecommendationInput(existingReview?.follow_up_recommendation || "")
     setDoctorNameInput(existingReview?.doctor_name || "")
     setReviewDateInput(existingReview?.review_date || "")
-    setFinalSummaryInput(existingReport?.final_diagnostic_analysis || "")
+    // final summary removed from UI/DB per spec; no longer populating finalSummaryInput
   }, [selectedUser, doctorReviews, medicalReports, tcmAssessments])
 
   const handleLogin = async () => {
@@ -1956,33 +2063,16 @@ export function AdminPanel() {
     const reviewDate = (useDraftInputs ? reviewDateInput : savedReview?.review_date) || unknown
     const eegStatusLabel = contentLabels.eegStatus
     const eegSummaryLabel = contentLabels.eegSummary
-    const eegSummary =
-      riskLevel === "high"
-        ? language === "zh-CN"
-          ? "认知风险较高，建议优先安排EEG检查以辅助鉴别病因。"
-          : language === "zh-HK"
-            ? "認知風險較高，建議優先安排EEG檢查以輔助鑑別病因。"
-            : language === "fr"
-              ? "Risque cognitif eleve; EEG prioritaire recommande pour appuyer le diagnostic differentiel."
-              : "Higher cognitive risk detected; prioritize EEG scheduling to support differential diagnosis."
-        : riskLevel === "moderate"
-          ? language === "zh-CN"
-            ? "中等风险，建议在近期复评前完成EEG基线检查。"
-            : language === "zh-HK"
-              ? "中等風險，建議於近期重評前完成EEG基線檢查。"
-              : language === "fr"
-                ? "Risque modere; EEG de reference conseille avant la prochaine reevaluation."
-                : "Moderate risk; baseline EEG is recommended before the next reassessment."
-          : language === "zh-CN"
-            ? "当前风险较低，可根据临床判断择期完成EEG。"
-            : language === "zh-HK"
-              ? "當前風險較低，可按臨床判斷擇期完成EEG。"
-              : language === "fr"
-                ? "Risque faible actuellement; EEG a programmer selon le jugement clinique."
-                : "Current risk is low; EEG may be scheduled electively based on clinical judgment."
+
+    // New cognitive classification per MMSE and MoCA and EEG correlation mapping
+    const mmseClass = classifyMmse(latestMmse?.total_score ?? null)
+    const mocaClass = classifyMoca(latestMoca?.total_score ?? null)
+    const overallCognitiveSeverity = chooseHigherSeverity(mmseClass, mocaClass)
+    const eegSummary = getEegCorrelationText(overallCognitiveSeverity, language) + (language === "zh-CN" || language === "zh-HK" ? "\n重要提示：EEG分类是基于MMSE和MoCA得分的估算，并不代表实际EEG检查结果。" : language === "fr" ? "\nNote importante : la classification EEG est une correlation estimee a partir des scores MMSE et MoCA et ne remplace pas un examen EEG." : "\nImportant Note: The EEG classification is an estimated correlation derived from cognitive assessment scores (MMSE and MoCA) and does not represent findings from an actual EEG examination.")
     const diagnosis = (useDraftInputs ? tcmDiagnosisInput : savedReview?.tcm_diagnosis) || unknown
     const therapyPlan = (useDraftInputs ? tcmTherapyPlanInput : savedReview?.therapy_plan) || unknown
-    const finalSummary = (useDraftInputs ? finalSummaryInput : savedReview?.final_summary) || unknown
+    // Auto-generate final summary combining MMSE, MoCA, TCM and sensory per requirement #1
+    const finalSummaryGenerated = buildAutoFinalSummary(latestMmse, latestMoca, latestTcm, latestOlfactory, language)
 
     const mmseRows = formatSectionRows(latestMmse, "MMSE", language)
     const mocaRows = formatSectionRows(latestMoca, "MOCA", language)
@@ -2084,7 +2174,7 @@ export function AdminPanel() {
 
       <div class="section">
         <div class="section-title">${escapeHtml(labels.tcm)}</div>
-        <div class="textarea">${escapeHtml(labels.tcmNeedsConfirmation)}</div>
+        <div class="textarea">${escapeHtml(language === "zh-CN" ? "中医评估表明患者的状况与体质相关。" : language === "zh-HK" ? "中醫評估表明患者的狀況與體質相關。" : language === "fr" ? "L'evaluation MTC indique que l'etat du patient est lie a sa constitution physique." : "Traditional Chinese Medicine assessment indicates that the patient's condition is related to physical constitution.")}${latestTcm?.primary_constitution ? "\n" + escapeHtml(getConstitutionLabelForLanguage(latestTcm.primary_constitution, language) || "") : ""}${latestTcm?.recommendations && latestTcm.recommendations.length > 0 ? "\n" + escapeHtml((latestTcm.recommendations || []).join("; ")) : ""}</div>
       </div>
 
       <div class="section">
@@ -2095,16 +2185,7 @@ export function AdminPanel() {
         <div class="textarea"><strong>${escapeHtml(eegSummaryLabel)}:</strong> ${escapeHtml(eegSummary)}</div>
       </div>
 
-      <div class="section">
-        <div class="section-title">${escapeHtml(labels.finalPlan)}</div>
-        <div class="risk-box">
-          <div><span class="risk-badge ${riskClass}">${escapeHtml(contentLabels.riskTier)}: ${escapeHtml(riskLabel)}</span></div>
-          <div class="note"><strong>${escapeHtml(contentLabels.dementiaRiskRecommendation)}:</strong> ${escapeHtml(dementiaRiskRecommendation)}</div>
-        </div>
-        <div class="textarea"><strong>${escapeHtml(labels.diagnosis)}:</strong> ${escapeHtml(diagnosis)}</div>
-        <div class="textarea"><strong>${escapeHtml(labels.treatmentPlan)}:</strong> ${escapeHtml(therapyPlan)}</div>
-        <div class="textarea"><strong>${escapeHtml(labels.finalSummary)}:</strong> ${escapeHtml(finalSummary)}</div>
-      </div>
+      <!-- Section 6 removed per specification -->
     </div>
     <div class="footer">
       <div>${escapeHtml(contentLabels.doctorName)}: ${escapeHtml(doctorName)}</div>
@@ -2150,38 +2231,18 @@ export function AdminPanel() {
     const mmseRisk = latestMmse && latestMmse.total_score <= 24
     const olfactoryRisk = olfactoryStatus.includes("severe") || olfactoryStatus.includes("high")
     const riskFlagCount = [mocaRisk, mmseRisk, olfactoryRisk].filter(Boolean).length
-    const riskLevel: "high" | "moderate" | "low" =
-      riskFlagCount >= 2 ? "high" : riskFlagCount === 1 ? "moderate" : "low"
-    const finalRisk =
-      riskLevel === "high" ? contentLabels.riskHigh : riskLevel === "moderate" ? contentLabels.riskModerate : contentLabels.riskLow
+    const riskLevel: "high" | "moderate" | "low" = riskFlagCount >= 2 ? "high" : riskFlagCount === 1 ? "moderate" : "low"
+    const finalRisk = riskLevel === "high" ? contentLabels.riskHigh : riskLevel === "moderate" ? contentLabels.riskModerate : contentLabels.riskLow
     const dementiaRiskRecommendation = getDementiaRiskRecommendation(riskLevel, language)
 
     const eegStatusLabel = contentLabels.eegStatus
     const eegSummaryLabel = contentLabels.eegSummary
-    const eegSummary =
-      riskLevel === "high"
-        ? language === "zh-CN"
-          ? "认知风险较高，建议优先安排EEG检查以辅助鉴别病因。"
-          : language === "zh-HK"
-            ? "認知風險較高，建議優先安排EEG檢查以輔助鑑別病因。"
-            : language === "fr"
-              ? "Risque cognitif eleve; EEG prioritaire recommande pour appuyer le diagnostic differentiel."
-              : "Higher cognitive risk detected; prioritize EEG scheduling to support differential diagnosis."
-        : riskLevel === "moderate"
-          ? language === "zh-CN"
-            ? "中等风险，建议在近期复评前完成EEG基线检查。"
-            : language === "zh-HK"
-              ? "中等風險，建議於近期重評前完成EEG基線檢查。"
-              : language === "fr"
-                ? "Risque modere; EEG de reference conseille avant la prochaine reevaluation."
-                : "Moderate risk; baseline EEG is recommended before the next reassessment."
-          : language === "zh-CN"
-            ? "当前风险较低，可根据临床判断择期完成EEG。"
-            : language === "zh-HK"
-              ? "當前風險較低，可按臨床判斷擇期完成EEG。"
-              : language === "fr"
-                ? "Risque faible actuellement; EEG a programmer selon le jugement clinique."
-                : "Current risk is low; EEG may be scheduled electively based on clinical judgment."
+    // Use MMSE/MoCA classification to determine EEG correlation text and include important note
+    const mmseClass = classifyMmse(latestMmse?.total_score ?? null)
+    const mocaClass = classifyMoca(latestMoca?.total_score ?? null)
+    const overallCognitiveSeverity = chooseHigherSeverity(mmseClass, mocaClass)
+    const eegSummary = getEegCorrelationText(overallCognitiveSeverity, language) + "\nImportant Note: The EEG classification is an estimated correlation derived from cognitive assessment scores (MMSE and MoCA) and does not represent findings from an actual EEG examination."
+    const finalSummaryGenerated = buildAutoFinalSummary(latestMmse, latestMoca, latestTcm, latestOlfactory, language)
 
     return [
       labels.reportTitle,
@@ -2211,16 +2272,17 @@ export function AdminPanel() {
       `${contentLabels.visual}: ${getSensoryScoreDisplay(latestVisual, language, labels.unknown, "normalized")}`,
       "",
       labels.tcm,
-      labels.tcmNeedsConfirmation,
+      language === "zh-CN"
+        ? "中医评估表明患者的状况与体质相关。" + (latestTcm?.primary_constitution ? ` ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : "")
+        : language === "zh-HK"
+          ? "中醫評估表明患者的狀況與體質相關。" + (latestTcm?.primary_constitution ? ` ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : "")
+          : language === "fr"
+            ? "L'evaluation MTC indique que l'etat du patient est lie a sa constitution physique." + (latestTcm?.primary_constitution ? ` ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : "")
+            : "Traditional Chinese Medicine assessment indicates that the patient's condition is related to physical constitution." + (latestTcm?.primary_constitution ? ` ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : ""),
       "",
       labels.eegSection,
       `${eegStatusLabel}: ${labels.eegInProcess}`,
       `${eegSummaryLabel}: ${eegSummary}`,
-      "",
-      labels.finalPlan,
-      `${contentLabels.riskTier}: ${finalRisk}`,
-      `${contentLabels.dementiaRiskRecommendation}: ${dementiaRiskRecommendation}`,
-      `${labels.finalSummary}: ${useDraftInputs ? (finalSummaryInput || labels.unknown) : labels.unknown}`,
       "",
       `-- ${labels.doctorInputs} --`,
     ].join("\n")
@@ -2483,8 +2545,6 @@ export function AdminPanel() {
         user_id: selectedUser,
         language: reportLanguage,
         report_status: nextStatus,
-        final_diagnostic_analysis: finalSummaryInput || null,
-        treatment_recommendation: tcmTherapyPlanInput || null,
         approved_at: nextStatus === "approved" || nextStatus === "published_to_patient" ? new Date().toISOString() : null,
         published_to_patient_at: nextStatus === "published_to_patient" ? new Date().toISOString() : null,
       }
@@ -3682,16 +3742,7 @@ export function AdminPanel() {
                           />
                         </div>
 
-                        <div className="mt-4 space-y-2">
-                          <Label htmlFor="final-summary">{localizeText("Final clinical summary", { zh: "最终临床总结", yue: "最終臨床總結", fr: "Synthese clinique finale" })}</Label>
-                          <AssessmentTextarea
-                            id="final-summary"
-                            value={finalSummaryInput}
-                            onChange={(event) => setFinalSummaryInput(event.target.value)}
-                            placeholder={localizeText("Integrated recommendation combining neurology + TCM", { zh: "神经科与中医结合的综合建议", yue: "神經科與中醫結合的綜合建議", fr: "Recommandation integree neurologie + MTC" })}
-                            rows={3}
-                          />
-                        </div>
+                        {/* Final clinical summary removed per spec (Section 6) */}
 
                         <div className="mt-4 flex flex-wrap gap-2">
                           <Button onClick={() => saveDoctorReview("draft")} variant="outline">
