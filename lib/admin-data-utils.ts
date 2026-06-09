@@ -1,3 +1,43 @@
+export function isHighRisk(userId: string, assessments: any[]) {
+  const userAssessments = assessments.filter((a) => a.user_id === userId)
+  if (!userAssessments || userAssessments.length === 0) return false
+  const lowMoca = userAssessments.filter((a) => a.assessment_type === "MOCA" && a.total_score < 18).length > 0
+  const lowMmse = userAssessments.filter((a) => a.assessment_type === "MMSE" && a.total_score < 14).length > 0
+  return lowMoca || lowMmse
+}
+
+export function filterUsers(users: any[], opts: { query?: string; missingOnly?: boolean; highRiskOnly?: boolean; recentlyUpdatedDays?: number } = {}, assessments: any[] = [], sensoryAssessments: any[] = [], tcmAssessments: any[] = []) {
+  const q = (opts.query || "").trim().toLowerCase()
+  const cutoff = opts.recentlyUpdatedDays ? Date.now() - opts.recentlyUpdatedDays * 24 * 3600 * 1000 : null
+
+  return users.filter((user) => {
+    if (q) {
+      const matches = (user.name || "").toLowerCase().includes(q) || (user.phone_number || "").toLowerCase().includes(q)
+      if (!matches) return false
+    }
+
+    const statuses = computeSectionStatus(user.id, assessments, sensoryAssessments, tcmAssessments)
+
+    if (opts.missingOnly) {
+      if (!hasAnyMissingRequired(statuses)) return false
+    }
+
+    if (opts.highRiskOnly) {
+      if (!isHighRisk(user.id, assessments)) return false
+    }
+
+    if (cutoff) {
+      const lastUpdated = [
+        ...(assessments.filter((a) => a.user_id === user.id).map((a) => new Date(a.completed_at).getTime()).filter(Boolean) || []),
+        ...(sensoryAssessments.filter((s) => s.user_id === user.id).map((s) => new Date(s.test_date).getTime()).filter(Boolean) || []),
+        ...(tcmAssessments.filter((t) => t.user_id === user.id).map((t) => new Date(t.completed_at).getTime()).filter(Boolean) || []),
+      ].sort((a, b) => b - a)[0]
+      if (!lastUpdated || lastUpdated < cutoff) return false
+    }
+
+    return true
+  })
+}
 import type { Assessment } from "@/components/admin-panel" // Assuming Assessment type is exported or defined here
 
 export interface AverageScores {

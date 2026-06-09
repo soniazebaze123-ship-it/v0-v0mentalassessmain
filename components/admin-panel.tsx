@@ -19,6 +19,7 @@ import { ScoreDistributionChart } from "@/components/admin/score-distribution-ch
 import { ProgressTrendChart } from "@/components/admin/progress-trend-chart"
 import { PatientProgressTracker } from "@/components/admin/patient-progress-tracker"
 import { getPatientTrajectories, getScoreDistribution, getScoreTrends, getTrajectoryWorkflowData } from "@/lib/admin-data-utils"
+import AuditTrail from "@/components/admin/audit-trail"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { TCM_PULSE_OPTIONS } from "@/lib/tcm-pulse"
 import { OLFACTORY_PROTOCOL_QUESTION_SET, SCENT_LABELS } from "@/lib/olfactory/config"
@@ -373,6 +374,15 @@ export function AdminPanel() {
 
   const averageScores = getAverageScores()
 
+  // Filters & search
+  const [filterQuery, setFilterQuery] = useState<string>("")
+  const [filterMissing, setFilterMissing] = useState<boolean>(false)
+  const [filterHighRisk, setFilterHighRisk] = useState<boolean>(false)
+  const [filterRecentlyDays, setFilterRecentlyDays] = useState<number>(0)
+
+  const filteredUsers = adminDataUtils.filterUsers(users, { query: filterQuery, missingOnly: filterMissing, highRiskOnly: filterHighRisk, recentlyUpdatedDays: filterRecentlyDays }, assessments, sensoryAssessments, tcmAssessments)
+
+
   // Section statuses for selected user
   const [sectionStatuses, setSectionStatuses] = useState<Record<string, any> | null>(null)
   const [adminRemarks, setAdminRemarks] = useState<Record<string, string>>({})
@@ -575,8 +585,29 @@ export function AdminPanel() {
               <CardTitle>{t("admin.registered_users")}</CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Search name or phone"
+                    className="border rounded px-2 py-1 text-sm"
+                    value={filterQuery}
+                    onChange={(e) => setFilterQuery(e.target.value)}
+                  />
+                  <select className="border rounded px-2 py-1 text-sm" value={filterRecentlyDays} onChange={(e) => setFilterRecentlyDays(Number(e.target.value))}>
+                    <option value={0}>Any time</option>
+                    <option value={7}>Last 7 days</option>
+                    <option value={30}>Last 30 days</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm flex items-center gap-1"><input type="checkbox" checked={filterMissing} onChange={(e) => setFilterMissing(e.target.checked)} /> Missing exams</label>
+                  <label className="text-sm flex items-center gap-1"><input type="checkbox" checked={filterHighRisk} onChange={(e) => setFilterHighRisk(e.target.checked)} /> High risk</label>
+                </div>
+              </div>
+
               <div className="space-y-4 max-h-96 overflow-y-auto">
-                {users.map((user) => {
+                {filteredUsers.map((user) => {
                   const userAssessments = getUserAssessments(user.id)
                   const userFiles = getUserFiles(user.id)
                   const userCurrentProgress = getUserProgress(user.id)
@@ -890,6 +921,8 @@ export function AdminPanel() {
                       {getUserProgress(selectedUser).length === 0 && (
                         <p className="text-gray-600">{t("admin.no_progress_assessments")}</p>
                       )}
+                      {/* Audit trail */}
+                      <AuditTrail userId={selectedUser} />
                     </div>
                   )}
                 </div>
