@@ -1,6 +1,10 @@
-const CACHE_NAME = 'mentalassess-v1';
+// Bump this version whenever caching behavior changes so old caches are purged.
+const CACHE_NAME = 'mentalassess-v2';
+
+// Only cache stable, versionless static assets here.
+// Never pre-cache the HTML shell ("/") — doing so can serve a stale app shell
+// that references deleted JS chunks after a new deploy, crashing the app.
 const STATIC_ASSETS = [
-  '/',
   '/offline.html',
   '/icons/icon-192x192.jpg',
   '/icons/icon-512x512.jpg',
@@ -19,48 +23,69 @@ self.addEventListener('install', (event) => {
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      );
-    })
+    caches
+      .keys()
+      .then((cacheNames) => {
+        return Promise.all(
+          cacheNames
+            .filter((name) => name !== CACHE_NAME)
+            .map((name) => caches.delete(name))
+        );
+      })
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Fetch event - network first, fallback to cache
+// Fetch event
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') return;
+  const { request } = event;
 
-  // Skip cross-origin requests
-  if (!event.request.url.startsWith(self.location.origin)) return;
+  // Only handle GET requests.
+  if (request.method !== 'GET') return;
 
-  // Skip API requests - always fetch from network
-  if (event.request.url.includes('/api/')) return;
+  // Skip cross-origin requests.
+  if (!request.url.startsWith(self.location.origin)) return;
 
+  // Always go to the network for API calls.
+  if (request.url.includes('/api/')) return;
+
+  const url = new URL(request.url);
+
+  // Never cache the HTML document or Next.js build assets. Serving a stale
+  // app shell or stale hashed chunk after a deploy causes chunk-load errors
+  // and a full client-side crash. These must always come from the network.
+  const isDocument =
+    request.mode === 'navigate' || request.destination === 'document';
+  const isBuildAsset =
+    url.pathname.startsWith('/_next/') || url.pathname.startsWith('/__nextjs');
+
+  if (isDocument || isBuildAsset) {
+    event.respondWith(
+      fetch(request).catch(() => {
+        // Offline fallback only for top-level navigations.
+        if (isDocument) {
+          return caches.match('/offline.html');
+        }
+        return new Response('Offline', { status: 503 });
+      })
+    );
+    return;
+  }
+
+  // For other same-origin assets (images, icons, fonts): network-first,
+  // falling back to cache when offline.
   event.respondWith(
-    fetch(event.request)
+    fetch(request)
       .then((response) => {
-        // Clone the response before caching
         const responseClone = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseClone);
+          cache.put(request, responseClone);
         });
         return response;
       })
       .catch(() => {
-        // Try to get from cache
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // Return offline page for navigation requests
-          if (event.request.mode === 'navigate') {
-            return caches.match('/offline.html');
-          }
+        return caches.match(request).then((cachedResponse) => {
+          if (cachedResponse) return cachedResponse;
           return new Response('Offline', { status: 503 });
         });
       })
