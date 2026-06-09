@@ -23,6 +23,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { TCM_PULSE_OPTIONS } from "@/lib/tcm-pulse"
 import { OLFACTORY_PROTOCOL_QUESTION_SET, SCENT_LABELS } from "@/lib/olfactory/config"
 import { parseOlfactoryProtocolVersion } from "@/lib/olfactory/protocol"
+import adminDataUtils from "@/lib/admin-data-utils"
 import type { OlfactoryProtocolVersion } from "@/lib/olfactory/types"
 
 interface User {
@@ -372,6 +373,68 @@ export function AdminPanel() {
 
   const averageScores = getAverageScores()
 
+  // Section statuses for selected user
+  const [sectionStatuses, setSectionStatuses] = useState<Record<string, any> | null>(null)
+  const [adminRemarks, setAdminRemarks] = useState<Record<string, string>>({})
+  const [localExemptFlags, setLocalExemptFlags] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    if (!selectedUser) return
+    const statuses = adminDataUtils.computeSectionStatus(selectedUser, assessments, sensoryAssessments, tcmAssessments)
+    setSectionStatuses(statuses)
+
+    // load any locally saved remarks
+    const keys = ["cognition", "tcm", "sensory"]
+    const remarks: Record<string, string> = {}
+    keys.forEach((k) => {
+      const key = `adminRemark:${selectedUser}:${k}`
+      const v = typeof window !== "undefined" ? localStorage.getItem(key) : null
+      if (v) remarks[k] = v
+    })
+    setAdminRemarks(remarks)
+
+    const exemptFlags: Record<string, boolean> = {}
+    keys.forEach((k) => {
+      const key = `adminExempt:${selectedUser}:${k}`
+      exemptFlags[k] = typeof window !== "undefined" ? !!localStorage.getItem(key) : false
+    })
+    setLocalExemptFlags(exemptFlags)
+  }, [selectedUser, assessments, sensoryAssessments, tcmAssessments])
+
+  const saveAdminRemark = async (section: string, text: string) => {
+    if (!selectedUser) return
+    setAdminRemarks((prev) => ({ ...prev, [section]: text }))
+    const storageKey = `adminRemark:${selectedUser}:${section}`
+    try {
+      if (typeof window !== "undefined") localStorage.setItem(storageKey, text)
+
+      // Attempt to persist to Supabase admin_notes table (best-effort)
+      const { data, error } = await supabase.from("admin_notes").upsert({
+        user_id: selectedUser,
+        section,
+        note: text,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: ["user_id", "section"] })
+
+      if (error) {
+        // leave in localStorage and mark as pending
+        console.warn("admin note save failed, saved locally:", error)
+        return
+      }
+      // optionally remove local pending marker
+      return
+    } catch (err) {
+      console.warn("Error saving admin remark:", err)
+    }
+  }
+
+  const markExempt = (section: string) => {
+    if (!selectedUser) return
+    const key = `adminExempt:${selectedUser}:${section}`
+    if (typeof window !== "undefined") localStorage.setItem(key, "1")
+    setLocalExemptFlags((prev) => ({ ...prev, [section]: true }))
+  }
+
   // Inside the `AdminPanel` component, after `averageScores` calculation, add the following data preparations:
   const mocaDistributionData = getScoreDistribution(assessments, "MOCA")
   const mmseDistributionData = getScoreDistribution(assessments, "MMSE")
@@ -605,6 +668,63 @@ export function AdminPanel() {
                   ) : (
                     // Assessments View (Completed and In Progress)
                     <div className="space-y-4">
+                      {/* Missing exams banner */}
+                      {sectionStatuses && adminDataUtils.hasAnyMissingRequired(sectionStatuses) && (
+                        <div className="p-3 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-rose-700">Missing required exams</p>
+                            <p className="text-sm text-rose-600">Some required sections are missing for this patient. Review and complete the exams.</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" onClick={() => { /* placeholder: trigger scheduling flow */ }} variant="outline">Schedule</Button>
+                            <Button size="sm" onClick={() => { /* placeholder: bulk remind */ }}>
+                              Remind
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Section overview cards: Cognition / TCM / Sensory */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {["cognition", "tcm", "sensory"].map((section) => {
+                          const statusObj = sectionStatuses ? sectionStatuses[section] : null
+                          const status = statusObj ? statusObj.status : "missing"
+                          const lastUpdated = statusObj ? statusObj.lastUpdated : null
+                          return (
+                            <div key={section} className="border rounded-lg p-3 bg-white">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold capitalize">{section}</p>
+                                  <Badge
+                                    variant={status === "completed" ? "default" : status === "in_progress" ? "outline" : "secondary"}
+                                    className={status === "completed" ? "bg-emerald-100 text-emerald-800" : status === "in_progress" ? "bg-yellow-100 text-yellow-800" : "bg-rose-100 text-rose-800"}
+                                  >
+                                    {status}
+                                  </Badge>
+                                </div>
+                                <div className="text-xs text-slate-500">{lastUpdated ? new Date(lastUpdated).toLocaleDateString() : ""}</div>
+                              </div>
+                              <p className="text-xs text-slate-500 mt-2">{statusObj && statusObj.missingItems ? (statusObj.missingItems.join(", ")) : "No data"}</p>
+
+                              <div className="mt-3">
+                                <Label htmlFor={`remark-${section}`}>Admin remark</Label>
+                                <AssessmentTextarea
+                                  id={`remark-${section}`}
+                                  value={adminRemarks[section] || ""}
+                                  onChange={(e) => setAdminRemarks((prev) => ({ ...prev, [section]: e.target.value }))}
+                                  placeholder={`Add a remark for ${section}`}
+                                  rows={2}
+                                />
+                                <div className="flex gap-2 mt-2">
+                                  <Button size="sm" onClick={() => saveAdminRemark(section, adminRemarks[section] || "")}>Save</Button>
+                                  <Button size="sm" variant="outline" onClick={() => markExempt(section)}>Mark Exempt</Button>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+
                       <h3 className="text-lg font-semibold">{t("admin.completed_assessments")}</h3>
                       {getUserAssessments(selectedUser).map((assessment) => (
                         <div key={assessment.id} className="border rounded-lg p-4 space-y-4">
