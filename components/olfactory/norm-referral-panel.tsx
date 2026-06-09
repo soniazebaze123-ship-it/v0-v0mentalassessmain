@@ -8,6 +8,7 @@ import {
   type CognitiveContext,
 } from "@/lib/olfactory/clinical-interpretation"
 
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -67,18 +68,10 @@ export function NormReferralPanel({
     return "bg-red-100 text-red-800 hover:bg-red-100"
   }
 
-  const localizedText = {
-    unknownScreening: language === "zh" ? "未知 / 筛查" : language === "yue" ? "未知 / 篩查" : language === "fr" ? "Inconnu / depistage" : "Unknown / screening",
-    healthyControl: language === "zh" ? "健康对照" : language === "yue" ? "健康對照" : language === "fr" ? "Temoin sain" : "Healthy control",
-    mciSuspected: language === "zh" ? "疑似轻度认知障碍" : language === "yue" ? "懷疑輕度認知障礙" : language === "fr" ? "Suspicion de TCM" : "MCI suspected",
-    adSuspected: language === "zh" ? "疑似阿尔茨海默病" : language === "yue" ? "懷疑阿茲海默症" : language === "fr" ? "Suspicion de maladie d'Alzheimer" : "AD suspected",
-    knownAd: language === "zh" ? "已知阿尔茨海默病" : language === "yue" ? "已知阿茲海默症" : language === "fr" ? "Maladie d'Alzheimer connue" : "Known AD",
-  }
-
   return (
-    <div className="space-y-5 border bg-white p-4">
-      <div className="space-y-1">
-        <h4 className="text-base font-semibold">
+    <Card>
+      <CardHeader>
+        <CardTitle>
           {language === "zh"
             ? "常模参考分层与转诊建议"
             : language === "yue"
@@ -86,8 +79,8 @@ export function NormReferralPanel({
               : language === "fr"
                 ? "Bandes de reference et recommandation d'orientation"
                 : "Norm-Referenced Bands and Referral Recommendation"}
-        </h4>
-        <p className="text-sm text-muted-foreground">
+        </CardTitle>
+        <CardDescription>
           {language === "zh"
             ? "用于临床筛查解释，不作为单独诊断依据。"
             : language === "yue"
@@ -95,10 +88,10 @@ export function NormReferralPanel({
               : language === "fr"
                 ? "Pour l'interpretation du depistage clinique, sans diagnostic autonome."
                 : "For clinical screening interpretation, not standalone diagnosis."}
-        </p>
-      </div>
+        </CardDescription>
+      </CardHeader>
 
-      <div className="space-y-5">
+      <CardContent className="space-y-5">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>
@@ -129,11 +122,11 @@ export function NormReferralPanel({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="unknown">{localizedText.unknownScreening}</SelectItem>
-                <SelectItem value="healthy">{localizedText.healthyControl}</SelectItem>
-                <SelectItem value="mci_suspected">{localizedText.mciSuspected}</SelectItem>
-                <SelectItem value="ad_suspected">{localizedText.adSuspected}</SelectItem>
-                <SelectItem value="known_ad">{localizedText.knownAd}</SelectItem>
+                <SelectItem value="unknown">Unknown / screening</SelectItem>
+                <SelectItem value="healthy">Healthy control</SelectItem>
+                <SelectItem value="mci_suspected">MCI suspected</SelectItem>
+                <SelectItem value="ad_suspected">AD suspected</SelectItem>
+                <SelectItem value="known_ad">Known AD</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -199,7 +192,7 @@ export function NormReferralPanel({
           <p className="mt-2 text-sm">{output.clinicianRecommendation[language]}</p>
           <p className="mt-3 text-xs text-muted-foreground">{output.caveat[language]}</p>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { AssessmentTextarea } from "@/components/ui/assessment-textarea"
 import { supabase } from "@/lib/supabase"
-import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp, Printer, Sparkles } from "lucide-react"
+import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 
 // Add imports for new chart components and data utilities
@@ -24,987 +24,12 @@ import { TCM_PULSE_OPTIONS } from "@/lib/tcm-pulse"
 import { OLFACTORY_PROTOCOL_QUESTION_SET, SCENT_LABELS } from "@/lib/olfactory/config"
 import { parseOlfactoryProtocolVersion } from "@/lib/olfactory/protocol"
 import type { OlfactoryProtocolVersion } from "@/lib/olfactory/types"
-import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib"
-import fontkit from "@pdf-lib/fontkit"
-
-// TCM questionnaire question definitions (mirrored from tcm-constitution.tsx)
-const TCM_QUESTIONS_MAP: Record<string, { text: string; textZh: string; constitution: string }> = {
-  qi1: { text: "Do you feel tired or fatigued easily?", textZh: "您容易感到疲劳吗？", constitution: "Qi Deficiency" },
-  qi2: { text: "Do you get short of breath with minimal effort?", textZh: "您稍微活动就气短吗？", constitution: "Qi Deficiency" },
-  qi3: { text: "Do you catch colds more often than others?", textZh: "您比别人更容易感冒吗？", constitution: "Qi Deficiency" },
-  yang1: { text: "Do your hands and feet often feel cold?", textZh: "您手脚经常冰凉吗？", constitution: "Yang Deficiency" },
-  yang2: { text: "Do you prefer warm drinks and food over cold?", textZh: "您喜欢温热的食物和饮料吗？", constitution: "Yang Deficiency" },
-  yang3: { text: "Do you feel cold when others feel comfortable?", textZh: "别人感觉舒适时您觉得冷吗？", constitution: "Yang Deficiency" },
-  yin1: { text: "Do you experience dry eyes, mouth, or skin?", textZh: "您经常感到眼睛、口腔或皮肤干燥吗？", constitution: "Yin Deficiency" },
-  yin2: { text: "Do you have warm palms, soles, or chest?", textZh: "您手心、脚心或胸口发热吗？", constitution: "Yin Deficiency" },
-  yin3: { text: "Do you experience night sweats?", textZh: "您有盗汗的情况吗？", constitution: "Yin Deficiency" },
-  pd1: { text: "Does your body feel heavy or sluggish?", textZh: "您感觉身体沉重或迟缓吗？", constitution: "Phlegm-Dampness" },
-  pd2: { text: "Is your skin or face oily?", textZh: "您的皮肤或脸部容易出油吗？", constitution: "Phlegm-Dampness" },
-  pd3: { text: "Do you feel tightness or fullness in chest/abdomen?", textZh: "您感到胸闷或腹胀吗？", constitution: "Phlegm-Dampness" },
-  dh1: { text: "Do you often have a bitter taste in your mouth?", textZh: "您经常口苦或口中有异味吗？", constitution: "Damp-Heat" },
-  dh2: { text: "Is your face oily or prone to acne?", textZh: "您的脸部容易出油或长痘吗？", constitution: "Damp-Heat" },
-  dh3: { text: "Do you feel irritable or easily angered?", textZh: "您容易烦躁或发脾气吗？", constitution: "Damp-Heat" },
-  bs1: { text: "Do you bruise easily?", textZh: "您容易淤青吗？", constitution: "Blood Stasis" },
-  bs2: { text: "Do you have dark circles under your eyes?", textZh: "您有黑眼圈吗？", constitution: "Blood Stasis" },
-  bs3: { text: "Do you experience fixed, stabbing pain in specific areas?", textZh: "您身体某些部位有固定的刺痛感吗？", constitution: "Blood Stasis" },
-  qs1: { text: "Do you feel anxious, depressed, or emotionally unstable?", textZh: "您经常感到焦虑、抑郁或情绪不稳吗？", constitution: "Qi Stagnation" },
-  qs2: { text: "Do you sigh frequently or feel chest tightness?", textZh: "您经常叹气或感到胸闷吗？", constitution: "Qi Stagnation" },
-  qs3: { text: "Does your mood fluctuate with stress?", textZh: "您的情绪随压力波动吗？", constitution: "Qi Stagnation" },
-  sc1: { text: "Do you have allergies (skin, respiratory, or food)?", textZh: "您有过敏症状吗？", constitution: "Special Constitution" },
-  sc2: { text: "Are you sensitive to medications or environmental changes?", textZh: "您对药物或环境变化敏感吗？", constitution: "Special Constitution" },
-  sc3: { text: "Do you experience seasonal symptoms?", textZh: "您有季节性症状吗？", constitution: "Special Constitution" },
-  bal1: { text: "Do you generally feel energetic and refreshed?", textZh: "您通常感到精力充沛吗？", constitution: "Balanced" },
-  bal2: { text: "Is your sleep restful and appetite normal?", textZh: "您睡眠质量好、食欲正常吗？", constitution: "Balanced" },
-  bal3: { text: "Do you adapt well to environmental changes?", textZh: "您能很好地适应环境变化吗？", constitution: "Balanced" },
-}
-
-const LIKERT_LABELS: Record<number, { en: string; zh: string; yue: string; fr: string }> = {
-  1: { en: "Never", zh: "从不", yue: "從不", fr: "Jamais" },
-  2: { en: "Rarely", zh: "很少", yue: "很少", fr: "Rarement" },
-  3: { en: "Sometimes", zh: "有时", yue: "有時", fr: "Parfois" },
-  4: { en: "Often", zh: "经常", yue: "經常", fr: "Souvent" },
-  5: { en: "Always", zh: "总是", yue: "總是", fr: "Toujours" },
-}
 
 interface User {
   id: string
-  phone_number: string
   name?: string | null
-  chinese_name?: string | null
-  national_id?: string | null
-  gender?: string | null
-  date_of_birth?: string | null
-  city?: string | null
-  province?: string | null
+  phone_number: string
   created_at: string
-}
-
-type ReportLanguage = "en" | "zh-CN" | "zh-HK" | "fr"
-
-const wrapTextToWidth = (text: string, font: PDFFont, fontSize: number, maxWidth: number) => {
-  const lines: string[] = []
-
-  for (const paragraph of text.split("\n")) {
-    if (!paragraph) {
-      lines.push("")
-      continue
-    }
-
-    const tokens = paragraph.match(/\S+\s*|\s+/g) ?? [paragraph]
-    let currentLine = ""
-
-    for (const token of tokens) {
-      const candidate = currentLine + token
-      if (font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
-        currentLine = candidate
-        continue
-      }
-
-      if (currentLine) {
-        lines.push(currentLine.trimEnd())
-        currentLine = ""
-      }
-
-      const trimmedToken = token.trim()
-      if (!trimmedToken) {
-        continue
-      }
-
-      if (font.widthOfTextAtSize(trimmedToken, fontSize) <= maxWidth) {
-        currentLine = token.trimStart()
-        continue
-      }
-
-      let segment = ""
-      for (const character of Array.from(trimmedToken)) {
-        const nextSegment = segment + character
-        if (font.widthOfTextAtSize(nextSegment, fontSize) <= maxWidth) {
-          segment = nextSegment
-          continue
-        }
-
-        if (segment) {
-          lines.push(segment)
-        }
-        segment = character
-      }
-
-      currentLine = segment
-    }
-
-    if (currentLine) {
-      lines.push(currentLine.trimEnd())
-    }
-  }
-
-  return lines
-}
-
-const canvasToPngBytes = async (canvas: HTMLCanvasElement) => {
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((value) => {
-      if (!value) {
-        reject(new Error("Failed to create PNG blob from canvas"))
-        return
-      }
-      resolve(value)
-    }, "image/png")
-  })
-  return new Uint8Array(await blob.arrayBuffer())
-}
-
-const wrapCanvasParagraph = (paragraph: string, ctx: CanvasRenderingContext2D, maxWidth: number) => {
-  if (!paragraph) {
-    return [""]
-  }
-
-  const lines: string[] = []
-  let currentLine = ""
-
-  for (const character of Array.from(paragraph)) {
-    const candidate = currentLine + character
-    if (ctx.measureText(candidate).width <= maxWidth) {
-      currentLine = candidate
-      continue
-    }
-
-    if (currentLine) {
-      lines.push(currentLine)
-    }
-    currentLine = character
-  }
-
-  if (currentLine) {
-    lines.push(currentLine)
-  }
-
-  return lines
-}
-
-const createChinesePdfFromCanvas = async (reportText: string) => {
-  const pdfDoc = await PDFDocument.create()
-
-  const pageWidthPt = 595.28
-  const pageHeightPt = 841.89
-  const canvasWidthPx = 1240
-  const canvasHeightPx = 1754
-  const marginLeftPx = 72
-  const marginTopPx = 96
-  const marginBottomPx = 80
-  const fontSizePx = 30
-  const lineHeightPx = 44
-  const contentWidthPx = canvasWidthPx - marginLeftPx * 2
-
-  const canvas = document.createElement("canvas")
-  canvas.width = canvasWidthPx
-  canvas.height = canvasHeightPx
-  const ctx = canvas.getContext("2d")
-  if (!ctx) {
-    throw new Error("Failed to initialize canvas context")
-  }
-
-  ctx.font = `${fontSizePx}px "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "SimSun", sans-serif`
-  const renderedLines = reportText
-    .split("\n")
-    .flatMap((paragraph) => wrapCanvasParagraph(paragraph, ctx, contentWidthPx))
-
-  const maxLinesPerPage = Math.floor((canvasHeightPx - marginTopPx - marginBottomPx) / lineHeightPx)
-  for (let index = 0; index < renderedLines.length; index += maxLinesPerPage) {
-    ctx.fillStyle = "#ffffff"
-    ctx.fillRect(0, 0, canvasWidthPx, canvasHeightPx)
-
-    ctx.fillStyle = "#000000"
-    ctx.font = `${fontSizePx}px "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", "SimSun", sans-serif`
-    ctx.textBaseline = "top"
-
-    const pageLines = renderedLines.slice(index, index + maxLinesPerPage)
-    pageLines.forEach((line, lineIndex) => {
-      ctx.fillText(line, marginLeftPx, marginTopPx + lineIndex * lineHeightPx)
-    })
-
-    const pagePng = await canvasToPngBytes(canvas)
-    const image = await pdfDoc.embedPng(pagePng)
-    const page = pdfDoc.addPage([pageWidthPt, pageHeightPt])
-    page.drawImage(image, {
-      x: 0,
-      y: 0,
-      width: pageWidthPt,
-      height: pageHeightPt,
-    })
-  }
-
-  return await pdfDoc.save()
-}
-
-const createMedicalReportPdf = async (reportText: string, language: ReportLanguage) => {
-  if (language === "zh-CN" || language === "zh-HK") {
-    return await createChinesePdfFromCanvas(reportText)
-  }
-
-  const pdfDoc = await PDFDocument.create()
-  pdfDoc.registerFontkit(fontkit)
-
-  const pageWidth = 595.28
-  const pageHeight = 841.89
-  const marginLeft = 36
-  const marginTop = 48
-  const marginBottom = 40
-  const contentWidth = pageWidth - marginLeft * 2
-  const fontSize = 11
-  const lineHeight = 15
-
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
-
-  const lines = wrapTextToWidth(reportText, font, fontSize, contentWidth)
-  let page = pdfDoc.addPage([pageWidth, pageHeight])
-  let cursorY = pageHeight - marginTop
-
-  for (const line of lines) {
-    if (cursorY < marginBottom) {
-      page = pdfDoc.addPage([pageWidth, pageHeight])
-      cursorY = pageHeight - marginTop
-    }
-
-    page.drawText(line, {
-      x: marginLeft,
-      y: cursorY,
-      size: fontSize,
-      font,
-      color: rgb(0, 0, 0),
-    })
-
-    cursorY -= lineHeight
-  }
-
-  return await pdfDoc.save()
-}
-
-type ReportStatus =
-  | "incomplete"
-  | "pending_tcm_review"
-  | "tcm_reviewed"
-  | "pending_final_approval"
-  | "approved"
-  | "published_to_patient"
-
-type TCMReviewStatus = "draft" | "reviewed"
-
-type ReportLabels = {
-  reportTitle: string
-  patientInfo: string
-  cognitive: string
-  sensory: string
-  tcm: string
-  eegSection: string
-  finalPlan: string
-  doctorInputs: string
-  treatmentPlan: string
-  diagnosis: string
-  tcmNeedsConfirmation: string
-  finalSummary: string
-  reportDate: string
-  name: string
-  idNumber: string
-  sex: string
-  dateOfBirth: string
-  cityProvince: string
-  hospital: string
-  eegNote: string
-  eegInProcess: string
-  mmseDesignScores: string
-  unknown: string
-}
-
-const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
-  en: {
-    reportTitle: "Integrated Medical Report",
-    patientInfo: "Section 1: Patient Information",
-    cognitive: "Section 2: Cognitive Assessment",
-    sensory: "Section 3: Sensory Assessment",
-    tcm: "Section 4: TCM Assessment",
-    eegSection: "Section 5: EEG Report",
-    finalPlan: "Section 6: Final Recommendation",
-    doctorInputs: "Doctor Inputs",
-    treatmentPlan: "Treatment Plan",
-    diagnosis: "TCM Diagnosis",
-    tcmNeedsConfirmation: "A doctor need to confirm",
-    finalSummary: "Final Clinical Summary",
-    reportDate: "Report Date",
-    name: "Name",
-    idNumber: "National ID",
-    sex: "Sex",
-    dateOfBirth: "Date of Birth",
-    cityProvince: "City/Province",
-    hospital: "Hospital",
-    eegNote: "EEG report",
-    eegInProcess: "still under process",
-    mmseDesignScores: "MMSE Reconstruction Design Scores",
-    unknown: "Not provided",
-  },
-  "zh-CN": {
-    reportTitle: "综合医学报告",
-    patientInfo: "第一部分：患者信息",
-    cognitive: "第二部分：认知评估",
-    sensory: "第三部分：感觉评估",
-    tcm: "第四部分：中医评估",
-    eegSection: "第五部分：脑电图报告",
-    finalPlan: "第六部分：最终建议",
-    doctorInputs: "医生补充",
-    treatmentPlan: "治疗方案",
-    diagnosis: "中医诊断",
-    tcmNeedsConfirmation: "需由医生确认",
-    finalSummary: "临床总结",
-    reportDate: "报告日期",
-    name: "姓名",
-    idNumber: "身份证号",
-    sex: "性别",
-    dateOfBirth: "出生日期",
-    cityProvince: "城市/省份",
-    hospital: "医院",
-    eegNote: "脑电图报告",
-    eegInProcess: "仍在处理中",
-    mmseDesignScores: "MMSE重建设计分项",
-    unknown: "未提供",
-  },
-  "zh-HK": {
-    reportTitle: "綜合醫療報告",
-    patientInfo: "第一部分：病人資料",
-    cognitive: "第二部分：認知評估",
-    sensory: "第三部分：感官評估",
-    tcm: "第四部分：中醫評估",
-    eegSection: "第五部分：腦電圖報告",
-    finalPlan: "第六部分：最終建議",
-    doctorInputs: "醫生補充",
-    treatmentPlan: "治療方案",
-    diagnosis: "中醫診斷",
-    tcmNeedsConfirmation: "需由醫生確認",
-    finalSummary: "臨床總結",
-    reportDate: "報告日期",
-    name: "姓名",
-    idNumber: "身份證號",
-    sex: "性別",
-    dateOfBirth: "出生日期",
-    cityProvince: "城市/省份",
-    hospital: "醫院",
-    eegNote: "腦電圖報告",
-    eegInProcess: "仍在處理中",
-    mmseDesignScores: "MMSE重建設計分項",
-    unknown: "未提供",
-  },
-  fr: {
-    reportTitle: "Rapport medical integre",
-    patientInfo: "Section 1: Informations patient",
-    cognitive: "Section 2: Evaluation cognitive",
-    sensory: "Section 3: Evaluation sensorielle",
-    tcm: "Section 4: Evaluation MTC",
-    eegSection: "Section 5: Rapport EEG",
-    finalPlan: "Section 6: Recommandation finale",
-    doctorInputs: "Saisie medecin",
-    treatmentPlan: "Plan therapeutique",
-    diagnosis: "Diagnostic MTC",
-    tcmNeedsConfirmation: "un medecin doit confirmer",
-    finalSummary: "Synthese clinique finale",
-    reportDate: "Date du rapport",
-    name: "Nom",
-    idNumber: "Identifiant national",
-    sex: "Sexe",
-    dateOfBirth: "Date de naissance",
-    cityProvince: "Ville/Province",
-    hospital: "Hopital",
-    eegNote: "Rapport EEG",
-    eegInProcess: "encore en cours",
-    mmseDesignScores: "Scores de reconstruction MMSE",
-    unknown: "Non renseigne",
-  },
-}
-
-type ReportContentLabels = {
-  cityProvinceValue: string
-  hospitalValue: string
-  olfactory: string
-  olfactoryDiagnosis: string
-  olfactoryRecommendation: string
-  mocaScoreDistribution: string
-  auditory: string
-  visual: string
-  primaryConstitution: string
-  tcmScore: string
-  tcmConstitutionDoctor: string
-  tongueObservation: string
-  faceObservation: string
-  questionnaireInterpretation: string
-  dietaryAdvice: string
-  followUpRecommendation: string
-  doctorName: string
-  reviewDate: string
-  questionnaireResponses: string
-  autoRecommendations: string
-  riskTier: string
-  dementiaRiskRecommendation: string
-  riskHigh: string
-  riskModerate: string
-  riskLow: string
-  mocaFinal: string
-  mmseFinal: string
-  mocaTasks: string
-  mmseTasks: string
-  score: string
-  eegStatus: string
-  eegSummary: string
-}
-
-const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
-  en: {
-    cityProvinceValue: "Guangzhou / Guangdong",
-    hospitalValue: "Nanfang Hospital of Integrated Traditional Chinese and Western Medicine",
-    olfactory: "Olfactory",
-    olfactoryDiagnosis: "Olfactory Diagnosis",
-    olfactoryRecommendation: "Olfactory Recommendation",
-    mocaScoreDistribution: "MoCA Score Distribution",
-    auditory: "Auditory",
-    visual: "Visual",
-    primaryConstitution: "Primary Constitution",
-    tcmScore: "TCM Score",
-    tcmConstitutionDoctor: "TCM Constitution (doctor)",
-    tongueObservation: "Tongue Observation",
-    faceObservation: "Face Observation",
-    questionnaireInterpretation: "Questionnaire Interpretation",
-    dietaryAdvice: "Dietary Advice",
-    followUpRecommendation: "Follow-up Recommendation",
-    doctorName: "Doctor Name",
-    reviewDate: "Review Date",
-    questionnaireResponses: "TCM Questionnaire Responses",
-    autoRecommendations: "Auto-generated Health Recommendations",
-    riskTier: "Risk Tier",
-    dementiaRiskRecommendation: "Dementia Risk Recommendation",
-    riskHigh: "HIGH",
-    riskModerate: "MODERATE",
-    riskLow: "LOW",
-    mocaFinal: "MoCA Final",
-    mmseFinal: "MMSE Final",
-    mocaTasks: "MoCA Tasks",
-    mmseTasks: "MMSE Tasks",
-    score: "Score",
-    eegStatus: "Status",
-    eegSummary: "Preliminary summary",
-  },
-  "zh-CN": {
-    cityProvinceValue: "广州 / 广东",
-    hospitalValue: "南方医科大学中西医结合医院",
-    olfactory: "嗅觉",
-    olfactoryDiagnosis: "嗅觉诊断",
-    olfactoryRecommendation: "嗅觉建议",
-    mocaScoreDistribution: "MoCA 分项分布",
-    auditory: "听觉",
-    visual: "视觉",
-    primaryConstitution: "主要体质",
-    tcmScore: "中医总分",
-    tcmConstitutionDoctor: "中医体质（医生）",
-    tongueObservation: "舌象观察",
-    faceObservation: "面诊观察",
-    questionnaireInterpretation: "问卷解读",
-    dietaryAdvice: "饮食建议",
-    followUpRecommendation: "随访建议",
-    doctorName: "医生姓名",
-    reviewDate: "评审日期",
-    questionnaireResponses: "中医问卷作答",
-    autoRecommendations: "问卷自动生成健康建议",
-    riskTier: "风险等级",
-    dementiaRiskRecommendation: "痴呆风险建议",
-    riskHigh: "高",
-    riskModerate: "中",
-    riskLow: "低",
-    mocaFinal: "MoCA 总分",
-    mmseFinal: "MMSE 总分",
-    mocaTasks: "MoCA 分项",
-    mmseTasks: "MMSE 分项",
-    score: "分数",
-    eegStatus: "状态",
-    eegSummary: "初步说明",
-  },
-  "zh-HK": {
-    cityProvinceValue: "廣州 / 廣東",
-    hospitalValue: "南方醫科大學中西醫結合醫院",
-    olfactory: "嗅覺",
-    olfactoryDiagnosis: "嗅覺診斷",
-    olfactoryRecommendation: "嗅覺建議",
-    mocaScoreDistribution: "MoCA 分項分佈",
-    auditory: "聽覺",
-    visual: "視覺",
-    primaryConstitution: "主要體質",
-    tcmScore: "中醫總分",
-    tcmConstitutionDoctor: "中醫體質（醫生）",
-    tongueObservation: "舌象觀察",
-    faceObservation: "面診觀察",
-    questionnaireInterpretation: "問卷解讀",
-    dietaryAdvice: "飲食建議",
-    followUpRecommendation: "隨訪建議",
-    doctorName: "醫生姓名",
-    reviewDate: "評審日期",
-    questionnaireResponses: "中醫問卷作答",
-    autoRecommendations: "問卷自動生成健康建議",
-    riskTier: "風險等級",
-    dementiaRiskRecommendation: "認知風險建議",
-    riskHigh: "高",
-    riskModerate: "中",
-    riskLow: "低",
-    mocaFinal: "MoCA 總分",
-    mmseFinal: "MMSE 總分",
-    mocaTasks: "MoCA 分項",
-    mmseTasks: "MMSE 分項",
-    score: "分數",
-    eegStatus: "狀態",
-    eegSummary: "初步說明",
-  },
-  fr: {
-    cityProvinceValue: "Guangzhou / Guangdong",
-    hospitalValue: "Hopital integre de medecine chinoise et occidentale de Nanfang",
-    olfactory: "Olfactif",
-    olfactoryDiagnosis: "Diagnostic olfactif",
-    olfactoryRecommendation: "Recommandation olfactive",
-    mocaScoreDistribution: "Repartition des scores MoCA",
-    auditory: "Auditif",
-    visual: "Visuel",
-    primaryConstitution: "Constitution principale",
-    tcmScore: "Score MTC",
-    tcmConstitutionDoctor: "Constitution MTC (medecin)",
-    tongueObservation: "Observation de la langue",
-    faceObservation: "Observation du visage",
-    questionnaireInterpretation: "Interpretation du questionnaire",
-    dietaryAdvice: "Conseil dietetique",
-    followUpRecommendation: "Recommandation de suivi",
-    doctorName: "Nom du medecin",
-    reviewDate: "Date de revue",
-    questionnaireResponses: "Reponses au questionnaire MTC",
-    autoRecommendations: "Recommandations de sante auto-generees",
-    riskTier: "Niveau de risque",
-    dementiaRiskRecommendation: "Recommandation de risque de demence",
-    riskHigh: "ELEVE",
-    riskModerate: "MODERE",
-    riskLow: "FAIBLE",
-    mocaFinal: "MoCA final",
-    mmseFinal: "MMSE final",
-    mocaTasks: "Taches MoCA",
-    mmseTasks: "Taches MMSE",
-    score: "Score",
-    eegStatus: "Statut",
-    eegSummary: "Resume preliminaire",
-  },
-}
-
-const getDementiaRiskRecommendation = (
-  riskLevel: "high" | "moderate" | "low",
-  language: ReportLanguage,
-) => {
-  if (language === "zh-CN") {
-    if (riskLevel === "high")
-      return "高风险：建议1-4周内转诊记忆门诊/神经科，完成全面认知评估、药物与共病评估，并同步启动家属照护与居家安全干预。"
-    if (riskLevel === "moderate")
-      return "中风险：建议8-12周复评（MMSE/MoCA），强化睡眠、运动、血压血糖血脂管理及抑郁筛查；若出现功能下降，提前专科随访。"
-    return "低风险：建议6-12个月常规复筛，持续认知训练与社交活动，保持地中海式饮食、规律运动和睡眠管理。"
-  }
-  if (language === "zh-HK") {
-    if (riskLevel === "high")
-      return "高風險：建議1-4週內轉介記憶門診/神經科，完成全面認知評估、藥物及共病評估，並同步啟動家屬照護與家居安全介入。"
-    if (riskLevel === "moderate")
-      return "中風險：建議8-12週重評（MMSE/MoCA），加強睡眠、運動、血壓血糖血脂管理及情緒篩查；如功能下降，提早專科跟進。"
-    return "低風險：建議6-12個月常規複篩，持續認知訓練與社交活動，維持地中海飲食、規律運動及睡眠管理。"
-  }
-  if (language === "fr") {
-    if (riskLevel === "high")
-      return "Risque eleve : orientation memoire/neurologie sous 1 a 4 semaines, bilan cognitif complet, revue medicamenteuse/comorbidites et mise en place immediate d'un plan d'accompagnement familial et de securite a domicile."
-    if (riskLevel === "moderate")
-      return "Risque modere : reevaluation cognitive dans 8 a 12 semaines (MMSE/MoCA), optimisation sommeil-activite physique-facteurs vasculaires et depistage thymique; suivi specialise anticipe en cas de declin fonctionnel."
-    return "Risque faible : depistage de routine tous les 6 a 12 mois, stimulation cognitive et sociale continue, avec maintien d'une hygiene de vie protectrice."
-  }
-
-  if (riskLevel === "high") {
-    return "High risk: refer to memory clinic/neurology within 1-4 weeks for full cognitive workup, medication/comorbidity review, and immediate family-care plus home-safety planning."
-  }
-  if (riskLevel === "moderate") {
-    return "Moderate risk: repeat MMSE/MoCA in 8-12 weeks, optimize sleep/exercise/vascular risk control, screen mood, and expedite specialist follow-up if functional decline appears."
-  }
-  return "Low risk: continue routine screening every 6-12 months with ongoing cognitive-social stimulation and protective lifestyle measures."
-}
-
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;")
-
-  const MMSE_LEGACY_KEYS = new Set(["legacy_mmse_score", "legacy_mmse_max_score", "legacy_score", "legacy_max_score"])
-
-const CONSTITUTION_LABELS: Record<string, { "zh-CN": string; "zh-HK": string; fr: string }> = {
-  balanced: { "zh-CN": "平和质", "zh-HK": "平和質", fr: "Constitution equilibree" },
-  "qi deficiency": { "zh-CN": "气虚质", "zh-HK": "氣虛質", fr: "Deficience du qi" },
-  "yang deficiency": { "zh-CN": "阳虚质", "zh-HK": "陽虛質", fr: "Deficience du yang" },
-  "yin deficiency": { "zh-CN": "阴虚质", "zh-HK": "陰虛質", fr: "Deficience du yin" },
-  "phlegm-dampness": { "zh-CN": "痰湿质", "zh-HK": "痰濕質", fr: "Mucosites-humidite" },
-  "damp-heat": { "zh-CN": "湿热质", "zh-HK": "濕熱質", fr: "Humidite-chaleur" },
-  "blood stasis": { "zh-CN": "血瘀质", "zh-HK": "血瘀質", fr: "Stase sanguine" },
-  "qi stagnation": { "zh-CN": "气郁质", "zh-HK": "氣鬱質", fr: "Stagnation du qi" },
-  "special constitution": { "zh-CN": "特禀质", "zh-HK": "特稟質", fr: "Constitution speciale" },
-}
-
-const getConstitutionLabelForLanguage = (value: string, language: ReportLanguage) => {
-  if (!value) return value
-  const normalized = value.replace(/_/g, " ").toLowerCase()
-  const mapping = CONSTITUTION_LABELS[normalized]
-  if (!mapping || language === "en") return value.replace(/_/g, " ")
-  return mapping[language]
-}
-
-// Cognitive classification helpers per spec
-const classifyMmse = (score: number | null | undefined) => {
-  const s = typeof score === "number" && Number.isFinite(score) ? score : null
-  if (s === null) return "Unknown"
-  if (s >= 27 && s <= 30) return "Normal"
-  if (s >= 21 && s <= 26) return "Mild"
-  if (s >= 11 && s <= 20) return "Moderate"
-  return "Severe"
-}
-
-const classifyMoca = (score: number | null | undefined) => {
-  const s = typeof score === "number" && Number.isFinite(score) ? score : null
-  if (s === null) return "Unknown"
-  if (s >= 26 && s <= 30) return "Normal"
-  if (s >= 18 && s <= 25) return "Mild"
-  if (s >= 10 && s <= 17) return "Moderate"
-  return "Severe"
-}
-
-const severityRank = (label: string) => {
-  switch ((label || "").toLowerCase()) {
-    case "severe":
-      return 4
-    case "moderate":
-      return 3
-    case "mild":
-      return 2
-    case "normal":
-      return 1
-    default:
-      return 0
-  }
-}
-
-const chooseHigherSeverity = (a: string, b: string) => {
-  return severityRank(a) >= severityRank(b) ? a : b
-}
-
-const getEegCorrelationText = (severity: string, language: ReportLanguage) => {
-  const key = (severity || "").toLowerCase()
-  if (language === "zh-CN") {
-    if (key === "normal") return "脑电图相关性提示无明显异常。"
-    if (key === "mild") return "脑电图相关性提示轻度异常。"
-    if (key === "moderate") return "脑电图相关性提示中度异常。"
-    return "脑电图相关性提示重度异常。"
-  }
-  if (language === "zh-HK") {
-    if (key === "normal") return "腦電圖相關性提示無明顯異常。"
-    if (key === "mild") return "腦電圖相關性提示輕度異常。"
-    if (key === "moderate") return "腦電圖相關性提示中度異常。"
-    return "腦電圖相關性提示重度異常。"
-  }
-  if (language === "fr") {
-    if (key === "normal") return "La correlation EEG n'indique pas d'anomalie significative."
-    if (key === "mild") return "La correlation EEG suggere une anomalie legere."
-    if (key === "moderate") return "La correlation EEG suggere une anomalie moderee."
-    return "La correlation EEG suggere une anomalie severe."
-  }
-  if (key === "normal") return "Electroencephalogram correlation indicates no significant abnormality."
-  if (key === "mild") return "Electroencephalogram correlation suggests mild abnormality."
-  if (key === "moderate") return "Electroencephalogram correlation suggests moderate abnormality."
-  return "Electroencephalogram correlation suggests severe abnormality."
-}
-
-const buildAutoFinalSummary = (
-  latestMmse: Assessment | undefined,
-  latestMoca: Assessment | undefined,
-  latestTcm: TCMAssessment | undefined,
-  latestOlfactory: SensoryAssessment | undefined,
-  language: ReportLanguage,
-) => {
-  const mmseScore = latestMmse?.total_score ?? null
-  const mocaScore = latestMoca?.total_score ?? null
-  const mmseClass = classifyMmse(mmseScore)
-  const mocaClass = classifyMoca(mocaScore)
-  const overall = chooseHigherSeverity(mmseClass, mocaClass)
-  const eegText = getEegCorrelationText(overall, language)
-
-  const tcmText = latestTcm?.primary_constitution
-    ? (language === "zh-CN" ? `中医评估表明患者的状况与体质相关：${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : `Traditional Chinese Medicine assessment indicates that the patient's condition is related to physical constitution: ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}`)
-    : language === "zh-CN"
-      ? "中医评估表明患者的状况与体质相关。"
-      : language === "zh-HK"
-        ? "中醫評估表明患者的狀況與體質相關。"
-        : language === "fr"
-          ? "L'evaluation MTC indique que l'etat du patient est lie a sa constitution physique."
-          : "Traditional Chinese Medicine assessment indicates that the patient's condition is related to physical constitution."
-
-  const sensoryText = (() => {
-    if (!latestOlfactory) return language === "zh-CN" ? "感觉评估未提供。" : language === "zh-HK" ? "感官評估未提供。" : language === "fr" ? "Evaluation sensorielle non renseignee." : "Sensory assessment not provided."
-    const olf = getOlfactoryScoreDisplay(latestOlfactory, language, language === "zh-CN" ? "未提供" : language === "zh-HK" ? "未提供" : language === "fr" ? "Non renseigne" : "Not provided")
-    return language === "zh-CN" ? `感觉评估：${olf}` : language === "zh-HK" ? `感官評估：${olf}` : language === "fr" ? `Evaluation sensorielle: ${olf}` : `Sensory assessment: ${olf}`
-  })()
-
-  if (language === "zh-CN") {
-    return `患者的认知筛查结果：MMSE ${mmseScore ?? "未提供"} (${mmseClass})，MoCA ${mocaScore ?? "未提供"} (${mocaClass})。综合评估为${overall}。${eegText} ${tcmText} ${sensoryText}`
-  }
-  if (language === "zh-HK") {
-    return `患者的認知篩查結果：MMSE ${mmseScore ?? "未提供"} (${mmseClass})，MoCA ${mocaScore ?? "未提供"} (${mocaClass})。綜合評估為${overall}。${eegText} ${tcmText} ${sensoryText}`
-  }
-  if (language === "fr") {
-    return `Evaluation cognitive: MMSE ${mmseScore ?? "Non renseigne"} (${mmseClass}), MoCA ${mocaScore ?? "Non renseigne"} (${mocaClass}). Classification globale: ${overall}. ${eegText} ${tcmText} ${sensoryText}`
-  }
-
-  return `The patient's cognitive assessment demonstrates ${overall.toLowerCase()} cognitive impairment based on MMSE (${mmseScore ?? "N/A"}, ${mmseClass}) and MoCA (${mocaScore ?? "N/A"}, ${mocaClass}). ${eegText} ${tcmText} ${sensoryText}`
-}
-
-const getLikertLabelForReport = (score: number, language: ReportLanguage) => {
-  const labels = LIKERT_LABELS[score]
-  if (!labels) return String(score)
-  if (language === "zh-CN") return labels.zh
-  if (language === "zh-HK") return labels.yue
-  if (language === "fr") return labels.fr
-  return labels.en
-}
-
-const getLikertLabelForUi = (score: number, language: "en" | "zh" | "yue" | "fr") => {
-  const labels = LIKERT_LABELS[score]
-  if (!labels) return String(score)
-  if (language === "zh") return labels.zh
-  if (language === "yue") return labels.yue
-  if (language === "fr") return labels.fr
-  return labels.en
-}
-
-const getOlfactoryRiskStatus = (assessment: SensoryAssessment | undefined) => {
-  if (!assessment) return ""
-
-  const classification = typeof assessment.classification === "string" ? assessment.classification.trim().toLowerCase() : ""
-  if (classification) return classification
-
-  const testData = assessment.test_data as Record<string, unknown> | undefined
-  const riskLevel = typeof testData?.risk_level === "string" ? testData.risk_level.trim().toLowerCase() : ""
-  if (riskLevel) return riskLevel
-
-  return ""
-}
-
-const getOlfactoryDiagnosisAndRecommendation = (
-  assessment: SensoryAssessment | undefined,
-  language: ReportLanguage,
-): { diagnosis: string; recommendation: string } => {
-  const normalized = getOlfactoryRiskStatus(assessment)
-
-  if (!normalized) {
-    return {
-      diagnosis: language === "zh-CN" ? "未提供" : language === "zh-HK" ? "未提供" : language === "fr" ? "Non renseigne" : "Not provided",
-      recommendation:
-        language === "zh-CN"
-          ? "未提供"
-          : language === "zh-HK"
-            ? "未提供"
-            : language === "fr"
-              ? "Non renseigne"
-              : "Not provided",
-    }
-  }
-
-  const severe = normalized.includes("severe") || normalized.includes("anosmia") || normalized.includes("high")
-  const mild = normalized.includes("mild") || normalized.includes("moderate") || normalized.includes("hyposmia")
-
-  if (language === "zh-CN") {
-    if (severe) {
-      return {
-        diagnosis: "重度嗅觉减退/缺失",
-        recommendation: "建议尽快转诊耳鼻喉科及神经科，进行进一步嗅觉与神经系统评估，并加强居家安全防护。",
-      }
-    }
-    if (mild) {
-      return {
-        diagnosis: "轻中度嗅觉减退",
-        recommendation: "建议进行嗅觉训练并于4-8周后复测；若持续下降，建议专科随访。",
-      }
-    }
-    return {
-      diagnosis: "嗅觉功能基本正常",
-      recommendation: "建议保持规律复查与健康生活方式，继续监测嗅觉变化。",
-    }
-  }
-
-  if (language === "zh-HK") {
-    if (severe) {
-      return {
-        diagnosis: "重度嗅覺減退/缺失",
-        recommendation: "建議儘快轉介耳鼻喉科及神經科作進一步評估，並加強家居安全防護。",
-      }
-    }
-    if (mild) {
-      return {
-        diagnosis: "輕中度嗅覺減退",
-        recommendation: "建議進行嗅覺訓練並於4-8週後複測；如持續下降，建議專科跟進。",
-      }
-    }
-    return {
-      diagnosis: "嗅覺功能基本正常",
-      recommendation: "建議保持定期複查及健康生活方式，持續監測嗅覺變化。",
-    }
-  }
-
-  if (language === "fr") {
-    if (severe) {
-      return {
-        diagnosis: "Hyposmie severe ou anosmie",
-        recommendation:
-          "Orientation rapide en ORL et neurologie pour evaluation complementaire, avec consignes de securite a domicile.",
-      }
-    }
-    if (mild) {
-      return {
-        diagnosis: "Hyposmie legere a moderee",
-        recommendation:
-          "Reeducation olfactive et recontrole dans 4 a 8 semaines; suivi specialise si aggravation persistante.",
-      }
-    }
-    return {
-      diagnosis: "Fonction olfactive globalement preservee",
-      recommendation: "Poursuivre la surveillance clinique et les mesures d'hygiene de vie.",
-    }
-  }
-
-  if (severe) {
-    return {
-      diagnosis: "Severe olfactory dysfunction / anosmia",
-      recommendation:
-        "Prompt ENT and neurology referral is advised for further workup, with reinforced home safety precautions.",
-    }
-  }
-  if (mild) {
-    return {
-      diagnosis: "Mild-to-moderate olfactory dysfunction",
-      recommendation:
-        "Recommend structured smell training and repeat screening in 4-8 weeks; escalate to specialty follow-up if persistent.",
-    }
-  }
-  return {
-    diagnosis: "Olfactory function broadly preserved",
-    recommendation: "Maintain routine follow-up and continue monitoring for smell changes.",
-  }
-}
-
-const getLocalizedGender = (value: string | null | undefined, language: ReportLanguage, unknownLabel: string) => {
-  if (!value) return unknownLabel
-  const normalized = value.trim().toLowerCase()
-  if (language === "zh-CN") {
-    if (normalized.includes("female")) return "女"
-    if (normalized.includes("male")) return "男"
-    if (normalized.includes("other")) return "其他"
-  }
-  if (language === "zh-HK") {
-    if (normalized.includes("female")) return "女"
-    if (normalized.includes("male")) return "男"
-    if (normalized.includes("other")) return "其他"
-  }
-  if (language === "fr") {
-    if (normalized.includes("female")) return "Femme"
-    if (normalized.includes("male")) return "Homme"
-    if (normalized.includes("other")) return "Autre"
-  }
-  return value
-}
-
-const getLocalizedSensoryClassification = (value: string | null | undefined, language: ReportLanguage) => {
-  if (!value) return "-"
-  const normalized = value.trim().toLowerCase().replace(/[_-]+/g, " ")
-  if (language === "zh-CN") {
-    if (normalized.includes("normal")) return "正常"
-    if (normalized.includes("impaired") || normalized.includes("impairment")) return "受损"
-    if (normalized.includes("mild")) return "轻度受损"
-    if (normalized.includes("moderate")) return "中度受损"
-    if (normalized.includes("severe")) return "重度受损"
-  }
-  if (language === "zh-HK") {
-    if (normalized.includes("normal")) return "正常"
-    if (normalized.includes("impaired") || normalized.includes("impairment")) return "受損"
-    if (normalized.includes("mild")) return "輕度受損"
-    if (normalized.includes("moderate")) return "中度受損"
-    if (normalized.includes("severe")) return "重度受損"
-  }
-  if (language === "fr") {
-    if (normalized.includes("normal")) return "Normal"
-    if (normalized.includes("impaired") || normalized.includes("impairment")) return "Altere"
-  }
-  return value
-}
-
-const getSensoryScoreDisplay = (
-  assessment: SensoryAssessment | undefined,
-  language: ReportLanguage,
-  unknownLabel: string,
-  preferredScore: "raw" | "normalized" = "normalized",
-) => {
-  if (!assessment) return unknownLabel
-
-  const scoreCandidates =
-    preferredScore === "raw"
-      ? [assessment.raw_score, assessment.normalized_score]
-      : [assessment.normalized_score, assessment.raw_score]
-
-  const numericScore = scoreCandidates.find((value) => typeof value === "number" && Number.isFinite(value))
-  const localizedClass = getLocalizedSensoryClassification(assessment.classification, language)
-
-  if (typeof numericScore !== "number") {
-    return localizedClass || unknownLabel
-  }
-
-  return `${numericScore} (${localizedClass || "-"})`
-}
-
-const getOlfactoryScoreDisplay = (assessment: SensoryAssessment | undefined, language: ReportLanguage, unknownLabel: string) => {
-  if (!assessment) return unknownLabel
-
-  const correctCount =
-    typeof assessment.raw_score === "number" && Number.isFinite(assessment.raw_score)
-      ? assessment.raw_score
-      : typeof assessment.test_data?.total_correct === "number" && Number.isFinite(assessment.test_data.total_correct)
-        ? assessment.test_data.total_correct
-        : typeof assessment.test_data?.correct_count === "number" && Number.isFinite((assessment.test_data as Record<string, unknown>).correct_count)
-          ? Number((assessment.test_data as Record<string, unknown>).correct_count)
-          : null
-
-  const totalQuestions =
-    typeof assessment.test_data?.total_trials === "number" && Number.isFinite(assessment.test_data.total_trials)
-      ? assessment.test_data.total_trials
-      : typeof assessment.test_data?.total_questions === "number" && Number.isFinite((assessment.test_data as Record<string, unknown>).total_questions)
-        ? Number((assessment.test_data as Record<string, unknown>).total_questions)
-        : null
-
-  const fallbackPercent =
-    typeof assessment.normalized_score === "number" && Number.isFinite(assessment.normalized_score)
-      ? Math.round(assessment.normalized_score)
-      : typeof assessment.normalized_score === "number" && Number.isFinite(assessment.normalized_score)
-        ? Math.round(assessment.normalized_score)
-        : typeof assessment.test_data?.percent_correct === "number" && Number.isFinite(assessment.test_data.percent_correct)
-          ? Math.round(assessment.test_data.percent_correct)
-          : typeof assessment.test_data?.score_percent === "number" && Number.isFinite((assessment.test_data as Record<string, unknown>).score_percent)
-            ? Math.round(Number((assessment.test_data as Record<string, unknown>).score_percent))
-          : null
-
-  if (correctCount !== null) {
-    const scoreText = totalQuestions !== null ? `${correctCount}/${totalQuestions}` : String(correctCount)
-    return `${scoreText} (${getLocalizedSensoryClassification(assessment.classification, language) || "-"})`
-  }
-
-  if (fallbackPercent === null) {
-    return getLocalizedSensoryClassification(assessment.classification, language) || unknownLabel
-  }
-
-  return `${fallbackPercent}% (${getLocalizedSensoryClassification(assessment.classification, language) || "-"})`
 }
 
 export interface Assessment {
@@ -1013,38 +38,6 @@ export interface Assessment {
   assessment_type: "MOCA" | "MMSE"
   total_score: number
   section_scores: Record<string, number>
-  scoring_version?: string
-  scoring_framework?: string
-  max_score?: number
-  legacy_score?: number
-  legacy_max_score?: number
-  score_percent?: number
-  reconstruction_applied?: boolean
-  recalculated_at?: string
-  orientation_audit?: {
-    location?: {
-      source?: string
-      confirmed?: boolean
-      sitePresetUsed?: boolean
-      testedSite?: string
-      geocodeProvider?: string | null
-      coordinates?: {
-        latitude?: number
-        longitude?: number
-        accuracyMeters?: number
-      } | null
-      suggestedPlace?: {
-        country?: string
-        president?: string
-        sea?: string
-        province?: string
-        city?: string
-        building?: string
-        place?: string
-        room?: string
-      }
-    }
-  }
   completed_at: string
   laboratory_analysis?: string
 }
@@ -1097,17 +90,6 @@ interface TCMAssessment {
   primary_score: number | null
   overall_score: number | null
   completed_at: string | null
-  data_source?: "new_build" | "old_build"
-  balanced_score?: number | null
-  qi_deficiency_score?: number | null
-  yang_deficiency_score?: number | null
-  yin_deficiency_score?: number | null
-  phlegm_dampness_score?: number | null
-  damp_heat_score?: number | null
-  blood_stasis_score?: number | null
-  qi_stagnation_score?: number | null
-  special_constitution_score?: number | null
-  recommendations?: string[] | null
   answers?: {
     pulse_assessment?: {
       selectedPulseIds?: string[]
@@ -1115,104 +97,11 @@ interface TCMAssessment {
       clinicalPulseScore?: number
       notes?: string
     }
-    questionnaire?: Record<string, number>
-    tongue_image_url?: string | null
-    face_image_url?: string | null
-    uploaded_image_ids?: string[]
   }
-}
-
-interface LegacyTCMConstitutionResult {
-  id: string
-  session_id: string
-  constitution_primary?: string | null
-  constitution_secondary?: string | null
-  questionnaire?: Record<string, unknown> | null
-  tongue_image_uri?: string | null
-  facial_image_uri?: string | null
-  clinician_comment?: string | null
-  created_at?: string | null
-  updated_at?: string | null
-}
-
-interface TCMDoctorReview {
-  id: string
-  user_id: string
-  doctor_id?: string | null
-  tcm_constitution?: string | null
-  tongue_observation?: string | null
-  face_observation?: string | null
-  questionnaire_interpretation?: string | null
-  tcm_diagnosis?: string | null
-  therapy_plan?: string | null
-  dietary_advice?: string | null
-  follow_up_recommendation?: string | null
-  doctor_name?: string | null
-  review_date?: string | null
-  review_status: TCMReviewStatus
-  reviewed_at?: string | null
-  created_at?: string
-  updated_at?: string
-}
-
-interface MedicalReport {
-  id: string
-  user_id: string
-  language: ReportLanguage
-  report_status: ReportStatus
-  cognitive_summary?: string | null
-  sensory_summary?: string | null
-  tcm_summary?: string | null
-  final_diagnostic_analysis?: string | null
-  treatment_recommendation?: string | null
-  doctor_approved_by?: string | null
-  approved_at?: string | null
-  published_to_patient_at?: string | null
-  created_at?: string
-  updated_at?: string
-}
-
-function clampCognitiveScore(score: number | null | undefined) {
-  const numericScore = typeof score === "number" && Number.isFinite(score) ? score : 0
-  return Math.min(30, Math.max(0, numericScore))
-}
-
-function normalizeQuestionnaireResponses(input: unknown): Record<string, number> {
-  if (!input || typeof input !== "object") {
-    return {}
-  }
-
-  return Object.entries(input as Record<string, unknown>).reduce<Record<string, number>>((acc, [key, value]) => {
-    if (typeof value === "number" && Number.isFinite(value)) {
-      acc[key] = value
-      return acc
-    }
-
-    if (typeof value === "string") {
-      const parsed = Number(value)
-      if (Number.isFinite(parsed)) {
-        acc[key] = parsed
-      }
-      return acc
-    }
-
-    if (value && typeof value === "object") {
-      const nested = value as Record<string, unknown>
-      const nestedScore = [nested.score, nested.value, nested.answer]
-        .map((candidate) => (typeof candidate === "string" ? Number(candidate) : candidate))
-        .find((candidate) => typeof candidate === "number" && Number.isFinite(candidate))
-
-      if (typeof nestedScore === "number") {
-        acc[key] = nestedScore
-      }
-    }
-
-    return acc
-  }, {})
 }
 
 export function AdminPanel() {
-  const { language, t, localizeText } = useLanguage()
+  const { t } = useLanguage()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
@@ -1222,9 +111,8 @@ export function AdminPanel() {
   const [userProgress, setUserProgress] = useState<UserProgress[]>([])
   const [sensoryAssessments, setSensoryAssessments] = useState<SensoryAssessment[]>([])
   const [tcmAssessments, setTcmAssessments] = useState<TCMAssessment[]>([])
-  const [doctorReviews, setDoctorReviews] = useState<TCMDoctorReview[]>([])
-  const [medicalReports, setMedicalReports] = useState<MedicalReport[]>([])
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
+  const [labAnalysis, setLabAnalysis] = useState("")
   const [viewingFiles, setViewingFiles] = useState(false)
   const [viewingProgressTracker, setViewingProgressTracker] = useState(false)
 
@@ -1232,30 +120,6 @@ export function AdminPanel() {
   const [selectedTrendUser, setSelectedTrendUser] = useState<string | null>(null)
   const [selectedTrendAssessmentType, setSelectedTrendAssessmentType] = useState<"MOCA" | "MMSE" | "ALL">("ALL")
   const [activeOlfactoryProtocol, setActiveOlfactoryProtocol] = useState<OlfactoryProtocolVersion>("sat_v3_14")
-  const [reportLanguage, setReportLanguage] = useState<ReportLanguage>("en")
-  const [tcmDiagnosisInput, setTcmDiagnosisInput] = useState("")
-  const [tcmTherapyPlanInput, setTcmTherapyPlanInput] = useState("")
-  
-  const [tcmAssessmentConstitutionInput, setTcmAssessmentConstitutionInput] = useState("")
-  const [tcmAssessmentPrimaryScoreInput, setTcmAssessmentPrimaryScoreInput] = useState("")
-  const [tcmAssessmentOverallScoreInput, setTcmAssessmentOverallScoreInput] = useState("")
-  const [tcmAssessmentRecommendationsInput, setTcmAssessmentRecommendationsInput] = useState("")
-  const [tcmConstitutionInput, setTcmConstitutionInput] = useState("")
-  const [tongueObservationInput, setTongueObservationInput] = useState("")
-  const [faceObservationInput, setFaceObservationInput] = useState("")
-  const [questionnaireInterpretationInput, setQuestionnaireInterpretationInput] = useState("")
-  const [dietaryAdviceInput, setDietaryAdviceInput] = useState("")
-  const [followUpRecommendationInput, setFollowUpRecommendationInput] = useState("")
-  const [doctorNameInput, setDoctorNameInput] = useState("")
-  const [reviewDateInput, setReviewDateInput] = useState("")
-  const [workflowMessage, setWorkflowMessage] = useState("")
-  const [generatedReport, setGeneratedReport] = useState("")
-  const [generatedAllReports, setGeneratedAllReports] = useState("")
-  const [patientSearch, setPatientSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<"all" | ReportStatus>("all")
-  const [riskFilter, setRiskFilter] = useState<"all" | "high" | "moderate" | "low">("all")
-  const [tcmImageFilter, setTcmImageFilter] = useState<"all" | "complete" | "missing_images" | "missing_questionnaire" | "data_unavailable">("all")
-  const [tcmDataLoadIssue, setTcmDataLoadIssue] = useState(false)
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -1263,71 +127,12 @@ export function AdminPanel() {
     }
   }, [isAuthenticated])
 
-  useEffect(() => {
-    if (language === "zh") {
-      setReportLanguage("zh-CN")
-      return
-    }
-    if (language === "yue") {
-      setReportLanguage("zh-HK")
-      return
-    }
-    if (language === "fr") {
-      setReportLanguage("fr")
-      return
-    }
-    setReportLanguage("en")
-  }, [language])
-
-  useEffect(() => {
-    setGeneratedReport("")
-    setGeneratedAllReports("")
-    setWorkflowMessage("")
-
-    const existingReview = doctorReviews
-      .filter((review) => review.user_id === selectedUser)
-      .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())[0]
-    const existingReport = medicalReports.find((report) => report.user_id === selectedUser)
-    const latestTcmAssessment = selectedUser ? getLatestTcmAssessment(selectedUser) : undefined
-
-    setTcmAssessmentConstitutionInput(latestTcmAssessment?.primary_constitution || "")
-    setTcmAssessmentPrimaryScoreInput(
-      typeof latestTcmAssessment?.primary_score === "number" && Number.isFinite(latestTcmAssessment.primary_score)
-        ? String(latestTcmAssessment.primary_score)
-        : "",
-    )
-    setTcmAssessmentOverallScoreInput(
-      typeof latestTcmAssessment?.overall_score === "number" && Number.isFinite(latestTcmAssessment.overall_score)
-        ? String(latestTcmAssessment.overall_score)
-        : "",
-    )
-    setTcmAssessmentRecommendationsInput((latestTcmAssessment?.recommendations || []).join("\n"))
-
-    setTcmConstitutionInput(existingReview?.tcm_constitution || "")
-    setTongueObservationInput(existingReview?.tongue_observation || "")
-    setFaceObservationInput(existingReview?.face_observation || "")
-    setQuestionnaireInterpretationInput(existingReview?.questionnaire_interpretation || "")
-    setTcmDiagnosisInput(existingReview?.tcm_diagnosis || "")
-    setTcmTherapyPlanInput(existingReview?.therapy_plan || "")
-    setDietaryAdviceInput(existingReview?.dietary_advice || "")
-    setFollowUpRecommendationInput(existingReview?.follow_up_recommendation || "")
-    setDoctorNameInput(existingReview?.doctor_name || "")
-    setReviewDateInput(existingReview?.review_date || "")
-    // final summary removed from UI/DB per spec; no longer populating finalSummaryInput
-  }, [selectedUser, doctorReviews, medicalReports, tcmAssessments])
-
   const handleLogin = async () => {
     // Simple authentication - in production, use proper authentication
     if (username === "admin" && password === "admin123") {
       setIsAuthenticated(true)
     } else {
-      alert(
-        localizeText("Invalid credentials", {
-          zh: "凭据无效",
-          yue: "憑證無效",
-          fr: "Identifiants invalides",
-        }),
-      )
+      alert("Invalid credentials")
     }
   }
 
@@ -1342,7 +147,6 @@ export function AdminPanel() {
     setUserProgress([])
     setSensoryAssessments([])
     setTcmAssessments([])
-    setTcmDataLoadIssue(false)
   }
 
   const loadData = async () => {
@@ -1364,170 +168,27 @@ export function AdminPanel() {
         .from("sensory_assessments")
         .select("*")
         .order("test_date", { ascending: false })
-      const { data: tcmData, error: tcmError } = await supabase
+      const { data: tcmData } = await supabase
         .from("tcm_assessments")
         .select("*")
         .order("completed_at", { ascending: false })
-      const { data: legacyTcmData, error: legacyTcmError } = await supabase
-        .from("tcm_constitution_results")
-        .select("*")
-        .order("updated_at", { ascending: false })
-      const { data: reviewData, error: reviewError } = await supabase
-        .from("tcm_doctor_reviews")
-        .select("*")
-        .order("updated_at", { ascending: false })
-      const { data: reportData, error: reportError } = await supabase
-        .from("medical_reports")
-        .select("*")
-        .order("updated_at", { ascending: false })
 
-      const mappedAssessments = (assessmentsData || []).map((assessment) => {
-        const sourceData = assessment.data && typeof assessment.data === "object" ? assessment.data : {}
-        const parsedScorePercent =
-          typeof assessment.score_percent === "number" && Number.isFinite(assessment.score_percent)
-            ? assessment.score_percent
-            : typeof sourceData.score_percent === "number" && Number.isFinite(sourceData.score_percent)
-              ? sourceData.score_percent
-              : undefined
-        const parsedLegacyScore =
-          typeof assessment.score_legacy === "number" && Number.isFinite(assessment.score_legacy)
-            ? assessment.score_legacy
-            : typeof sourceData.legacy_mmse_score === "number" && Number.isFinite(sourceData.legacy_mmse_score)
-              ? sourceData.legacy_mmse_score
-              : undefined
-        const parsedLegacyMaxScore =
-          typeof sourceData.legacy_mmse_max_score === "number" && Number.isFinite(sourceData.legacy_mmse_max_score)
-            ? sourceData.legacy_mmse_max_score
-            : assessment.type === "MMSE"
-              ? 22
-              : undefined
-        const sectionScores = Object.fromEntries(
-          Object.entries(sourceData).filter(([, value]) => typeof value === "number" && Number.isFinite(value)),
-        ) as Record<string, number>
-        const sectionMetadata =
-          sourceData.section_metadata && typeof sourceData.section_metadata === "object"
-            ? (sourceData.section_metadata as Record<string, unknown>)
-            : {}
-        const orientationAudit =
-          sectionMetadata.orientation && typeof sectionMetadata.orientation === "object"
-            ? (sectionMetadata.orientation as Assessment["orientation_audit"])
-            : undefined
-
-        return {
-          id: assessment.id,
-          user_id: assessment.user_id,
-          assessment_type: assessment.type as "MOCA" | "MMSE",
-          total_score: clampCognitiveScore(assessment.score),
-          section_scores: sectionScores,
-          scoring_version: assessment.scoring_version || assessment.data?.scoring_version,
-          scoring_framework: assessment.scoring_framework,
-          max_score: assessment.max_score || assessment.data?.max_score,
-          legacy_score: parsedLegacyScore,
-          legacy_max_score: parsedLegacyMaxScore,
-          score_percent: parsedScorePercent,
-          reconstruction_applied: Boolean(assessment.reconstruction_applied),
-          recalculated_at: assessment.recalculated_at,
-          orientation_audit: orientationAudit,
-          completed_at: assessment.completed_at,
-          laboratory_analysis: assessment.data?.laboratory_analysis,
-        }
-      })
+      const mappedAssessments = (assessmentsData || []).map((assessment) => ({
+        id: assessment.id,
+        user_id: assessment.user_id,
+        assessment_type: assessment.type as "MOCA" | "MMSE",
+        total_score: assessment.score,
+        section_scores: assessment.data?.sections || {},
+        completed_at: assessment.completed_at,
+        laboratory_analysis: assessment.data?.laboratory_analysis,
+      }))
 
       setUsers(usersData || [])
       setAssessments(mappedAssessments)
       setUploadedFiles(filesData || [])
       setUserProgress(progressData || [])
-      // Postgres `numeric` columns are returned as strings by the Supabase JS client.
-      // Coerce them to real numbers so the report logic (which checks typeof === "number") works.
-      const toNumber = (value: unknown): number | null => {
-        if (typeof value === "number") return Number.isFinite(value) ? value : null
-        if (typeof value === "string" && value.trim() !== "") {
-          const parsed = Number(value)
-          return Number.isFinite(parsed) ? parsed : null
-        }
-        return null
-      }
-      const mappedSensory = ((sensoryData || []) as Record<string, unknown>[]).map((row) => ({
-        ...row,
-        raw_score: toNumber(row.raw_score),
-        normalized_score: toNumber(row.normalized_score),
-      }))
-      setSensoryAssessments(mappedSensory as unknown as SensoryAssessment[])
-
-      const newBuildTcmAssessments = ((tcmData || []) as TCMAssessment[]).map((assessment) => ({
-        ...assessment,
-        data_source: "new_build" as const,
-      }))
-
-      const legacyRows = (legacyTcmData || []) as LegacyTCMConstitutionResult[]
-      const legacySessionIds = [...new Set(legacyRows.map((row) => row.session_id).filter(Boolean))]
-
-      const legacySessionsById = new Map<string, string>()
-      if (legacySessionIds.length > 0) {
-        const { data: legacySessionsData, error: legacySessionError } = await supabase
-          .from("assessment_sessions")
-          .select("id, patient_id")
-          .in("id", legacySessionIds)
-
-        if (legacySessionError) {
-          console.warn("Error loading assessment_sessions for legacy TCM records:", legacySessionError)
-        } else {
-          ;(legacySessionsData || []).forEach((session) => {
-            if (session?.id && session?.patient_id) {
-              legacySessionsById.set(session.id, session.patient_id)
-            }
-          })
-        }
-      }
-
-      const legacyAssessments: TCMAssessment[] = legacyRows
-        .map((row) => {
-          const userId = legacySessionsById.get(row.session_id)
-          if (!userId) {
-            return null
-          }
-
-          const questionnaire = normalizeQuestionnaireResponses(row.questionnaire)
-          const clinicianComment = row.clinician_comment?.trim()
-
-          return {
-            id: `legacy-${row.id}`,
-            user_id: userId,
-            primary_constitution: row.constitution_primary || row.constitution_secondary || "Unknown",
-            primary_score: null,
-            overall_score: null,
-            completed_at: row.updated_at || row.created_at || null,
-            recommendations: clinicianComment ? [clinicianComment] : [],
-            answers: {
-              questionnaire,
-              tongue_image_url: row.tongue_image_uri || null,
-              face_image_url: row.facial_image_uri || null,
-            },
-            data_source: "old_build",
-          }
-        })
-        .filter((assessment): assessment is TCMAssessment => Boolean(assessment))
-
-      if (tcmError) {
-        console.warn("TCM assessments table not available or not readable:", tcmError)
-      }
-      if (legacyTcmError) {
-        console.warn("Legacy TCM table not available or not readable:", legacyTcmError)
-      }
-
-      setTcmDataLoadIssue(Boolean(tcmError) && Boolean(legacyTcmError))
-
-      const mergedTcmAssessments = [...newBuildTcmAssessments, ...legacyAssessments].sort(
-        (a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime(),
-      )
-
-      setTcmAssessments(mergedTcmAssessments)
-      if (!reviewError) {
-        setDoctorReviews((reviewData || []) as TCMDoctorReview[])
-      }
-      if (!reportError) {
-        setMedicalReports((reportData || []) as MedicalReport[])
-      }
+      setSensoryAssessments((sensoryData || []) as SensoryAssessment[])
+      setTcmAssessments((tcmData || []) as TCMAssessment[])
 
       const { data: runtimeData } = await supabase
         .from("olfactory_runtime_settings")
@@ -1539,7 +200,21 @@ export function AdminPanel() {
       }
     } catch (error) {
       console.error("Error loading data:", error)
-      setTcmDataLoadIssue(true)
+    }
+  }
+
+  const updateLabAnalysis = async (assessmentId: string) => {
+    try {
+      await supabase.from("assessments").update({ laboratory_analysis: labAnalysis }).eq("id", assessmentId)
+
+      setAssessments((prev) =>
+        prev.map((a) => (a.id === assessmentId ? { ...a, laboratory_analysis: labAnalysis } : a)),
+      )
+      setLabAnalysis("")
+      alert("Laboratory analysis updated successfully")
+    } catch (error) {
+      console.error("Error updating lab analysis:", error)
+      alert("Failed to update laboratory analysis")
     }
   }
 
@@ -1550,17 +225,6 @@ export function AdminPanel() {
         phone_number: user?.phone_number || "",
         assessment_type: assessment.assessment_type,
         total_score: assessment.total_score,
-        legacy_score:
-          assessment.assessment_type === "MMSE"
-            ? typeof assessment.legacy_score === "number"
-              ? assessment.legacy_score
-              : ""
-            : "",
-        reconstructed_score:
-          assessment.assessment_type === "MMSE"
-            ? assessment.total_score
-            : "",
-        score_version: assessment.scoring_version || "",
         section_scores: JSON.stringify(assessment.section_scores),
         completed_at: assessment.completed_at,
         laboratory_analysis: assessment.laboratory_analysis || "",
@@ -1568,24 +232,11 @@ export function AdminPanel() {
     })
 
     const csv = [
-      [
-        "Phone Number",
-        "Assessment Type",
-        "Total Score",
-        "Legacy Score",
-        "Reconstructed Score",
-        "Score Version",
-        "Section Scores",
-        "Completed At",
-        "Laboratory Analysis",
-      ],
+      ["Phone Number", "Assessment Type", "Total Score", "Section Scores", "Completed At", "Laboratory Analysis"],
       ...csvData.map((row) => [
         row.phone_number,
         row.assessment_type,
         row.total_score.toString(),
-        row.legacy_score.toString(),
-        row.reconstructed_score.toString(),
-        row.score_version,
         row.section_scores,
         row.completed_at,
         row.laboratory_analysis,
@@ -1599,65 +250,6 @@ export function AdminPanel() {
     const a = document.createElement("a")
     a.href = url
     a.download = "assessment-results.csv"
-    a.click()
-  }
-
-  const exportAllTcmResults = () => {
-    const escapeCsvCell = (value: unknown) => {
-      const text = value == null ? "" : String(value)
-      if (/[",\n]/.test(text)) {
-        return `"${text.replace(/"/g, '""')}"`
-      }
-      return text
-    }
-
-    const rows = tcmAssessments
-      .slice()
-      .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime())
-      .map((assessment) => {
-        const user = users.find((u) => u.id === assessment.user_id)
-        return [
-          user?.name || "",
-          user?.chinese_name || "",
-          user?.phone_number || "",
-          assessment.user_id,
-          assessment.data_source === "old_build" ? "old_build" : "new_build",
-          assessment.completed_at || "",
-          assessment.primary_constitution || "",
-          assessment.primary_score ?? "",
-          assessment.overall_score ?? "",
-          JSON.stringify(assessment.answers?.questionnaire || {}),
-          JSON.stringify(assessment.recommendations || []),
-          assessment.answers?.tongue_image_url || "",
-          assessment.answers?.face_image_url || "",
-        ]
-      })
-
-    const header = [
-      "Name",
-      "Chinese Name",
-      "Phone Number",
-      "User ID",
-      "Source Build",
-      "Completed At",
-      "Primary Constitution",
-      "Primary Score",
-      "Overall Score",
-      "Questionnaire",
-      "Recommendations",
-      "Tongue Image URL",
-      "Face Image URL",
-    ]
-
-    const csv = [header, ...rows]
-      .map((row) => row.map((cell) => escapeCsvCell(cell)).join(","))
-      .join("\n")
-
-    const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "tcm-results-all-builds.csv"
     a.click()
   }
 
@@ -1691,13 +283,7 @@ export function AdminPanel() {
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder={
-                  localizeText("Enter username", {
-                    zh: "输入用户名",
-                    yue: "輸入用戶名",
-                    fr: "Saisir le nom d'utilisateur",
-                  })
-                }
+                placeholder="Enter username"
               />
             </div>
             <div className="space-y-2">
@@ -1707,13 +293,7 @@ export function AdminPanel() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={
-                  localizeText("Enter password", {
-                    zh: "输入密码",
-                    yue: "輸入密碼",
-                    fr: "Saisir le mot de passe",
-                  })
-                }
+                placeholder="Enter password"
               />
             </div>
             <Button onClick={handleLogin} className="w-full">
@@ -1745,141 +325,6 @@ export function AdminPanel() {
     return tcmAssessments.filter((assessment) => assessment.user_id === userId)
   }
 
-  const getUserDoctorReview = (userId: string) => {
-    return doctorReviews
-      .filter((review) => review.user_id === userId)
-      .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())[0]
-  }
-
-  const getUserMedicalReport = (userId: string) => {
-    return medicalReports.find((report) => report.user_id === userId)
-  }
-
-  const getUserImageFiles = (userId: string, imageKind: "tongue" | "face") => {
-    return getUserFiles(userId).filter(
-      (file) => file.file_type.startsWith("image/") && new RegExp(imageKind, "i").test(file.filename),
-    )
-  }
-
-  const getLatestTcmAssessment = (userId: string) => {
-    return getUserTcmAssessments(userId)
-      .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime())[0]
-  }
-
-  // Get image URLs from the TCM assessment record (most reliable source, as URLs are stored directly)
-  const getTcmAssessmentImageUrl = (userId: string, imageKind: "tongue" | "face"): string | null => {
-    const latest = getLatestTcmAssessment(userId)
-    if (!latest?.answers) return null
-    return imageKind === "tongue"
-      ? (latest.answers.tongue_image_url ?? null)
-      : (latest.answers.face_image_url ?? null)
-  }
-
-  const getTcmImageState = (userId: string) => {
-    const files = getUserFiles(userId)
-    const latest = getLatestTcmAssessment(userId)
-    const hasQuestionnaire =
-      getUserTcmAssessments(userId).length > 0 ||
-      Boolean(getUserDoctorReview(userId))
-
-    if (!hasQuestionnaire && tcmDataLoadIssue) {
-      return {
-        key: "data_unavailable" as const,
-        label: localizeText("TCM data unavailable", { zh: "中医数据不可用", yue: "中醫數據不可用", fr: "Donnees MTC indisponibles" }),
-      }
-    }
-
-    // Images are optional — questionnaire is mandatory for TCM patients
-    const hasTongueImage =
-      files.some((file) => /tongue/i.test(file.filename)) ||
-      !!(latest?.answers?.tongue_image_url)
-    const hasFaceImage =
-      files.some((file) => /face/i.test(file.filename)) ||
-      !!(latest?.answers?.face_image_url)
-    const hasImages = hasTongueImage && hasFaceImage
-
-    if (!hasQuestionnaire) {
-      return {
-        key: "missing_questionnaire" as const,
-        label: localizeText("Missing questionnaire", { zh: "缺少问卷", yue: "缺少問卷", fr: "Questionnaire manquant" }),
-      }
-    }
-    if (!hasImages) {
-      return {
-        key: "missing_images" as const,
-        label: localizeText("Missing images", { zh: "缺少图片", yue: "缺少圖片", fr: "Images manquantes" }),
-      }
-    }
-    return {
-      key: "complete" as const,
-      label: localizeText("Complete", { zh: "完整", yue: "完整", fr: "Complet" }),
-    }
-  }
-
-  const getUserLatestCognitiveRisk = (userId: string) => {
-    const userAssessments = getUserAssessments(userId)
-    const latestMoca = userAssessments
-      .filter((assessment) => assessment.assessment_type === "MOCA")
-      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
-    const latestMmse = userAssessments
-      .filter((assessment) => assessment.assessment_type === "MMSE")
-      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
-
-    const mocaRisk = latestMoca && latestMoca.total_score <= 25
-    const mmseRisk = latestMmse && latestMmse.total_score <= 24
-    const riskFlags = [mocaRisk, mmseRisk].filter(Boolean).length
-
-    if (riskFlags >= 2) {
-      return {
-        key: "high" as const,
-        label: localizeText("High risk", { zh: "高风险", yue: "高風險", fr: "Risque eleve" }),
-      }
-    }
-    if (riskFlags === 1) {
-      return {
-        key: "moderate" as const,
-        label: localizeText("Moderate risk", { zh: "中风险", yue: "中風險", fr: "Risque modere" }),
-      }
-    }
-    return {
-      key: "low" as const,
-      label: localizeText("Low risk", { zh: "低风险", yue: "低風險", fr: "Risque faible" }),
-    }
-  }
-
-  const getReportStatusLabel = (status: ReportStatus) => {
-    switch (status) {
-      case "incomplete":
-        return localizeText("Incomplete", { zh: "资料不完整", yue: "資料不完整", fr: "Incomplet" })
-      case "pending_tcm_review":
-        return localizeText("Pending TCM review", { zh: "待中医审核", yue: "待中醫審核", fr: "En attente de revue MTC" })
-      case "tcm_reviewed":
-        return localizeText("TCM reviewed", { zh: "中医已审核", yue: "中醫已審核", fr: "Revue MTC terminee" })
-      case "pending_final_approval":
-        return localizeText("Pending final approval", { zh: "待最终审批", yue: "待最終審批", fr: "En attente d'approbation finale" })
-      case "approved":
-        return localizeText("Approved", { zh: "已批准", yue: "已批准", fr: "Approuve" })
-      case "published_to_patient":
-        return localizeText("Published to patient", { zh: "已发布给患者", yue: "已發布給患者", fr: "Publie au patient" })
-      default:
-        return status
-    }
-  }
-
-  const getWorkflowStatusForUser = (userId: string): ReportStatus => {
-    const report = getUserMedicalReport(userId)
-    if (report?.report_status) return report.report_status
-
-    const review = getUserDoctorReview(userId)
-    const tcmImageState = getTcmImageState(userId)
-    // Only missing questionnaire blocks workflow; missing images is acceptable
-    if (tcmImageState.key === "missing_questionnaire") return "incomplete"
-    if (tcmImageState.key === "data_unavailable") return review ? "pending_final_approval" : "pending_tcm_review"
-    if (!review) return "pending_tcm_review"
-    if (review.review_status === "reviewed") return "pending_final_approval"
-    return "pending_tcm_review"
-  }
-
   const getOlfactoryLabel = (value?: string | null) => {
     if (!value || value === "No answer") return "No answer"
     const translated = t(`sensory.olfactory.smell.${value}`)
@@ -1889,10 +334,6 @@ export function AdminPanel() {
   const getPulseLabel = (pulseId: string) => {
     const pulse = TCM_PULSE_OPTIONS.find((option) => option.id === pulseId)
     return pulse ? `${pulse.char} · ${pulse.pinyin} · ${pulse.label}` : pulseId
-  }
-
-  const formatCoordinate = (value?: number) => {
-    return typeof value === "number" && Number.isFinite(value) ? value.toFixed(6) : "-"
   }
 
   const getAverageScores = () => {
@@ -1909,13 +350,8 @@ export function AdminPanel() {
     if (assessmentType === "MOCA") {
       return {
         visuospatial: t("moca.visuospatial"),
-        trail_making: localizeText("Trail making", { zh: "连线测试", yue: "連線測試", fr: "Trails" }),
-        cube: t("moca.cube"),
-        clock: localizeText("Clock drawing", { zh: "画钟", yue: "畫鐘", fr: "Horloge" }),
         executive: t("moca.executive"),
         naming: t("moca.naming"),
-        animal_naming: localizeText("Animal naming", { zh: "动物命名", yue: "動物命名", fr: "Denomination animaux" }),
-        object_naming: localizeText("Object naming", { zh: "物体命名", yue: "物體命名", fr: "Denomination objets" }),
         memory: t("moca.memory"),
         attention: t("moca.attention"),
         language: t("moca.language"),
@@ -1926,11 +362,8 @@ export function AdminPanel() {
         orientation: t("mmse.orientation"),
         registration: t("mmse.registration"),
         attention: t("mmse.attention"),
-        recall: t("mmse.recall"),
         naming: t("mmse.naming"),
         repetition: t("mmse.repetition"),
-        three_stage_command: t("mmse.three_stage_command"),
-        reading_command: t("mmse.reading_command"),
         writing: t("mmse.writing"),
         copying: t("mmse.copying"),
       }
@@ -1938,675 +371,6 @@ export function AdminPanel() {
   }
 
   const averageScores = getAverageScores()
-
-  const MMSE_RECONSTRUCTION_KEYS: Array<keyof Assessment["section_scores"]> = [
-    "orientation",
-    "registration",
-    "attention",
-    "recall",
-    "naming",
-    "repetition",
-    "three_stage_command",
-    "reading_command",
-    "writing",
-    "copying",
-  ]
-
-  const formatMmseReconstructionScores = (assessment?: Assessment) => {
-    if (!assessment) return []
-    const labels = getSectionNames("MMSE")
-    return MMSE_RECONSTRUCTION_KEYS.map((key) => {
-      const label = labels[key as keyof typeof labels] || key
-      const score = assessment.section_scores?.[key]
-      return `- ${label}: ${typeof score === "number" ? score : 0}`
-    })
-  }
-
-  const MOCA_DISTRIBUTION_KEYS: Array<keyof Assessment["section_scores"]> = [
-    "visuospatial",
-    "trail_making",
-    "cube",
-    "clock",
-    "executive",
-    "naming",
-    "animal_naming",
-    "object_naming",
-    "attention",
-    "language",
-    "abstraction",
-    "memory",
-    "delayed_recall",
-    "orientation",
-  ]
-
-  const formatMocaScoreDistribution = (assessment?: Assessment) => {
-    if (!assessment || !assessment.section_scores) return []
-    const labels = getSectionNames("MOCA")
-    const scores = assessment.section_scores
-    const orderedKeys = MOCA_DISTRIBUTION_KEYS.filter((key) => Object.prototype.hasOwnProperty.call(scores, key))
-    const extraKeys = Object.keys(scores).filter((key) => !MOCA_DISTRIBUTION_KEYS.includes(key as keyof Assessment["section_scores"]))
-    const keys = [...orderedKeys, ...extraKeys]
-
-    return keys.map((key) => {
-      const label = labels[key as keyof typeof labels] || key
-      const score = scores[key]
-      return `- ${label}: ${typeof score === "number" ? score : 0}`
-    })
-  }
-
-  const getUserDisplayName = (user?: User) => {
-    if (!user) return "-"
-    return user.chinese_name || user.name || user.phone_number || user.id
-  }
-
-  const formatSectionRows = (assessment: Assessment | undefined, assessmentType: "MOCA" | "MMSE", language: ReportLanguage) => {
-    if (!assessment) return ""
-
-    const labels = getSectionNames(assessmentType)
-    const sourceScores = assessment.section_scores || {}
-    const rows = Object.entries(sourceScores)
-      .filter(([key]) => !(assessmentType === "MMSE" && MMSE_LEGACY_KEYS.has(key)))
-      .map(([key, score]) => {
-        const sectionLabel = labels[key as keyof typeof labels] || key
-        const numericScore = typeof score === "number" ? score : 0
-        return `<tr><td>${escapeHtml(sectionLabel)}</td><td class="score-cell">${numericScore}</td></tr>`
-      })
-      .join("")
-
-    if (rows) return rows
-
-    const emptyText = language === "zh-CN" || language === "zh-HK" ? "未提供" : language === "fr" ? "Non renseigne" : "Not provided"
-    return `<tr><td>${escapeHtml(emptyText)}</td><td class="score-cell">-</td></tr>`
-  }
-
-  const buildMedicalReportHtml = (userId: string, language: ReportLanguage) => {
-    const labels = REPORT_LABELS[language]
-    const contentLabels = REPORT_CONTENT_LABELS[language]
-    const unknown = labels.unknown
-
-    const user = users.find((entry) => entry.id === userId)
-    const userAssessments = getUserAssessments(userId)
-    const userSensory = getUserSensoryAssessments(userId)
-    const userTcm = getUserTcmAssessments(userId)
-    const savedReview = getUserDoctorReview(userId)
-    const useDraftInputs = selectedUser === userId
-
-    const latestMoca = userAssessments
-      .filter((assessment) => assessment.assessment_type === "MOCA")
-      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
-    const latestMmse = userAssessments
-      .filter((assessment) => assessment.assessment_type === "MMSE")
-      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
-    const latestOlfactory = userSensory
-      .filter((assessment) => assessment.test_type === "olfactory")
-      .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
-    const latestAuditory = userSensory
-      .filter((assessment) => assessment.test_type === "auditory")
-      .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
-    const latestVisual = userSensory
-      .filter((assessment) => assessment.test_type === "visual")
-      .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
-    const latestTcm = userTcm
-      .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime())[0]
-
-    const olfactoryStatus = getOlfactoryRiskStatus(latestOlfactory)
-    const mocaRisk = latestMoca && latestMoca.total_score <= 25
-    const mmseRisk = latestMmse && latestMmse.total_score <= 24
-    const olfactoryRisk = olfactoryStatus.includes("severe") || olfactoryStatus.includes("high")
-    const riskFlagCount = [mocaRisk, mmseRisk, olfactoryRisk].filter(Boolean).length
-    const riskLevel: "high" | "moderate" | "low" = riskFlagCount >= 2 ? "high" : riskFlagCount === 1 ? "moderate" : "low"
-    const dementiaRiskRecommendation = getDementiaRiskRecommendation(riskLevel, language)
-    const riskClass = riskLevel === "high" ? "risk-high" : riskLevel === "moderate" ? "risk-mid" : "risk-low"
-    const riskLabel = riskLevel === "high" ? contentLabels.riskHigh : riskLevel === "moderate" ? contentLabels.riskModerate : contentLabels.riskLow
-
-    const doctorName = (useDraftInputs ? doctorNameInput : savedReview?.doctor_name) || unknown
-    const reviewDate = (useDraftInputs ? reviewDateInput : savedReview?.review_date) || unknown
-    const eegStatusLabel = contentLabels.eegStatus
-    const eegSummaryLabel = contentLabels.eegSummary
-
-    // New cognitive classification per MMSE and MoCA and EEG correlation mapping
-    const mmseClass = classifyMmse(latestMmse?.total_score ?? null)
-    const mocaClass = classifyMoca(latestMoca?.total_score ?? null)
-    const overallCognitiveSeverity = chooseHigherSeverity(mmseClass, mocaClass)
-    const eegSummary = getEegCorrelationText(overallCognitiveSeverity, language) + (language === "zh-CN" || language === "zh-HK" ? "\n重要提示：EEG分类是基于MMSE和MoCA得分的估算，并不代表实际EEG检查结果。" : language === "fr" ? "\nNote importante : la classification EEG est une correlation estimee a partir des scores MMSE et MoCA et ne remplace pas un examen EEG." : "\nImportant Note: The EEG classification is an estimated correlation derived from cognitive assessment scores (MMSE and MoCA) and does not represent findings from an actual EEG examination.")
-    const diagnosis = (useDraftInputs ? tcmDiagnosisInput : savedReview?.tcm_diagnosis) || unknown
-    const therapyPlan = (useDraftInputs ? tcmTherapyPlanInput : savedReview?.therapy_plan) || unknown
-    // Auto-generate final summary combining MMSE, MoCA, TCM and sensory per requirement #1
-    const finalSummaryGenerated = buildAutoFinalSummary(latestMmse, latestMoca, latestTcm, latestOlfactory, language)
-
-    const mmseRows = formatSectionRows(latestMmse, "MMSE", language)
-    const mocaRows = formatSectionRows(latestMoca, "MOCA", language)
-
-    const reportDate = new Date().toLocaleDateString()
-    const reportTitle = labels.reportTitle
-    const pageTitle = `${reportTitle} - ${getUserDisplayName(user)}`
-
-    return `<!DOCTYPE html>
-<html lang="${escapeHtml(language === "zh-CN" ? "zh-CN" : language === "zh-HK" ? "zh-HK" : language)}">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${escapeHtml(pageTitle)}</title>
-  <style>
-    :root { --primary:#1a4a6e; --accent:#c8960c; --bg:#f7f4ef; --border:#d9cfae; --text:#1a1a2e; --muted:#5b5b74; }
-    * { box-sizing:border-box; }
-    body { margin:0; font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif; background:#e5e0d5; }
-    .page { width:794px; min-height:1123px; margin:18px auto; background:#fff; box-shadow:0 8px 28px rgba(0,0,0,.14); overflow:hidden; }
-    .header { background:var(--primary); color:#fff; padding:16px 26px 14px; border-bottom:4px solid var(--accent); }
-    .header h1 { margin:0; font-size:22px; letter-spacing:1px; }
-    .header .sub { margin-top:4px; font-size:11px; opacity:.85; }
-    .header .meta { margin-top:8px; font-size:12px; color:#f5d779; }
-    .content { padding:14px 18px 16px; color:var(--text); }
-    .section { margin-bottom:10px; border:1px solid var(--border); }
-    .section-title { background:#eef4fb; color:var(--primary); padding:5px 10px; font-size:12px; font-weight:700; letter-spacing:.4px; }
-    .grid { display:grid; grid-template-columns:1fr 1fr; }
-    .field { display:flex; border-top:1px solid #eee7d5; }
-    .label { width:108px; background:#faf8f2; color:var(--muted); font-size:11px; padding:6px 8px; border-right:1px solid #eee7d5; }
-    .value { flex:1; font-size:11px; padding:6px 8px; }
-    .kpis { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding:8px; border-top:1px solid #eee7d5; }
-    .kpi { border:1px solid #e4d9b8; border-radius:8px; padding:8px; background:#fffdf8; text-align:center; }
-    .kpi .k { font-size:10px; color:var(--muted); }
-    .kpi .v { margin-top:2px; font-size:17px; font-weight:700; color:var(--primary); }
-    .score-layout { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:8px; border-top:1px solid #eee7d5; }
-    table { width:100%; border-collapse:collapse; font-size:10.5px; }
-    th { text-align:left; background:var(--primary); color:#fff; font-weight:600; padding:5px 8px; }
-    td { padding:4px 8px; border-bottom:1px solid #efe7d4; }
-    .score-cell { text-align:right; font-weight:700; color:var(--primary); width:66px; }
-    .risk-box { padding:8px; border-top:1px solid #eee7d5; display:grid; grid-template-columns:190px 1fr; gap:8px; align-items:start; }
-    .risk-badge { display:inline-block; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:700; letter-spacing:.7px; }
-    .risk-high { background:#ffebee; color:#b71c1c; border:1px solid #ef9a9a; }
-    .risk-mid { background:#fff8e1; color:#e65100; border:1px solid #ffcc80; }
-    .risk-low { background:#e8f5e9; color:#2e7d32; border:1px solid #a5d6a7; }
-    .note { font-size:10.5px; line-height:1.45; color:#2f2f45; }
-    .textarea { border-top:1px solid #eee7d5; padding:8px; font-size:10.5px; line-height:1.4; min-height:58px; white-space:pre-wrap; }
-    .footer { padding:10px 18px 16px; font-size:10px; color:#777; display:flex; justify-content:space-between; }
-    @page { size: A4 portrait; margin: 0; }
-    @media print { body { background:#fff; } .page { margin:0; box-shadow:none; } }
-  </style>
-</head>
-<body>
-  <div class="page">
-    <div class="header">
-      <h1>${escapeHtml(reportTitle)}</h1>
-      <div class="sub">南方医科大学中西医结合医院 • Southern Medical University - Integrated Medicine Hospital</div>
-      <div class="meta">${escapeHtml(labels.reportDate)}: ${escapeHtml(reportDate)}</div>
-    </div>
-    <div class="content">
-      <div class="section">
-        <div class="section-title">${escapeHtml(labels.patientInfo)}</div>
-        <div class="grid">
-          <div class="field"><div class="label">${escapeHtml(labels.name)}</div><div class="value">${escapeHtml(getUserDisplayName(user))}</div></div>
-          <div class="field"><div class="label">${escapeHtml(labels.idNumber)}</div><div class="value">${escapeHtml(user?.national_id || unknown)}</div></div>
-          <div class="field"><div class="label">${escapeHtml(labels.sex)}</div><div class="value">${escapeHtml(getLocalizedGender(user?.gender, language, unknown))}</div></div>
-          <div class="field"><div class="label">${escapeHtml(labels.dateOfBirth)}</div><div class="value">${escapeHtml(user?.date_of_birth || unknown)}</div></div>
-          <div class="field"><div class="label">${escapeHtml(labels.cityProvince)}</div><div class="value">${escapeHtml(contentLabels.cityProvinceValue)}</div></div>
-          <div class="field"><div class="label">${escapeHtml(labels.hospital)}</div><div class="value">${escapeHtml(contentLabels.hospitalValue)}</div></div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">${escapeHtml(labels.cognitive)}</div>
-        <div class="kpis">
-          <div class="kpi"><div class="k">${escapeHtml(contentLabels.mocaFinal)}</div><div class="v">${latestMoca ? `${latestMoca.total_score}/30` : "-"}</div></div>
-          <div class="kpi"><div class="k">${escapeHtml(contentLabels.mmseFinal)}</div><div class="v">${latestMmse ? `${latestMmse.total_score}/30` : "-"}</div></div>
-          <div class="kpi"><div class="k">${escapeHtml(contentLabels.riskTier)}</div><div class="v">${escapeHtml(riskLabel)}</div></div>
-        </div>
-        <div class="score-layout">
-          <table>
-            <thead><tr><th>${escapeHtml(contentLabels.mocaTasks)}</th><th class="score-cell">${escapeHtml(contentLabels.score)}</th></tr></thead>
-            <tbody>${mocaRows}</tbody>
-          </table>
-          <table>
-            <thead><tr><th>${escapeHtml(contentLabels.mmseTasks)}</th><th class="score-cell">${escapeHtml(contentLabels.score)}</th></tr></thead>
-            <tbody>${mmseRows}</tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">${escapeHtml(labels.sensory)}</div>
-        <div class="grid">
-          <div class="field"><div class="label">${escapeHtml(contentLabels.olfactory)}</div><div class="value">${escapeHtml(getOlfactoryScoreDisplay(latestOlfactory, language, unknown))}</div></div>
-          <div class="field"><div class="label">${escapeHtml(contentLabels.auditory)}</div><div class="value">${escapeHtml(getSensoryScoreDisplay(latestAuditory, language, unknown, "normalized"))}</div></div>
-          <div class="field"><div class="label">${escapeHtml(contentLabels.visual)}</div><div class="value">${escapeHtml(getSensoryScoreDisplay(latestVisual, language, unknown, "normalized"))}</div></div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">${escapeHtml(labels.tcm)}</div>
-        <div class="textarea">${escapeHtml(language === "zh-CN" ? "中医评估表明患者的状况与体质相关。" : language === "zh-HK" ? "中醫評估表明患者的狀況與體質相關。" : language === "fr" ? "L'evaluation MTC indique que l'etat du patient est lie a sa constitution physique." : "Traditional Chinese Medicine assessment indicates that the patient's condition is related to physical constitution.")}${latestTcm?.primary_constitution ? "\n" + escapeHtml(getConstitutionLabelForLanguage(latestTcm.primary_constitution, language) || "") : ""}${latestTcm?.recommendations && latestTcm.recommendations.length > 0 ? "\n" + escapeHtml((latestTcm.recommendations || []).join("; ")) : ""}</div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">${escapeHtml(labels.eegSection)}</div>
-        <div class="grid">
-          <div class="field"><div class="label">${escapeHtml(eegStatusLabel)}</div><div class="value">${escapeHtml(labels.eegInProcess)}</div></div>
-        </div>
-        <div class="textarea"><strong>${escapeHtml(eegSummaryLabel)}:</strong> ${escapeHtml(eegSummary)}</div>
-      </div>
-
-      <!-- Section 6 removed per specification -->
-    </div>
-    <div class="footer">
-      <div>${escapeHtml(contentLabels.doctorName)}: ${escapeHtml(doctorName)}</div>
-      <div>${escapeHtml(contentLabels.reviewDate)}: ${escapeHtml(reviewDate)}</div>
-    </div>
-  </div>
-</body>
-</html>`
-  }
-
-  const buildMedicalReport = (userId: string, language: ReportLanguage) => {
-    const labels = REPORT_LABELS[language]
-    const contentLabels = REPORT_CONTENT_LABELS[language]
-    const user = users.find((entry) => entry.id === userId)
-    const userAssessments = getUserAssessments(userId)
-    const userSensory = getUserSensoryAssessments(userId)
-    const userTcm = getUserTcmAssessments(userId)
-    // Use saved doctor review when available, fall back to current input state
-    const savedReview = getUserDoctorReview(userId)
-    const useDraftInputs = selectedUser === userId
-
-    const latestMoca = userAssessments
-      .filter((assessment) => assessment.assessment_type === "MOCA")
-      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
-    const latestMmse = userAssessments
-      .filter((assessment) => assessment.assessment_type === "MMSE")
-      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
-    const latestOlfactory = userSensory
-      .filter((assessment) => assessment.test_type === "olfactory")
-      .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
-    const latestAuditory = userSensory
-      .filter((assessment) => assessment.test_type === "auditory")
-      .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
-    const latestVisual = userSensory
-      .filter((assessment) => assessment.test_type === "visual")
-      .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
-    const latestTcm = userTcm
-      .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime())[0]
-    const olfactoryPlan = getOlfactoryDiagnosisAndRecommendation(latestOlfactory, language)
-
-    const olfactoryStatus = getOlfactoryRiskStatus(latestOlfactory)
-    const mocaRisk = latestMoca && latestMoca.total_score <= 25
-    const mmseRisk = latestMmse && latestMmse.total_score <= 24
-    const olfactoryRisk = olfactoryStatus.includes("severe") || olfactoryStatus.includes("high")
-    const riskFlagCount = [mocaRisk, mmseRisk, olfactoryRisk].filter(Boolean).length
-    const riskLevel: "high" | "moderate" | "low" = riskFlagCount >= 2 ? "high" : riskFlagCount === 1 ? "moderate" : "low"
-    const finalRisk = riskLevel === "high" ? contentLabels.riskHigh : riskLevel === "moderate" ? contentLabels.riskModerate : contentLabels.riskLow
-    const dementiaRiskRecommendation = getDementiaRiskRecommendation(riskLevel, language)
-
-    const eegStatusLabel = contentLabels.eegStatus
-    const eegSummaryLabel = contentLabels.eegSummary
-    // Use MMSE/MoCA classification to determine EEG correlation text and include important note
-    const mmseClass = classifyMmse(latestMmse?.total_score ?? null)
-    const mocaClass = classifyMoca(latestMoca?.total_score ?? null)
-    const overallCognitiveSeverity = chooseHigherSeverity(mmseClass, mocaClass)
-    const eegSummary = getEegCorrelationText(overallCognitiveSeverity, language) + "\nImportant Note: The EEG classification is an estimated correlation derived from cognitive assessment scores (MMSE and MoCA) and does not represent findings from an actual EEG examination."
-    const finalSummaryGenerated = buildAutoFinalSummary(latestMmse, latestMoca, latestTcm, latestOlfactory, language)
-
-    return [
-      labels.reportTitle,
-      `${labels.reportDate}: ${new Date().toLocaleDateString()}`,
-      "",
-      labels.patientInfo,
-      `${labels.name}: ${getUserDisplayName(user)}`,
-      `${labels.idNumber}: ${user?.national_id || labels.unknown}`,
-      `${labels.sex}: ${getLocalizedGender(user?.gender, language, labels.unknown)}`,
-      `${labels.dateOfBirth}: ${user?.date_of_birth || labels.unknown}`,
-      `${labels.cityProvince}: ${contentLabels.cityProvinceValue}`,
-      `${labels.hospital}: ${contentLabels.hospitalValue}`,
-      "",
-      labels.cognitive,
-      `${contentLabels.mmseFinal}: ${latestMmse ? `${latestMmse.total_score}/30` : labels.unknown}`,
-      `${contentLabels.mocaFinal}: ${latestMoca ? `${latestMoca.total_score}/30` : labels.unknown}`,
-      `${contentLabels.mocaScoreDistribution}:`,
-      ...(formatMocaScoreDistribution(latestMoca).length > 0
-        ? formatMocaScoreDistribution(latestMoca)
-        : [`- ${labels.unknown}`]),
-      "",
-      labels.sensory,
-      `${contentLabels.olfactory}: ${getOlfactoryScoreDisplay(latestOlfactory, language, labels.unknown)}`,
-      `${contentLabels.olfactoryDiagnosis}: ${olfactoryPlan.diagnosis}`,
-      `${contentLabels.olfactoryRecommendation}: ${olfactoryPlan.recommendation}`,
-      `${contentLabels.auditory}: ${getSensoryScoreDisplay(latestAuditory, language, labels.unknown, "normalized")}`,
-      `${contentLabels.visual}: ${getSensoryScoreDisplay(latestVisual, language, labels.unknown, "normalized")}`,
-      "",
-      labels.tcm,
-      language === "zh-CN"
-        ? "中医评估表明患者的状况与体质相关。" + (latestTcm?.primary_constitution ? ` ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : "")
-        : language === "zh-HK"
-          ? "中醫評估表明患者的狀況與體質相關。" + (latestTcm?.primary_constitution ? ` ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : "")
-          : language === "fr"
-            ? "L'evaluation MTC indique que l'etat du patient est lie a sa constitution physique." + (latestTcm?.primary_constitution ? ` ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : "")
-            : "Traditional Chinese Medicine assessment indicates that the patient's condition is related to physical constitution." + (latestTcm?.primary_constitution ? ` ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : ""),
-      "",
-      labels.eegSection,
-      `${eegStatusLabel}: ${labels.eegInProcess}`,
-      `${eegSummaryLabel}: ${eegSummary}`,
-      "",
-      `-- ${labels.doctorInputs} --`,
-    ].join("\n")
-  }
-
-  const handleGenerateReport = () => {
-    if (!selectedUser) return
-    const reportText = buildMedicalReport(selectedUser, reportLanguage)
-    setGeneratedReport(reportText)
-  }
-
-  const handleDownloadReport = async () => {
-    if (!selectedUser) return
-    const user = users.find((entry) => entry.id === selectedUser)
-    const filePrefix = getUserDisplayName(user).replace(/\s+/g, "_")
-    const fileTimestamp = new Date().toISOString().replace(/[:.]/g, "-")
-    const reportHtml = buildMedicalReportHtml(selectedUser, reportLanguage)
-    const blob = new Blob([reportHtml], { type: "text/html;charset=utf-8" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `MA_${filePrefix}_${reportLanguage}_onepage_${fileTimestamp}.html`
-    link.click()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-  }
-
-  const handlePrintReport = () => {
-    if (!selectedUser) return
-    const reportHtml = buildMedicalReportHtml(selectedUser, reportLanguage)
-    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=900,height=700")
-    if (!printWindow) return
-    printWindow.document.write(reportHtml)
-    printWindow.document.close()
-    printWindow.focus()
-    setTimeout(() => {
-      printWindow.print()
-    }, 150)
-  }
-
-  const buildAllMedicalReports = (language: ReportLanguage) => {
-    const sections = users.map((user, index) => {
-      const report = buildMedicalReport(user.id, language)
-      return [`===== Patient ${index + 1} / ${users.length} =====`, report].join("\n")
-    })
-    return sections.join("\n\n")
-  }
-
-  const handleGenerateAllReports = () => {
-    const compiledReports = buildAllMedicalReports(reportLanguage)
-    setGeneratedAllReports(compiledReports)
-  }
-
-  const handleDownloadAllReports = async () => {
-    if (!generatedAllReports) return
-    const fileTimestamp = new Date().toISOString().replace(/[:.]/g, "-")
-    const reportText = generatedAllReports || buildAllMedicalReports(reportLanguage)
-    const pdfBytes = await createMedicalReportPdf(reportText, reportLanguage)
-    const blob = new Blob([pdfBytes], { type: "application/pdf" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `MA_all_patients_${reportLanguage}_unicode_${fileTimestamp}.pdf`
-    link.click()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-  }
-
-  const handlePrintAllReports = () => {
-    const allReports = generatedAllReports || buildAllMedicalReports(reportLanguage)
-    if (!generatedAllReports) {
-      setGeneratedAllReports(allReports)
-    }
-    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=1000,height=800")
-    if (!printWindow) return
-    printWindow.document.write(`<pre style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; padding: 24px; line-height: 1.6;">${allReports.replace(/</g, "&lt;")}</pre>`)
-    printWindow.document.close()
-    printWindow.focus()
-    setTimeout(() => {
-      printWindow.print()
-    }, 150)
-  }
-
-  const saveTcmAssessmentResult = async () => {
-    if (!selectedUser) return
-
-    const parseNullableNumber = (value: string) => {
-      const trimmed = value.trim()
-      if (!trimmed) return null
-      const parsed = Number(trimmed)
-      return Number.isFinite(parsed) ? parsed : null
-    }
-
-    try {
-      const latestAnyAssessment = getLatestTcmAssessment(selectedUser)
-      const latestNewBuildAssessment = getUserTcmAssessments(selectedUser)
-        .filter((assessment) => assessment.data_source !== "old_build")
-        .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime())[0]
-
-      const recommendationList = tcmAssessmentRecommendationsInput
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-
-      const primaryScore = parseNullableNumber(tcmAssessmentPrimaryScoreInput)
-      const overallScore = parseNullableNumber(tcmAssessmentOverallScoreInput)
-
-      const payload = {
-        user_id: selectedUser,
-        primary_constitution: tcmAssessmentConstitutionInput.trim() || "Unknown",
-        primary_score: primaryScore,
-        overall_score: overallScore,
-        recommendations: recommendationList,
-        answers: {
-          questionnaire: latestAnyAssessment?.answers?.questionnaire || {},
-          pulse_assessment: latestAnyAssessment?.answers?.pulse_assessment,
-          tongue_image_url: latestAnyAssessment?.answers?.tongue_image_url || null,
-          face_image_url: latestAnyAssessment?.answers?.face_image_url || null,
-          uploaded_image_ids: latestAnyAssessment?.answers?.uploaded_image_ids || [],
-        },
-        completed_at: new Date().toISOString(),
-      }
-
-      let savedRecord: TCMAssessment | null = null
-
-      if (latestNewBuildAssessment?.id) {
-        const { data, error } = await supabase
-          .from("tcm_assessments")
-          .update(payload)
-          .eq("id", latestNewBuildAssessment.id)
-          .select("*")
-          .single()
-        if (error) throw error
-        savedRecord = { ...(data as TCMAssessment), data_source: "new_build" }
-      } else {
-        const { data, error } = await supabase.from("tcm_assessments").insert(payload).select("*").single()
-        if (error) throw error
-        savedRecord = { ...(data as TCMAssessment), data_source: "new_build" }
-      }
-
-      if (savedRecord) {
-        setTcmAssessments((prev) => {
-          const withoutSaved = prev.filter((assessment) => assessment.id !== savedRecord!.id)
-          return [savedRecord as TCMAssessment, ...withoutSaved].sort(
-            (a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime(),
-          )
-        })
-      }
-
-      setWorkflowMessage(
-        localizeText("TCM assessment results saved for this patient.", {
-          zh: "该患者的中医评估结果已保存。",
-          yue: "該患者的中醫評估結果已保存。",
-          fr: "Les resultats d'evaluation MTC de ce patient ont ete enregistres.",
-        }),
-      )
-    } catch (error) {
-      console.error("Failed to save TCM assessment results:", error)
-      setWorkflowMessage(
-        localizeText("Could not save TCM assessment results.", {
-          zh: "无法保存中医评估结果。",
-          yue: "無法保存中醫評估結果。",
-          fr: "Impossible d'enregistrer les resultats d'evaluation MTC.",
-        }),
-      )
-    }
-  }
-
-  const saveDoctorReview = async (reviewStatus: TCMReviewStatus) => {
-    if (!selectedUser) return
-    try {
-      const existingReview = getUserDoctorReview(selectedUser)
-      const payload = {
-        user_id: selectedUser,
-        tcm_constitution: tcmConstitutionInput || null,
-        tongue_observation: tongueObservationInput || null,
-        face_observation: faceObservationInput || null,
-        questionnaire_interpretation: questionnaireInterpretationInput || null,
-        tcm_diagnosis: tcmDiagnosisInput || null,
-        therapy_plan: tcmTherapyPlanInput || null,
-        dietary_advice: dietaryAdviceInput || null,
-        follow_up_recommendation: followUpRecommendationInput || null,
-        doctor_name: doctorNameInput || null,
-        review_date: reviewDateInput || null,
-        review_status: reviewStatus,
-        reviewed_at: reviewStatus === "reviewed" ? new Date().toISOString() : null,
-      }
-
-      let savedRecord: TCMDoctorReview | null = null
-      if (existingReview?.id) {
-        const { data, error } = await supabase
-          .from("tcm_doctor_reviews")
-          .update(payload)
-          .eq("id", existingReview.id)
-          .select("*")
-          .single()
-        if (error) throw error
-        savedRecord = data as TCMDoctorReview
-      } else {
-        const { data, error } = await supabase.from("tcm_doctor_reviews").insert(payload).select("*").single()
-        if (error) throw error
-        savedRecord = data as TCMDoctorReview
-      }
-
-      if (savedRecord) {
-        setDoctorReviews((prev) => [savedRecord as TCMDoctorReview, ...prev.filter((review) => review.id !== savedRecord!.id)])
-      }
-
-      const existingReport = getUserMedicalReport(selectedUser)
-      const autoStatus: ReportStatus = reviewStatus === "reviewed" ? "tcm_reviewed" : "pending_tcm_review"
-      if (existingReport?.id) {
-        const { data: syncedReport, error: syncError } = await supabase
-          .from("medical_reports")
-          .update({ report_status: autoStatus, language: reportLanguage })
-          .eq("id", existingReport.id)
-          .select("*")
-          .single()
-        if (!syncError && syncedReport) {
-          setMedicalReports((prev) => [syncedReport as MedicalReport, ...prev.filter((report) => report.id !== syncedReport.id)])
-        }
-      } else {
-        const { data: insertedReport, error: insertReportError } = await supabase
-          .from("medical_reports")
-          .insert({ user_id: selectedUser, report_status: autoStatus, language: reportLanguage })
-          .select("*")
-          .single()
-        if (!insertReportError && insertedReport) {
-          setMedicalReports((prev) => [insertedReport as MedicalReport, ...prev.filter((report) => report.id !== insertedReport.id)])
-        }
-      }
-
-      setWorkflowMessage(
-        reviewStatus === "reviewed"
-          ? localizeText("TCM review marked as reviewed.", {
-              zh: "中医审核已标记为完成。",
-              yue: "中醫審核已標記為完成。",
-              fr: "La revue MTC est marquee comme terminee.",
-            })
-          : localizeText("TCM review draft saved.", {
-              zh: "中医审核草稿已保存。",
-              yue: "中醫審核草稿已保存。",
-              fr: "Le brouillon de revue MTC est enregistre.",
-            }),
-      )
-    } catch (error) {
-      console.error("Failed to save TCM doctor review:", error)
-      setWorkflowMessage(
-        localizeText("Could not save review. Ensure table tcm_doctor_reviews exists.", {
-          zh: "无法保存审核。请确认 tcm_doctor_reviews 表已创建。",
-          yue: "無法保存審核。請確認 tcm_doctor_reviews 表已建立。",
-          fr: "Impossible d'enregistrer la revue. Verifiez que la table tcm_doctor_reviews existe.",
-        }),
-      )
-    }
-  }
-
-  const updateReportStatus = async (nextStatus: ReportStatus) => {
-    if (!selectedUser) return
-    try {
-      const existingReport = getUserMedicalReport(selectedUser)
-      const payload = {
-        user_id: selectedUser,
-        language: reportLanguage,
-        report_status: nextStatus,
-        approved_at: nextStatus === "approved" || nextStatus === "published_to_patient" ? new Date().toISOString() : null,
-        published_to_patient_at: nextStatus === "published_to_patient" ? new Date().toISOString() : null,
-      }
-
-      let savedRecord: MedicalReport | null = null
-      if (existingReport?.id) {
-        const { data, error } = await supabase
-          .from("medical_reports")
-          .update(payload)
-          .eq("id", existingReport.id)
-          .select("*")
-          .single()
-        if (error) throw error
-        savedRecord = data as MedicalReport
-      } else {
-        const { data, error } = await supabase.from("medical_reports").insert(payload).select("*").single()
-        if (error) throw error
-        savedRecord = data as MedicalReport
-      }
-
-      if (savedRecord) {
-        setMedicalReports((prev) => [savedRecord as MedicalReport, ...prev.filter((report) => report.id !== savedRecord!.id)])
-      }
-      setWorkflowMessage(
-        localizeText("Report status updated to", {
-          zh: "报告状态已更新为",
-          yue: "報告狀態已更新為",
-          fr: "Le statut du rapport est passe a",
-        }) + ` ${getReportStatusLabel(nextStatus)}.`,
-      )
-    } catch (error) {
-      console.error("Failed to update report status:", error)
-      setWorkflowMessage(
-        localizeText("Could not update report status. Ensure table medical_reports exists.", {
-          zh: "无法更新报告状态。请确认 medical_reports 表已创建。",
-          yue: "無法更新報告狀態。請確認 medical_reports 表已建立。",
-          fr: "Impossible de mettre a jour le statut du rapport. Verifiez que la table medical_reports existe.",
-        }),
-      )
-    }
-  }
-
-  const currentSelectedReportStatus = selectedUser ? getWorkflowStatusForUser(selectedUser) : "incomplete"
-  const canPublishToPatient =
-    currentSelectedReportStatus === "approved" || currentSelectedReportStatus === "published_to_patient"
-
-  const filteredUsers = users.filter((user) => {
-    const query = patientSearch.trim().toLowerCase()
-    const identityBlob = `${user.phone_number || ""} ${user.name || ""} ${user.national_id || ""}`.toLowerCase()
-    if (query && !identityBlob.includes(query)) return false
-
-    const workflowStatus = getWorkflowStatusForUser(user.id)
-    if (statusFilter !== "all" && workflowStatus !== statusFilter) return false
-
-    const risk = getUserLatestCognitiveRisk(user.id)
-    if (riskFilter !== "all" && risk.key !== riskFilter) return false
-
-    const imageState = getTcmImageState(user.id)
-    if (tcmImageFilter !== "all" && imageState.key !== tcmImageFilter) return false
-
-    return true
-  })
 
   // Inside the `AdminPanel` component, after `averageScores` calculation, add the following data preparations:
   const mocaDistributionData = getScoreDistribution(assessments, "MOCA")
@@ -2633,10 +397,6 @@ export function AdminPanel() {
               <Download className="w-4 h-4" />
               <span>{t("admin.export_csv")}</span>
             </Button>
-            <Button onClick={exportAllTcmResults} variant="outline" className="flex items-center space-x-2 bg-transparent">
-              <Download className="w-4 h-4" />
-              <span>{localizeText("Export TCM (all builds)", { zh: "导出中医（全部版本）", yue: "導出中醫（全部版本）", fr: "Exporter MTC (toutes versions)" })}</span>
-            </Button>
             <ThemeToggle />
             <Button onClick={handleLogout} variant="outline" className="flex items-center space-x-2 bg-transparent">
               <LogOut className="w-4 h-4" />
@@ -2646,7 +406,7 @@ export function AdminPanel() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center space-x-2">
@@ -2686,30 +446,6 @@ export function AdminPanel() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center space-x-2">
-                <BarChart3 className="w-8 h-8 text-indigo-600" />
-                <div>
-                  <p className="text-2xl font-bold">{averageScores.mmse.toFixed(1)}</p>
-                  <p className="text-sm text-gray-600">Avg MMSE Score</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <Eye className="w-8 h-8 text-amber-600" />
-                <div>
-                  <p className="text-2xl font-bold">{sensoryAssessments.length}</p>
-                  <p className="text-sm text-gray-600">Sensory Screenings</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
                 <ImageIcon className="w-8 h-8 text-orange-600" />
                 <div>
                   <p className="text-2xl font-bold">{uploadedFiles.length}</p>
@@ -2723,28 +459,15 @@ export function AdminPanel() {
         <Card className="mb-8 border-cyan-200 bg-[linear-gradient(135deg,rgba(236,254,255,0.98),rgba(255,255,255,0.98),rgba(239,246,255,0.92))]">
           <CardHeader>
             <CardTitle className="flex items-center gap-3">
-              {localizeText("Olfactory Examiner Key", {
-                zh: "嗅觉评估员参考键",
-                yue: "嗅覺評估員參考鍵",
-                fr: "Cle examinateur olfactif",
-              })}
+              Olfactory Examiner Key
               <Badge className="bg-cyan-600 text-white hover:bg-cyan-600 text-xs font-normal">
-                {localizeText("Active", {
-                  zh: "当前",
-                  yue: "當前",
-                  fr: "Actif",
-                })}
-                : {activeOlfactoryProtocol === "sat_v3_14" ? "14-item" : activeOlfactoryProtocol === "sat_v2" ? "12-item" : "8-item"} ({activeOlfactoryProtocol})
+                Active: {activeOlfactoryProtocol === "sat_v3_14" ? "14-item" : activeOlfactoryProtocol === "sat_v2" ? "12-item" : "8-item"} ({activeOlfactoryProtocol})
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-slate-600">
-              {localizeText("This key is only for examiners. Scents are shown in the order they are presented to the patient. Patients should not be shown the correct mapping.", {
-                zh: "此参考键仅供评估员使用。气味按向患者呈现的顺序显示。请勿向患者显示正确对应关系。",
-                yue: "呢個參考鍵只供評估員使用。氣味會按向患者呈現嘅次序顯示。請勿向患者顯示正確對應。",
-                fr: "Cette cle est reservee aux examinateurs. Les odeurs sont affichees dans l'ordre de presentation au patient. Ne montrez pas la correspondance correcte au patient.",
-              })}
+              This key is only for examiners. Scents are shown in the order they are presented to the patient. Patients should not be shown the correct mapping.
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {OLFACTORY_PROTOCOL_QUESTION_SET[activeOlfactoryProtocol].map((question) => (
@@ -2753,9 +476,9 @@ export function AdminPanel() {
                     <Badge className="bg-cyan-600 text-white hover:bg-cyan-600">{question.questionCode}</Badge>
                     <span className="text-sm font-semibold text-slate-700">{SCENT_LABELS[question.correctAnswer].en}</span>
                   </div>
-                  <p className="mt-2 text-xs text-slate-500">{localizeText("Correct", { zh: "正确", yue: "正確", fr: "Correct" })}: {SCENT_LABELS[question.correctAnswer].zh}</p>
-                  <p className="mt-1 text-xs text-slate-500">{localizeText("Code description", { zh: "编码说明", yue: "編碼說明", fr: "Description du code" })}: {question.codeDescription.en}</p>
-                  <p className="mt-1 text-xs text-slate-500">{localizeText("Options", { zh: "选项", yue: "選項", fr: "Options" })}: {question.options.map((option) => SCENT_LABELS[option.key].en).join(", ")}</p>
+                  <p className="mt-2 text-xs text-slate-500">Correct: {SCENT_LABELS[question.correctAnswer].zh}</p>
+                  <p className="mt-1 text-xs text-slate-500">Code description: {question.codeDescription.en}</p>
+                  <p className="mt-1 text-xs text-slate-500">Options: {question.options.map((option) => SCENT_LABELS[option.key].en).join(", ")}</p>
                 </div>
               ))}
             </div>
@@ -2786,129 +509,14 @@ export function AdminPanel() {
           {/* Users List */}
           <Card>
             <CardHeader>
-              <CardTitle>
-                {localizeText("Patient Report Review Dashboard", {
-                  zh: "患者报告审核面板",
-                  yue: "患者報告審核面板",
-                  fr: "Tableau de revue des rapports patient",
-                })}
-              </CardTitle>
+              <CardTitle>{t("admin.registered_users")}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-3 md:grid-cols-2 mb-4">
-                <AssessmentInput
-                  placeholder={localizeText("Search by phone, name, or national ID", {
-                    zh: "按手机号、姓名或身份证号搜索",
-                    yue: "按手機號、姓名或身份證號搜尋",
-                    fr: "Rechercher par telephone, nom ou identifiant national",
-                  })}
-                  value={patientSearch}
-                  onChange={(event) => setPatientSearch(event.target.value)}
-                />
-                <div className="grid grid-cols-3 gap-2">
-                  <select
-                    value={statusFilter}
-                    onChange={(event) => setStatusFilter(event.target.value as "all" | ReportStatus)}
-                    className="h-10 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:ring-2 focus:ring-blue-300"
-                  >
-                    <option value="all">{localizeText("All status", { zh: "全部状态", yue: "全部狀態", fr: "Tous les statuts" })}</option>
-                    <option value="incomplete">{getReportStatusLabel("incomplete")}</option>
-                    <option value="pending_tcm_review">{getReportStatusLabel("pending_tcm_review")}</option>
-                    <option value="tcm_reviewed">{getReportStatusLabel("tcm_reviewed")}</option>
-                    <option value="pending_final_approval">{getReportStatusLabel("pending_final_approval")}</option>
-                    <option value="approved">{getReportStatusLabel("approved")}</option>
-                    <option value="published_to_patient">{getReportStatusLabel("published_to_patient")}</option>
-                  </select>
-                  <select
-                    value={riskFilter}
-                    onChange={(event) => setRiskFilter(event.target.value as "all" | "high" | "moderate" | "low")}
-                    className="h-10 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:ring-2 focus:ring-blue-300"
-                  >
-                    <option value="all">{localizeText("All risk", { zh: "全部风险", yue: "全部風險", fr: "Tous les risques" })}</option>
-                    <option value="high">{localizeText("High risk", { zh: "高风险", yue: "高風險", fr: "Risque eleve" })}</option>
-                    <option value="moderate">{localizeText("Moderate risk", { zh: "中风险", yue: "中風險", fr: "Risque modere" })}</option>
-                    <option value="low">{localizeText("Low risk", { zh: "低风险", yue: "低風險", fr: "Risque faible" })}</option>
-                  </select>
-                  <select
-                    value={tcmImageFilter}
-                    onChange={(event) =>
-                      setTcmImageFilter(
-                        event.target.value as "all" | "complete" | "missing_images" | "missing_questionnaire" | "data_unavailable",
-                      )
-                    }
-                    className="h-10 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:ring-2 focus:ring-blue-300"
-                  >
-                    <option value="all">{localizeText("All TCM files", { zh: "全部中医资料", yue: "全部中醫資料", fr: "Tous les dossiers MTC" })}</option>
-                    <option value="complete">{localizeText("Questionnaire + Images", { zh: "问卷+图片完整", yue: "問卷+圖片完整", fr: "Questionnaire + images" })}</option>
-                    <option value="missing_images">{localizeText("Missing images (questionnaire OK)", { zh: "缺少图片（问卷已完成）", yue: "缺少圖片（問卷已完成）", fr: "Images manquantes (questionnaire OK)" })}</option>
-                    <option value="missing_questionnaire">{localizeText("Missing questionnaire", { zh: "缺少问卷", yue: "缺少問卷", fr: "Questionnaire manquant" })}</option>
-                    <option value="data_unavailable">{localizeText("TCM data unavailable", { zh: "中医数据不可用", yue: "中醫數據不可用", fr: "Donnees MTC indisponibles" })}</option>
-                  </select>
-                </div>
-              </div>
-
-              {tcmDataLoadIssue && (
-                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  {localizeText(
-                    "TCM questionnaire data could not be loaded. Patient status may be incomplete until data access is restored.",
-                    {
-                      zh: "中医问卷数据暂时无法加载。在恢复数据访问前，患者状态可能显示不完整。",
-                      yue: "中醫問卷數據暫時無法加載。在恢復數據訪問前，患者狀態可能顯示不完整。",
-                      fr: "Les donnees du questionnaire MTC n'ont pas pu etre chargees. Le statut patient peut rester incomplet tant que l'acces aux donnees n'est pas retabli.",
-                    },
-                  )}
-                </div>
-              )}
-
-              <div className="mb-4 overflow-auto rounded-lg border border-slate-200">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-semibold">{localizeText("Patient", { zh: "患者", yue: "患者", fr: "Patient" })}</th>
-                      <th className="px-3 py-2 text-left font-semibold">{localizeText("Cognitive Status", { zh: "认知状态", yue: "認知狀態", fr: "Statut cognitif" })}</th>
-                      <th className="px-3 py-2 text-left font-semibold">{localizeText("TCM Images", { zh: "中医图片", yue: "中醫圖片", fr: "Images MTC" })}</th>
-                      <th className="px-3 py-2 text-left font-semibold">{localizeText("Report Status", { zh: "报告状态", yue: "報告狀態", fr: "Statut du rapport" })}</th>
-                      <th className="px-3 py-2 text-left font-semibold">{localizeText("Download", { zh: "下载", yue: "下載", fr: "Telechargement" })}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map((user) => {
-                      const risk = getUserLatestCognitiveRisk(user.id)
-                      const tcmImageState = getTcmImageState(user.id)
-                      const workflowStatus = getWorkflowStatusForUser(user.id)
-                      return (
-                        <tr
-                          key={`row-${user.id}`}
-                          className={`cursor-pointer border-t ${selectedUser === user.id ? "bg-blue-50" : "hover:bg-slate-50"}`}
-                          onClick={() => setSelectedUser(user.id)}
-                        >
-                          <td className="px-3 py-2">
-                            <p className="font-medium">{user.name || user.phone_number}</p>
-                            <p className="text-xs text-slate-500">{user.phone_number}</p>
-                          </td>
-                          <td className="px-3 py-2">{risk.label}</td>
-                          <td className="px-3 py-2">{tcmImageState.label}</td>
-                          <td className="px-3 py-2">
-                            <Badge variant="outline">{getReportStatusLabel(workflowStatus)}</Badge>
-                          </td>
-                          <td className="px-3 py-2">
-                            {workflowStatus === "published_to_patient"
-                              ? localizeText("Available", { zh: "可下载", yue: "可下載", fr: "Disponible" })
-                              : localizeText("Locked", { zh: "锁定", yue: "鎖定", fr: "Verrouille" })}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
               <div className="space-y-4 max-h-96 overflow-y-auto">
-                {filteredUsers.map((user) => {
+                {users.map((user) => {
                   const userAssessments = getUserAssessments(user.id)
                   const userFiles = getUserFiles(user.id)
                   const userCurrentProgress = getUserProgress(user.id)
-                  const workflowStatus = getWorkflowStatusForUser(user.id)
                   return (
                     <div
                       key={user.id}
@@ -2921,7 +529,7 @@ export function AdminPanel() {
                         <div>
                           <p className="font-medium">{user.name || user.phone_number}</p>
                           <p className="text-sm text-gray-600">
-                            {t("admin.registered")}: {new Date(user.created_at).toLocaleDateString()}
+                            {user.phone_number} • {t("admin.registered")}: {new Date(user.created_at).toLocaleDateString()}
                           </p>
                         </div>
                         <div className="flex flex-col items-end space-y-1">
@@ -2931,7 +539,6 @@ export function AdminPanel() {
                           <Badge variant="outline">
                             {t("admin.in_progress_count", { count: userCurrentProgress.length })}
                           </Badge>
-                          <Badge variant="outline">{getReportStatusLabel(workflowStatus)}</Badge>
                           <Badge variant="outline">{t("admin.files_count", { count: userFiles.length })}</Badge>
                         </div>
                       </div>
@@ -3005,11 +612,6 @@ export function AdminPanel() {
                             <Badge variant={assessment.assessment_type === "MOCA" ? "default" : "secondary"}>
                               {assessment.assessment_type}
                             </Badge>
-                            {assessment.assessment_type === "MMSE" && (
-                              <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
-                                {assessment.scoring_version || t("mmse.v2_badge")}
-                              </Badge>
-                            )}
                             <span className="text-sm text-gray-600">
                               {new Date(assessment.completed_at).toLocaleDateString()}
                             </span>
@@ -3019,83 +621,6 @@ export function AdminPanel() {
                             <p className="font-medium">
                               {t("admin.total_score")}: {assessment.total_score}/30
                             </p>
-                            {assessment.assessment_type === "MMSE" && (
-                              <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-sm text-slate-700">
-                                <p className="font-semibold text-blue-900">
-                                  {localizeText("MMSE Score Provenance", {
-                                    zh: "MMSE 评分来源",
-                                    yue: "MMSE 評分來源",
-                                    fr: "Provenance du score MMSE",
-                                  })}
-                                </p>
-                                <div className="mt-1 grid grid-cols-1 gap-1">
-                                  <p>
-                                    {localizeText("Reconstructed", {
-                                      zh: "重建分数",
-                                      yue: "重建分數",
-                                      fr: "Score reconstruit",
-                                    })}
-                                    : <span className="font-semibold">{assessment.total_score}/30</span>
-                                  </p>
-                                  {typeof assessment.legacy_score === "number" && (
-                                    <p>
-                                      {localizeText("Legacy", {
-                                        zh: "旧版分数",
-                                        yue: "舊版分數",
-                                        fr: "Score hérité",
-                                      })}
-                                      : <span className="font-semibold">{assessment.legacy_score}/{assessment.legacy_max_score || 22}</span>
-                                    </p>
-                                  )}
-                                  <p>
-                                    {localizeText("Version", {
-                                      zh: "版本",
-                                      yue: "版本",
-                                      fr: "Version",
-                                    })}
-                                    : <span className="font-semibold">{assessment.scoring_version || "-"}</span>
-                                  </p>
-                                  {assessment.scoring_framework && (
-                                    <p>
-                                      {localizeText("Framework", {
-                                        zh: "评分框架",
-                                        yue: "評分框架",
-                                        fr: "Cadre",
-                                      })}
-                                      : <span className="font-semibold">{assessment.scoring_framework}</span>
-                                    </p>
-                                  )}
-                                  <p>
-                                    {localizeText("Reconstruction Applied", {
-                                      zh: "已应用重建",
-                                      yue: "已套用重建",
-                                      fr: "Reconstruction appliquée",
-                                    })}
-                                    : <span className="font-semibold">{assessment.reconstruction_applied ? localizeText("Yes", { zh: "是", yue: "是", fr: "Oui" }) : localizeText("No", { zh: "否", yue: "否", fr: "Non" })}</span>
-                                  </p>
-                                  {typeof assessment.score_percent === "number" && (
-                                    <p>
-                                      {localizeText("Normalized Percent", {
-                                        zh: "标准化百分比",
-                                        yue: "標準化百分比",
-                                        fr: "Pourcentage normalisé",
-                                      })}
-                                      : <span className="font-semibold">{assessment.score_percent.toFixed(2)}%</span>
-                                    </p>
-                                  )}
-                                  {assessment.recalculated_at && (
-                                    <p>
-                                      {localizeText("Recalculated At", {
-                                        zh: "重算时间",
-                                        yue: "重算時間",
-                                        fr: "Recalculé le",
-                                      })}
-                                      : <span className="font-semibold">{new Date(assessment.recalculated_at).toLocaleString()}</span>
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            )}
                             <div className="text-sm text-gray-600 mt-2">
                               <p className="font-medium">{t("admin.section_scores")}:</p>
                               <div className="grid grid-cols-1 gap-1 mt-1">
@@ -3111,88 +636,51 @@ export function AdminPanel() {
                                 })}
                               </div>
                             </div>
-
-                            {assessment.assessment_type === "MMSE" && assessment.orientation_audit?.location && (
-                              <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-sm text-slate-700">
-                                <p className="font-medium text-blue-900">
-                                  {localizeText("MMSE Orientation Location Audit", {
-                                    zh: "MMSE 定向地点审计",
-                                    yue: "MMSE 定向地點審核",
-                                    fr: "Audit de localisation MMSE",
-                                  })}
-                                </p>
-                                {(() => {
-                                  const coords = assessment.orientation_audit?.location?.coordinates
-                                  const hasCoordinates =
-                                    typeof coords?.latitude === "number" && Number.isFinite(coords.latitude) &&
-                                    typeof coords?.longitude === "number" && Number.isFinite(coords.longitude)
-
-                                  return (
-                                <div className="mt-1 grid grid-cols-1 gap-1">
-                                  <p>
-                                    {localizeText("Source", { zh: "来源", yue: "來源", fr: "Source" })}: <span className="font-semibold">{assessment.orientation_audit.location.source || localizeText("manual", { zh: "手动", yue: "手動", fr: "manuel" })}</span>
-                                    {" • "}
-                                    {localizeText("Confirmed", { zh: "已确认", yue: "已確認", fr: "Confirme" })}: <span className="font-semibold">{assessment.orientation_audit.location.confirmed ? localizeText("Yes", { zh: "是", yue: "是", fr: "Oui" }) : localizeText("No", { zh: "否", yue: "否", fr: "Non" })}</span>
-                                  </p>
-                                  <p>
-                                    {localizeText("Site", { zh: "地点", yue: "地點", fr: "Site" })}: <span className="font-semibold">{assessment.orientation_audit.location.testedSite || localizeText("Guangzhou Hospital", { zh: "广州医院", yue: "廣州醫院", fr: "Hopital de Guangzhou" })}</span>
-                                    {" • "}
-                                    {localizeText("Preset used", { zh: "使用预设", yue: "使用預設", fr: "Preconfiguration utilisee" })}: <span className="font-semibold">{assessment.orientation_audit.location.sitePresetUsed ? localizeText("Yes", { zh: "是", yue: "是", fr: "Oui" }) : localizeText("No", { zh: "否", yue: "否", fr: "Non" })}</span>
-                                  </p>
-                                  {hasCoordinates && (
-                                    <p>
-                                      {localizeText("Coordinates", { zh: "坐标", yue: "座標", fr: "Coordonnees" })}: <span className="font-semibold">{formatCoordinate(assessment.orientation_audit.location.coordinates?.latitude)}</span>, <span className="font-semibold">{formatCoordinate(assessment.orientation_audit.location.coordinates?.longitude)}</span>
-                                      {" • "}
-                                      {localizeText("Accuracy (m)", { zh: "精度（米）", yue: "精度（米）", fr: "Precision (m)" })}: <span className="font-semibold">{assessment.orientation_audit.location.coordinates?.accuracyMeters ?? "-"}</span>
-                                    </p>
-                                  )}
-                                  <p>
-                                    {localizeText("Place", { zh: "地点层级", yue: "地點層級", fr: "Lieu" })}: <span className="font-semibold">{assessment.orientation_audit.location.suggestedPlace?.country || "-"}</span> / <span className="font-semibold">{assessment.orientation_audit.location.suggestedPlace?.province || "-"}</span> / <span className="font-semibold">{assessment.orientation_audit.location.suggestedPlace?.city || "-"}</span> / <span className="font-semibold">{assessment.orientation_audit.location.suggestedPlace?.building || "-"}</span> / <span className="font-semibold">{assessment.orientation_audit.location.suggestedPlace?.place || assessment.orientation_audit.location.suggestedPlace?.room || "-"}</span>
-                                  </p>
-                                </div>
-                                  )
-                                })()}
-                              </div>
-                            )}
                           </div>
 
+                          <div className="space-y-2">
+                            <Label htmlFor={`lab-${assessment.id}`}>{t("admin.laboratory_analysis")}</Label>
+                            <AssessmentTextarea
+                              id={`lab-${assessment.id}`}
+                              value={assessment.laboratory_analysis || labAnalysis}
+                              onChange={(e) => setLabAnalysis(e.target.value)}
+                              placeholder={t("admin.enter_analysis")}
+                              rows={3}
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => updateLabAnalysis(assessment.id)}
+                              disabled={!labAnalysis.trim()}
+                            >
+                              {t("admin.update_analysis")}
+                            </Button>
+                          </div>
                         </div>
                       ))}
                       {getUserAssessments(selectedUser).length === 0 && (
                         <p className="text-gray-600">{t("admin.no_completed_assessments")}</p>
                       )}
 
-                      <h3 className="text-lg font-semibold mt-6">
-                        {localizeText("TCM & Pulse Reviews", { zh: "中医与脉象评估", yue: "中醫與脈象評估", fr: "Revue MTC et pouls" })}
-                      </h3>
+                      <h3 className="text-lg font-semibold mt-6">TCM & Pulse Reviews</h3>
                       {getUserTcmAssessments(selectedUser).map((assessment) => (
                         <div key={assessment.id} className="border rounded-lg p-4 space-y-3 bg-emerald-50/60">
                           <div className="flex justify-between items-center flex-wrap gap-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="outline" className="bg-emerald-100 text-emerald-800">
-                                {getConstitutionLabelForLanguage(assessment.primary_constitution, reportLanguage)}
-                              </Badge>
-                              <Badge variant="outline" className="bg-white text-slate-700 border-slate-300">
-                                {assessment.data_source === "old_build"
-                                  ? localizeText("Old build", { zh: "旧版本", yue: "舊版本", fr: "Ancienne version" })
-                                  : localizeText("New build", { zh: "新版本", yue: "新版本", fr: "Nouvelle version" })}
-                              </Badge>
-                            </div>
+                            <Badge variant="outline" className="bg-emerald-100 text-emerald-800">
+                              {assessment.primary_constitution}
+                            </Badge>
                             <span className="text-sm text-gray-600">
-                              {assessment.completed_at
-                                ? new Date(assessment.completed_at).toLocaleDateString()
-                                : localizeText("No date", { zh: "无日期", yue: "無日期", fr: "Sans date" })}
+                              {assessment.completed_at ? new Date(assessment.completed_at).toLocaleDateString() : "No date"}
                             </span>
                           </div>
                           <p className="text-sm text-slate-700">
-                            {localizeText("Overall score", { zh: "总分", yue: "總分", fr: "Score global" })}: <span className="font-semibold">{assessment.overall_score ?? "-"}/100</span>
+                            Overall score: <span className="font-semibold">{assessment.overall_score ?? "-"}/100</span>
                           </p>
                           {assessment.answers?.pulse_assessment && (
                             <div className="rounded-lg border border-emerald-200 bg-white/90 p-3 text-sm text-slate-700">
                               <p>
-                                {localizeText("Pulse severity", { zh: "脉象严重度", yue: "脈象嚴重度", fr: "Severite du pouls" })}: <span className="font-semibold">{assessment.answers.pulse_assessment.severity ?? 0}</span>
+                                Pulse severity: <span className="font-semibold">{assessment.answers.pulse_assessment.severity ?? 0}</span>
                                 {" • "}
-                                {localizeText("Pulse score", { zh: "脉象评分", yue: "脈象評分", fr: "Score du pouls" })}: <span className="font-semibold">{assessment.answers.pulse_assessment.clinicalPulseScore ?? 0}/100</span>
+                                Pulse score: <span className="font-semibold">{assessment.answers.pulse_assessment.clinicalPulseScore ?? 0}/100</span>
                               </p>
                               {assessment.answers.pulse_assessment.selectedPulseIds && assessment.answers.pulse_assessment.selectedPulseIds.length > 0 && (
                                 <div className="mt-2 flex flex-wrap gap-2">
@@ -3204,42 +692,36 @@ export function AdminPanel() {
                                 </div>
                               )}
                               {assessment.answers.pulse_assessment.notes && (
-                                <p className="mt-2 text-xs text-slate-600">{localizeText("Doctor note", { zh: "医生备注", yue: "醫生備註", fr: "Note du medecin" })}: {assessment.answers.pulse_assessment.notes}</p>
+                                <p className="mt-2 text-xs text-slate-600">Doctor note: {assessment.answers.pulse_assessment.notes}</p>
                               )}
                             </div>
                           )}
                         </div>
                       ))}
                       {getUserTcmAssessments(selectedUser).length === 0 && (
-                        <p className="text-gray-600">{localizeText("No TCM pulse reviews recorded for this user", { zh: "该用户暂无中医脉象评估记录", yue: "該用戶暫無中醫脈象評估記錄", fr: "Aucune revue MTC/pouls pour cet utilisateur" })}</p>
+                        <p className="text-gray-600">No TCM pulse reviews recorded for this user</p>
                       )}
 
-                      <h3 className="text-lg font-semibold mt-6">{localizeText("Sensory Screenings", { zh: "感觉筛查", yue: "感官篩查", fr: "Depistages sensoriels" })}</h3>
+                      <h3 className="text-lg font-semibold mt-6">Sensory Screenings</h3>
                       {getUserSensoryAssessments(selectedUser).map((assessment) => (
                         <div key={assessment.id} className="border rounded-lg p-4 space-y-3 bg-amber-50/60">
                           <div className="flex justify-between items-center flex-wrap gap-2">
                             <Badge variant="outline" className="bg-amber-100 text-amber-800">
-                              {assessment.test_type === "olfactory"
-                                ? localizeText("Olfactory", { zh: "嗅觉", yue: "嗅覺", fr: "Olfactif" })
-                                : assessment.test_type === "auditory"
-                                  ? localizeText("Auditory", { zh: "听觉", yue: "聽覺", fr: "Auditif" })
-                                  : localizeText("Visual", { zh: "视觉", yue: "視覺", fr: "Visuel" })}
+                              {assessment.test_type}
                             </Badge>
                             <span className="text-sm text-gray-600">
-                              {assessment.test_date
-                                ? new Date(assessment.test_date).toLocaleDateString()
-                                : localizeText("No date", { zh: "无日期", yue: "無日期", fr: "Sans date" })}
+                              {assessment.test_date ? new Date(assessment.test_date).toLocaleDateString() : "No date"}
                             </span>
                           </div>
                           <p className="text-sm text-slate-700">
-                            {localizeText("Raw score", { zh: "原始分", yue: "原始分", fr: "Score brut" })}: <span className="font-semibold">{assessment.raw_score ?? "-"}</span>
+                            Raw score: <span className="font-semibold">{assessment.raw_score ?? "-"}</span>
                             {assessment.test_type === "olfactory" ? " / 12" : ""}
                             {" • "}
-                            {localizeText("Classification", { zh: "分级", yue: "分級", fr: "Classification" })}: <span className="font-semibold">{assessment.classification ?? "-"}</span>
+                            Classification: <span className="font-semibold">{assessment.classification ?? "-"}</span>
                           </p>
                           {assessment.test_type === "olfactory" && assessment.test_data?.strip_results && (
                             <div className="rounded-lg border border-amber-200 bg-white/90 p-3">
-                              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{localizeText("Patient strip responses", { zh: "患者试纸作答", yue: "患者試紙作答", fr: "Reponses patient par bande" })}</p>
+                              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Patient strip responses</p>
                               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                                 {assessment.test_data.strip_results.map((result) => (
                                   <div
@@ -3247,17 +729,13 @@ export function AdminPanel() {
                                     className={`rounded-md border p-2 text-xs ${result.correct ? "border-emerald-200 bg-emerald-50/70 text-emerald-800" : "border-rose-200 bg-rose-50/70 text-rose-800"}`}
                                   >
                                     <div className="flex items-center justify-between gap-2">
-                                      <div className="font-semibold">{localizeText("Strip", { zh: "试纸", yue: "試紙", fr: "Bande" })} #{result.strip}</div>
+                                      <div className="font-semibold">Strip #{result.strip}</div>
                                       <Badge variant="outline" className={result.correct ? "border-emerald-300 bg-white text-emerald-700" : "border-rose-300 bg-white text-rose-700"}>
-                                        {result.correct
-                                          ? localizeText("Correct", { zh: "正确", yue: "正確", fr: "Correct" })
-                                          : result.timedOut
-                                            ? localizeText("Timed out", { zh: "超时", yue: "超時", fr: "Temps ecoule" })
-                                            : localizeText("Review", { zh: "复核", yue: "覆核", fr: "Verifier" })}
+                                        {result.correct ? "Correct" : result.timedOut ? "Timed out" : "Review"}
                                       </Badge>
                                     </div>
-                                    <div>{localizeText("Selected", { zh: "选择", yue: "選擇", fr: "Selection" })}: {getOlfactoryLabel(result.selected)}</div>
-                                    <div>{localizeText("Correct", { zh: "正确", yue: "正確", fr: "Correct" })}: {getOlfactoryLabel(result.correctAnswer)}</div>
+                                    <div>Selected: {getOlfactoryLabel(result.selected)}</div>
+                                    <div>Correct: {getOlfactoryLabel(result.correctAnswer)}</div>
                                   </div>
                                 ))}
                               </div>
@@ -3266,554 +744,8 @@ export function AdminPanel() {
                         </div>
                       ))}
                       {getUserSensoryAssessments(selectedUser).length === 0 && (
-                        <p className="text-gray-600">{localizeText("No sensory screenings recorded for this user", { zh: "该用户暂无感觉筛查记录", yue: "該用戶暫無感官篩查記錄", fr: "Aucun depistage sensoriel pour cet utilisateur" })}</p>
+                        <p className="text-gray-600">No sensory screenings recorded for this user</p>
                       )}
-
-                      {(() => {
-                        const tongueImages = getUserImageFiles(selectedUser, "tongue")
-                        const faceImages = getUserImageFiles(selectedUser, "face")
-                        const latestTcmAssessment = getLatestTcmAssessment(selectedUser)
-                        const existingDoctorReview = getUserDoctorReview(selectedUser)
-                        // Reliable image URLs stored directly on the TCM assessment record
-                        const assessmentTongueUrl = latestTcmAssessment?.answers?.tongue_image_url ?? null
-                        const assessmentFaceUrl = latestTcmAssessment?.answers?.face_image_url ?? null
-                        // Final URL: prefer assessment-stored URL, fall back to uploaded_files match
-                        const resolvedTongueUrl = assessmentTongueUrl || (tongueImages[0] ? getFileUrl(tongueImages[0].file_path) : null)
-                        const resolvedFaceUrl = assessmentFaceUrl || (faceImages[0] ? getFileUrl(faceImages[0].file_path) : null)
-                        // All constitution scores for detailed breakdown
-                        const constitutionScores = latestTcmAssessment ? [
-                          { key: "balanced", label: "平和质 Balanced", score: latestTcmAssessment.balanced_score },
-                          { key: "qi_deficiency", label: "气虚质 Qi Deficiency", score: latestTcmAssessment.qi_deficiency_score },
-                          { key: "yang_deficiency", label: "阳虚质 Yang Deficiency", score: latestTcmAssessment.yang_deficiency_score },
-                          { key: "yin_deficiency", label: "阴虚质 Yin Deficiency", score: latestTcmAssessment.yin_deficiency_score },
-                          { key: "phlegm_dampness", label: "痰湿质 Phlegm-Dampness", score: latestTcmAssessment.phlegm_dampness_score },
-                          { key: "damp_heat", label: "湿热质 Damp-Heat", score: latestTcmAssessment.damp_heat_score },
-                          { key: "blood_stasis", label: "血瘀质 Blood Stasis", score: latestTcmAssessment.blood_stasis_score },
-                          { key: "qi_stagnation", label: "气郁质 Qi Stagnation", score: latestTcmAssessment.qi_stagnation_score },
-                          { key: "special_constitution", label: "特禀质 Special", score: latestTcmAssessment.special_constitution_score },
-                        ].filter(s => s.score != null) : []
-
-                        return (
-                          <div className="mt-6 rounded-2xl border border-emerald-200 bg-[linear-gradient(135deg,rgba(236,253,245,0.96),rgba(255,255,255,0.98),rgba(239,246,255,0.94))] p-5 shadow-sm">
-                            <div className="flex items-center justify-between gap-3 flex-wrap">
-                              <h3 className="text-lg font-semibold text-emerald-950">{localizeText("TCM Doctor Review Pack", { zh: "中医医生审核包", yue: "中醫醫生審核包", fr: "Pack de revue medecin MTC" })}</h3>
-                              <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
-                                {localizeText("Doctor workspace", { zh: "医生工作区", yue: "醫生工作區", fr: "Espace medecin" })}
-                              </Badge>
-                            </div>
-                            <p className="mt-2 text-sm text-slate-600">
-                              {localizeText(
-                                "Review tongue and face images, questionnaire constitution data, and existing remarks before finalizing the patient report.",
-                                {
-                                  zh: "在生成患者报告前，先审核舌象、面诊图像、问卷体质数据及已有医生备注。",
-                                  yue: "在生成患者報告前，先審核舌象、面診圖像、問卷體質數據及已有醫生備註。",
-                                  fr: "Avant finalisation du rapport patient, verifier les images langue/visage, la constitution et les remarques existantes.",
-                                },
-                              )}
-                            </p>
-
-                            {/* Tongue and Face images */}
-                            <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                              <div className="rounded-xl border border-emerald-100 bg-white p-4">
-                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{localizeText("Tongue image", { zh: "舌象图像", yue: "舌象圖像", fr: "Image de la langue" })}</p>
-                                {resolvedTongueUrl ? (
-                                  <div className="mt-3">
-                                    <div className="relative h-48 overflow-hidden rounded-lg bg-slate-100">
-                                      <Image
-                                        src={resolvedTongueUrl}
-                                        alt="Tongue image"
-                                        fill
-                                        className="object-contain"
-                                        unoptimized
-                                      />
-                                    </div>
-                                    {tongueImages.length > 1 && (
-                                      <div className="mt-3 grid gap-2 grid-cols-3">
-                                        {tongueImages.slice(1).map((file) => (
-                                          <div key={file.id} className="relative h-20 overflow-hidden rounded-lg bg-slate-100">
-                                            <Image src={getFileUrl(file.file_path)} alt={file.filename} fill className="object-cover" unoptimized />
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <p className="mt-3 text-sm text-slate-500">{localizeText("No tongue image uploaded for this patient.", { zh: "该患者未上传舌象图片。", yue: "該患者未上傳舌象圖片。", fr: "Aucune image de langue n'a ete televersee pour ce patient." })}</p>
-                                )}
-                              </div>
-
-                              <div className="rounded-xl border border-emerald-100 bg-white p-4">
-                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{localizeText("Face image", { zh: "面诊图像", yue: "面診圖像", fr: "Image du visage" })}</p>
-                                {resolvedFaceUrl ? (
-                                  <div className="mt-3">
-                                    <div className="relative h-48 overflow-hidden rounded-lg bg-slate-100">
-                                      <Image
-                                        src={resolvedFaceUrl}
-                                        alt="Face image"
-                                        fill
-                                        className="object-contain"
-                                        unoptimized
-                                      />
-                                    </div>
-                                    {faceImages.length > 1 && (
-                                      <div className="mt-3 grid gap-2 grid-cols-3">
-                                        {faceImages.slice(1).map((file) => (
-                                          <div key={file.id} className="relative h-20 overflow-hidden rounded-lg bg-slate-100">
-                                            <Image src={getFileUrl(file.file_path)} alt={file.filename} fill className="object-cover" unoptimized />
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <p className="mt-3 text-sm text-slate-500">
-                                    {localizeText("No face image uploaded for this patient.", {
-                                      zh: "该患者未上传面诊图片。",
-                                      yue: "該患者未上傳面診圖片。",
-                                      fr: "Aucune image du visage n'a ete televersee pour ce patient.",
-                                    })}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* TCM Questionnaire & Constitution */}
-                            <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                              <div className="rounded-xl border border-emerald-100 bg-white p-4 text-sm text-slate-700">
-                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                                  {localizeText("TCM questionnaire and constitution", {
-                                    zh: "中医问卷与体质",
-                                    yue: "中醫問卷與體質",
-                                    fr: "Questionnaire MTC et constitution",
-                                  })}
-                                </p>
-                                {latestTcmAssessment ? (
-                                  <div className="mt-3 space-y-3">
-                                    <div className="rounded-lg bg-emerald-50 p-3">
-                                      <p>{localizeText("Primary constitution", { zh: "主要体质", yue: "主要體質", fr: "Constitution principale" })}: <span className="font-semibold text-emerald-800">{latestTcmAssessment.primary_constitution ? getConstitutionLabelForLanguage(latestTcmAssessment.primary_constitution, reportLanguage) : "-"}</span></p>
-                                      <p>{localizeText("Primary score", { zh: "主要体质分", yue: "主要體質分", fr: "Score principal" })}: <span className="font-semibold">{latestTcmAssessment.primary_score != null ? `${latestTcmAssessment.primary_score}%` : "-"}</span></p>
-                                      <p>{localizeText("Overall balance score", { zh: "总体平衡分", yue: "總體平衡分", fr: "Score d'equilibre global" })}: <span className="font-semibold">{latestTcmAssessment.overall_score ?? "-"}/100</span></p>
-                                      <p>{localizeText("Completed", { zh: "完成时间", yue: "完成時間", fr: "Termine le" })}: <span className="font-semibold">{latestTcmAssessment.completed_at ? new Date(latestTcmAssessment.completed_at).toLocaleString() : "-"}</span></p>
-                                    </div>
-
-                                    {/* All constitution scores */}
-                                    {constitutionScores.length > 0 && (
-                                      <div>
-                                        <p className="text-xs font-semibold text-slate-500 mb-2">{localizeText("Constitution scores breakdown", { zh: "体质分数明细", yue: "體質分數明細", fr: "Detail des scores de constitution" })}</p>
-                                        <div className="space-y-1">
-                                          {constitutionScores.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).map((item) => (
-                                            <div key={item.key} className="flex items-center gap-2">
-                                              <span className="w-44 text-xs text-slate-600 shrink-0">{item.label}</span>
-                                              <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-                                                <div
-                                                  className={`h-full rounded-full ${item.key === latestTcmAssessment.primary_constitution ? "bg-emerald-500" : "bg-slate-300"}`}
-                                                  style={{ width: `${item.score ?? 0}%` }}
-                                                />
-                                              </div>
-                                              <span className="text-xs font-medium w-8 text-right">{item.score}%</span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Pulse assessment */}
-                                    {latestTcmAssessment.answers?.pulse_assessment && (
-                                      <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
-                                        <p className="text-xs font-semibold text-slate-500 mb-1">{localizeText("Pulse assessment", { zh: "脉象评估", yue: "脈象評估", fr: "Evaluation du pouls" })}</p>
-                                        <p>{localizeText("Severity", { zh: "严重度", yue: "嚴重度", fr: "Severite" })}: <span className="font-semibold">{latestTcmAssessment.answers.pulse_assessment.severity ?? 0}/10</span></p>
-                                        <p>{localizeText("Clinical pulse score", { zh: "临床脉象分", yue: "臨床脈象分", fr: "Score clinique du pouls" })}: <span className="font-semibold">{latestTcmAssessment.answers.pulse_assessment.clinicalPulseScore ?? 0}/100</span></p>
-                                        {latestTcmAssessment.answers.pulse_assessment.selectedPulseIds && latestTcmAssessment.answers.pulse_assessment.selectedPulseIds.length > 0 && (
-                                          <div className="mt-2 flex flex-wrap gap-1">
-                                            {latestTcmAssessment.answers.pulse_assessment.selectedPulseIds.map((pulseId) => (
-                                              <Badge key={`review-pack-${latestTcmAssessment.id}-${pulseId}`} variant="outline" className="bg-white text-xs">
-                                                {getPulseLabel(pulseId)}
-                                              </Badge>
-                                            ))}
-                                          </div>
-                                        )}
-                                        {latestTcmAssessment.answers.pulse_assessment.notes && (
-                                          <p className="mt-2 text-xs text-slate-600">{localizeText("Note", { zh: "备注", yue: "備註", fr: "Note" })}: {latestTcmAssessment.answers.pulse_assessment.notes}</p>
-                                        )}
-                                      </div>
-                                    )}
-
-                                    {/* Full questionnaire Q&A per question */}
-                                    {latestTcmAssessment.answers?.questionnaire && Object.keys(latestTcmAssessment.answers.questionnaire).length > 0 && (() => {
-                                      const qa = latestTcmAssessment.answers!.questionnaire!
-                                      const grouped: Record<string, Array<{ id: string; textZh: string; text: string; score: number }>> = {}
-                                      for (const [qid, score] of Object.entries(qa)) {
-                                        const q = TCM_QUESTIONS_MAP[qid]
-                                        if (!q) continue
-                                        if (!grouped[q.constitution]) grouped[q.constitution] = []
-                                        grouped[q.constitution].push({ id: qid, textZh: q.textZh, text: q.text, score: score as number })
-                                      }
-                                      return (
-                                        <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3">
-                                          <p className="text-xs font-semibold text-slate-600 mb-2">{localizeText("Patient questionnaire responses", { zh: "患者问卷答案", yue: "患者問卷答案", fr: "Reponses au questionnaire patient" })}</p>
-                                          <div className="space-y-3">
-                                            {Object.entries(grouped).map(([constitution, items]) => (
-                                              <div key={constitution}>
-                                                <p className="text-xs font-semibold text-emerald-700 mb-1">{getConstitutionLabelForLanguage(constitution, reportLanguage)}</p>
-                                                <div className="space-y-1">
-                                                  {items.map((item) => (
-                                                    <div key={item.id} className="flex items-start justify-between gap-2">
-                                                      <span className="text-xs text-slate-600 flex-1">
-                                                        {language === "en" ? item.text : language === "fr" ? item.text : item.textZh}
-                                                      </span>
-                                                      <Badge variant="outline" className={`text-xs shrink-0 ${item.score >= 4 ? "border-rose-200 bg-rose-50 text-rose-700" : item.score <= 2 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
-                                                        {getLikertLabelForUi(item.score, language)}
-                                                      </Badge>
-                                                    </div>
-                                                  ))}
-                                                </div>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )
-                                    })()}
-
-                                    {/* Patient-generated recommendations from questionnaire */}
-                                    {latestTcmAssessment.recommendations && latestTcmAssessment.recommendations.length > 0 && (
-                                      <div className="rounded-lg border border-amber-100 bg-amber-50/60 p-3">
-                                        <p className="text-xs font-semibold text-amber-700 mb-2">{localizeText("Auto-generated recommendations (from questionnaire)", { zh: "自动生成建议（来自问卷）", yue: "自動生成建議（來自問卷）", fr: "Recommandations auto-generees (questionnaire)" })}</p>
-                                        <ul className="space-y-1">
-                                          {latestTcmAssessment.recommendations.map((rec, idx) => (
-                                            <li key={idx} className="text-xs text-slate-700 flex items-start gap-1">
-                                              <span className="text-amber-500 mt-0.5">•</span>
-                                              {rec}
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <p className="mt-3 text-sm text-slate-500">{localizeText("No TCM questionnaire assessment is available for this patient.", { zh: "该患者暂无中医问卷评估记录。", yue: "該患者暫無中醫問卷評估記錄。", fr: "Aucune evaluation du questionnaire MTC n'est disponible pour ce patient." })}</p>
-                                )}
-                              </div>
-
-                              {/* Doctor remarks & recommendations */}
-                              <div className="rounded-xl border border-emerald-100 bg-white p-4 text-sm text-slate-700">
-                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{localizeText("Doctor remarks and recommendations", { zh: "医生备注与建议", yue: "醫生備註與建議", fr: "Remarques et recommandations du medecin" })}</p>
-                                <div className="mt-3 space-y-2">
-                                  <p>
-                                    {localizeText("Constitution note", { zh: "体质备注", yue: "體質備註", fr: "Note constitution" })}: <span className="font-semibold">{existingDoctorReview?.tcm_constitution || tcmConstitutionInput || "-"}</span>
-                                  </p>
-                                  <p>
-                                    {localizeText("Tongue remark", { zh: "舌象备注", yue: "舌象備註", fr: "Remarque langue" })}: <span className="font-semibold">{existingDoctorReview?.tongue_observation || tongueObservationInput || "-"}</span>
-                                  </p>
-                                  <p>
-                                    {localizeText("Face remark", { zh: "面诊备注", yue: "面診備註", fr: "Remarque visage" })}: <span className="font-semibold">{existingDoctorReview?.face_observation || faceObservationInput || "-"}</span>
-                                  </p>
-                                  <p>
-                                    {localizeText("Questionnaire interpretation", { zh: "问卷解读", yue: "問卷解讀", fr: "Interpretation du questionnaire" })}: <span className="font-semibold">{existingDoctorReview?.questionnaire_interpretation || questionnaireInterpretationInput || "-"}</span>
-                                  </p>
-                                  <p>
-                                    {localizeText("TCM diagnosis", { zh: "中医诊断", yue: "中醫診斷", fr: "Diagnostic MTC" })}: <span className="font-semibold">{existingDoctorReview?.tcm_diagnosis || tcmDiagnosisInput || "-"}</span>
-                                  </p>
-                                  <p>
-                                    {localizeText("Therapy plan", { zh: "治疗方案", yue: "治療方案", fr: "Plan therapeutique" })}: <span className="font-semibold">{existingDoctorReview?.therapy_plan || tcmTherapyPlanInput || "-"}</span>
-                                  </p>
-                                  <p>
-                                    {localizeText("Dietary advice", { zh: "饮食建议", yue: "飲食建議", fr: "Conseil dietetique" })}: <span className="font-semibold">{existingDoctorReview?.dietary_advice || dietaryAdviceInput || "-"}</span>
-                                  </p>
-                                  <p>
-                                    {localizeText("Follow-up recommendation", { zh: "随访建议", yue: "隨訪建議", fr: "Recommandation de suivi" })}: <span className="font-semibold">{existingDoctorReview?.follow_up_recommendation || followUpRecommendationInput || "-"}</span>
-                                  </p>
-                                  {!existingDoctorReview && (
-                                    <p className="text-xs text-slate-400 italic mt-2">{localizeText("No doctor review saved yet. Use the form below to enter remarks.", { zh: "尚未保存医生评审，请使用下方表单填写备注。", yue: "尚未保存醫生評審，請使用下方表單填寫備註。", fr: "Aucune revue medecin enregistree. Utilisez le formulaire ci-dessous." })}</p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })()}
-
-                      <div className="mt-6 rounded-2xl border border-sky-200 bg-[linear-gradient(135deg,rgba(240,249,255,0.96),rgba(255,255,255,0.98),rgba(238,242,255,0.94))] p-5 shadow-sm">
-                        <div className="flex items-center justify-between gap-3 flex-wrap">
-                          <h3 className="text-lg font-semibold flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-sky-600" />
-                            {localizeText("Medical Report Studio", { zh: "医学报告工作台", yue: "醫學報告工作台", fr: "Studio de rapport medical" })}
-                          </h3>
-                          <Badge className="bg-sky-600 text-white hover:bg-sky-600">{localizeText("Premium", { zh: "高级", yue: "高級", fr: "Premium" })}</Badge>
-                        </div>
-                        <p className="mt-2 text-sm text-slate-600">
-                          {localizeText(
-                            "Individualized report workflow: doctor reviews each patient, approves, then publishes for patient download.",
-                            {
-                              zh: "个体化报告流程：医生逐一审核患者，完成审批后发布给患者下载。",
-                              yue: "個體化報告流程：醫生逐一審核患者，完成審批後發布給患者下載。",
-                              fr: "Flux personnalise: le medecin revoit, approuve puis publie pour telechargement patient.",
-                            },
-                          )}
-                        </p>
-
-                        <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-600">
-                          {localizeText("Current status", { zh: "当前状态", yue: "當前狀態", fr: "Statut actuel" })}: <span className="font-semibold">{getReportStatusLabel(currentSelectedReportStatus)}</span>
-                          {currentSelectedReportStatus !== "published_to_patient" && (
-                            <p className="mt-1 text-slate-500">
-                              {localizeText("Patient download remains locked until status is published_to_patient.", {
-                                zh: "患者下载将在状态变为“已发布给患者”后解锁。",
-                                yue: "患者下載將在狀態變為「已發布給患者」後解鎖。",
-                                fr: "Le telechargement patient reste verrouille jusqu'au statut Publie au patient.",
-                              })}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="mt-4 grid gap-4 md:grid-cols-3">
-                          <div className="space-y-2 md:col-span-3">
-                            <Label htmlFor="tcm-assessment-constitution">{localizeText("TCM assessment primary constitution", { zh: "中医评估主要体质", yue: "中醫評估主要體質", fr: "Constitution principale de l'evaluation MTC" })}</Label>
-                            <AssessmentInput
-                              id="tcm-assessment-constitution"
-                              value={tcmAssessmentConstitutionInput}
-                              onChange={(event) => setTcmAssessmentConstitutionInput(event.target.value)}
-                              placeholder={localizeText("Example: Qi Deficiency", { zh: "例如：气虚质", yue: "例如：氣虛質", fr: "Exemple : Deficience du Qi" })}
-                            />
-                          </div>
-
-                          <div className="space-y-2 md:col-span-1">
-                            <Label htmlFor="tcm-assessment-primary-score">{localizeText("Primary constitution score (%)", { zh: "主要体质分（%）", yue: "主要體質分（%）", fr: "Score de constitution principale (%)" })}</Label>
-                            <AssessmentInput
-                              id="tcm-assessment-primary-score"
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={tcmAssessmentPrimaryScoreInput}
-                              onChange={(event) => setTcmAssessmentPrimaryScoreInput(event.target.value)}
-                              placeholder="0-100"
-                            />
-                          </div>
-
-                          <div className="space-y-2 md:col-span-1">
-                            <Label htmlFor="tcm-assessment-overall-score">{localizeText("Overall balance score (/100)", { zh: "总体平衡分（/100）", yue: "總體平衡分（/100）", fr: "Score d'equilibre global (/100)" })}</Label>
-                            <AssessmentInput
-                              id="tcm-assessment-overall-score"
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={tcmAssessmentOverallScoreInput}
-                              onChange={(event) => setTcmAssessmentOverallScoreInput(event.target.value)}
-                              placeholder="0-100"
-                            />
-                          </div>
-
-                          <div className="space-y-2 md:col-span-1 flex items-end">
-                            <Button onClick={saveTcmAssessmentResult} variant="outline" className="w-full">
-                              {localizeText("Save TCM assessment results", { zh: "保存中医评估结果", yue: "保存中醫評估結果", fr: "Enregistrer les resultats MTC" })}
-                            </Button>
-                          </div>
-
-                          <div className="space-y-2 md:col-span-3">
-                            <Label htmlFor="tcm-assessment-recommendations">{localizeText("Patient recommendations (one per line)", { zh: "患者建议（每行一条）", yue: "患者建議（每行一條）", fr: "Recommandations patient (une par ligne)" })}</Label>
-                            <AssessmentTextarea
-                              id="tcm-assessment-recommendations"
-                              value={tcmAssessmentRecommendationsInput}
-                              onChange={(event) => setTcmAssessmentRecommendationsInput(event.target.value)}
-                              placeholder={localizeText("Lifestyle, diet and regimen recommendations", { zh: "生活方式、饮食与调理建议", yue: "生活方式、飲食與調理建議", fr: "Recommandations mode de vie, alimentation et regimen" })}
-                              rows={3}
-                            />
-                          </div>
-
-                          <div className="space-y-2 md:col-span-1">
-                            <Label htmlFor="report-language">{localizeText("Report language", { zh: "报告语言", yue: "報告語言", fr: "Langue du rapport" })}</Label>
-                            <select
-                              id="report-language"
-                              value={reportLanguage}
-                              onChange={(event) => setReportLanguage(event.target.value as ReportLanguage)}
-                              className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-sky-300"
-                            >
-                              <option value="en">English</option>
-                              <option value="zh-CN">简体中文</option>
-                              <option value="zh-HK">繁體中文</option>
-                              <option value="fr">Français</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-2 md:col-span-1">
-                            <Label htmlFor="doctor-name">{localizeText("Doctor name", { zh: "医生姓名", yue: "醫生姓名", fr: "Nom du medecin" })}</Label>
-                            <AssessmentInput
-                              id="doctor-name"
-                              value={doctorNameInput}
-                              onChange={(event) => setDoctorNameInput(event.target.value)}
-                              placeholder={localizeText("TCM doctor name", { zh: "请输入中医医生姓名", yue: "請輸入中醫醫生姓名", fr: "Nom du medecin MTC" })}
-                            />
-                          </div>
-
-                          <div className="space-y-2 md:col-span-1">
-                            <Label htmlFor="review-date">{localizeText("Review date", { zh: "评审日期", yue: "評審日期", fr: "Date de revue" })}</Label>
-                            <AssessmentInput
-                              id="review-date"
-                              type="date"
-                              value={reviewDateInput}
-                              onChange={(event) => setReviewDateInput(event.target.value)}
-                            />
-                          </div>
-
-                          <div className="space-y-2 md:col-span-3">
-                            <Label htmlFor="tcm-constitution">{localizeText("TCM constitution", { zh: "中医体质", yue: "中醫體質", fr: "Constitution MTC" })}</Label>
-                            <AssessmentTextarea
-                              id="tcm-constitution"
-                              value={tcmConstitutionInput}
-                              onChange={(event) => setTcmConstitutionInput(event.target.value)}
-                              placeholder={localizeText("Describe constitution type and rationale", { zh: "描述体质类型及判断依据", yue: "描述體質類型及判斷依據", fr: "Decrire le type de constitution et son raisonnement" })}
-                              rows={2}
-                            />
-                          </div>
-
-                          <div className="space-y-2 md:col-span-3">
-                            <Label htmlFor="tongue-observation">{localizeText("Tongue observation", { zh: "舌象观察", yue: "舌象觀察", fr: "Observation de la langue" })}</Label>
-                            <AssessmentTextarea
-                              id="tongue-observation"
-                              value={tongueObservationInput}
-                              onChange={(event) => setTongueObservationInput(event.target.value)}
-                              placeholder={localizeText("Color, coating, moisture, fissures", { zh: "颜色、舌苔、湿润度、裂纹", yue: "顏色、舌苔、濕潤度、裂紋", fr: "Couleur, enduit, humidite, fissures" })}
-                              rows={2}
-                            />
-                          </div>
-
-                          <div className="space-y-2 md:col-span-3">
-                            <Label htmlFor="face-observation">{localizeText("Face observation", { zh: "面诊观察", yue: "面診觀察", fr: "Observation du visage" })}</Label>
-                            <AssessmentTextarea
-                              id="face-observation"
-                              value={faceObservationInput}
-                              onChange={(event) => setFaceObservationInput(event.target.value)}
-                              placeholder={localizeText("Complexion, eye region, expression patterns", { zh: "面色、眼周、神情特征", yue: "面色、眼周、神情特徵", fr: "Teint, zone oculaire, expressions" })}
-                              rows={2}
-                            />
-                          </div>
-
-                          <div className="space-y-2 md:col-span-3">
-                            <Label htmlFor="questionnaire-interpretation">{localizeText("Pulse/questionnaire interpretation", { zh: "脉象/问卷解读", yue: "脈象/問卷解讀", fr: "Interpretation pouls/questionnaire" })}</Label>
-                            <AssessmentTextarea
-                              id="questionnaire-interpretation"
-                              value={questionnaireInterpretationInput}
-                              onChange={(event) => setQuestionnaireInterpretationInput(event.target.value)}
-                              placeholder={localizeText("Interpret questionnaire and pulse indicators", { zh: "解读问卷与脉象指标", yue: "解讀問卷與脈象指標", fr: "Interpreter les indicateurs du questionnaire et du pouls" })}
-                              rows={2}
-                            />
-                          </div>
-
-                          <div className="space-y-2 md:col-span-3">
-                            <Label htmlFor="tcm-diagnosis">{localizeText("TCM diagnosis", { zh: "中医诊断", yue: "中醫診斷", fr: "Diagnostic MTC" })}</Label>
-                            <AssessmentTextarea
-                              id="tcm-diagnosis"
-                              value={tcmDiagnosisInput}
-                              onChange={(event) => setTcmDiagnosisInput(event.target.value)}
-                              placeholder={localizeText("Enter TCM diagnosis", { zh: "填写中医诊断", yue: "填寫中醫診斷", fr: "Saisir le diagnostic MTC" })}
-                              rows={2}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="mt-4 space-y-2">
-                          <Label htmlFor="tcm-therapy-plan">{localizeText("TCM therapy and regimen plan", { zh: "中医治疗与调理方案", yue: "中醫治療與調理方案", fr: "Plan therapeutique et regimen MTC" })}</Label>
-                          <AssessmentTextarea
-                            id="tcm-therapy-plan"
-                            value={tcmTherapyPlanInput}
-                            onChange={(event) => setTcmTherapyPlanInput(event.target.value)}
-                            placeholder={localizeText("Herbs, acupuncture frequency, lifestyle, follow-up interval", { zh: "中药、针灸频次、生活方式、随访周期", yue: "中藥、針灸頻次、生活方式、隨訪週期", fr: "Plantes, frequence d'acupuncture, mode de vie, intervalle de suivi" })}
-                            rows={3}
-                          />
-                        </div>
-
-                        <div className="mt-4 space-y-2">
-                          <Label htmlFor="dietary-advice">{localizeText("Dietary advice", { zh: "饮食建议", yue: "飲食建議", fr: "Conseil dietetique" })}</Label>
-                          <AssessmentTextarea
-                            id="dietary-advice"
-                            value={dietaryAdviceInput}
-                            onChange={(event) => setDietaryAdviceInput(event.target.value)}
-                            placeholder={localizeText("Food strategy and restrictions", { zh: "饮食策略与禁忌", yue: "飲食策略與禁忌", fr: "Strategie alimentaire et restrictions" })}
-                            rows={2}
-                          />
-                        </div>
-
-                        <div className="mt-4 space-y-2">
-                          <Label htmlFor="follow-up-recommendation">{localizeText("Follow-up recommendation", { zh: "随访建议", yue: "隨訪建議", fr: "Recommandation de suivi" })}</Label>
-                          <AssessmentTextarea
-                            id="follow-up-recommendation"
-                            value={followUpRecommendationInput}
-                            onChange={(event) => setFollowUpRecommendationInput(event.target.value)}
-                            placeholder={localizeText("Follow-up schedule and escalation criteria", { zh: "随访计划与升级处理标准", yue: "隨訪計劃與升級處理標準", fr: "Calendrier de suivi et criteres d'escalade" })}
-                            rows={2}
-                          />
-                        </div>
-
-                        {/* Final clinical summary removed per spec (Section 6) */}
-
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <Button onClick={() => saveDoctorReview("draft")} variant="outline">
-                            {localizeText("Save TCM draft", { zh: "保存中医草稿", yue: "保存中醫草稿", fr: "Enregistrer le brouillon MTC" })}
-                          </Button>
-                          <Button onClick={() => saveDoctorReview("reviewed")} variant="outline">
-                            {localizeText("Mark TCM reviewed", { zh: "标记为中医已审核", yue: "標記為中醫已審核", fr: "Marquer revue MTC terminee" })}
-                          </Button>
-                          <Button onClick={() => updateReportStatus("approved")} variant="outline">
-                            {localizeText("Approve final report", { zh: "批准最终报告", yue: "批准最終報告", fr: "Approuver le rapport final" })}
-                          </Button>
-                          <Button onClick={() => updateReportStatus("pending_final_approval")} variant="outline">
-                            {localizeText("Send to final approval", { zh: "提交最终审批", yue: "提交最終審批", fr: "Envoyer pour approbation finale" })}
-                          </Button>
-                          <Button
-                            onClick={() => updateReportStatus("published_to_patient")}
-                            variant="outline"
-                            disabled={!canPublishToPatient}
-                          >
-                            {localizeText("Publish to patient", { zh: "发布给患者", yue: "發布給患者", fr: "Publier au patient" })}
-                          </Button>
-                        </div>
-
-                        {workflowMessage && (
-                          <p className="mt-2 text-xs text-slate-600">{workflowMessage}</p>
-                        )}
-
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <Button onClick={handleGenerateReport}>
-                            <FileText className="mr-2 h-4 w-4" />
-                            {localizeText("Generate report draft", { zh: "生成报告草稿", yue: "生成報告草稿", fr: "Generer le brouillon du rapport" })}
-                          </Button>
-                          <Button onClick={handleDownloadReport} variant="outline" disabled={!selectedUser}>
-                            <Download className="mr-2 h-4 w-4" />
-                            {localizeText("Download one-page report", { zh: "下载单页报告", yue: "下載單頁報告", fr: "Telecharger le rapport une page" })}
-                          </Button>
-                          <Button onClick={handlePrintReport} variant="outline" disabled={!selectedUser}>
-                            <Printer className="mr-2 h-4 w-4" />
-                            {localizeText("Print", { zh: "打印", yue: "列印", fr: "Imprimer" })}
-                          </Button>
-                        </div>
-
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <Button onClick={handleGenerateAllReports} variant="secondary">
-                            <Sparkles className="mr-2 h-4 w-4" />
-                            {localizeText("Generate all patient reports", { zh: "生成全部患者报告", yue: "生成全部患者報告", fr: "Generer tous les rapports patient" })}
-                          </Button>
-                          <Button onClick={handleDownloadAllReports} variant="outline" disabled={!generatedAllReports}>
-                            <Download className="mr-2 h-4 w-4" />
-                            {localizeText("Download all reports", { zh: "下载全部报告", yue: "下載全部報告", fr: "Telecharger tous les rapports" })}
-                          </Button>
-                          <Button onClick={handlePrintAllReports} variant="outline" disabled={users.length === 0}>
-                            <Printer className="mr-2 h-4 w-4" />
-                            {localizeText("Print all reports", { zh: "打印全部报告", yue: "列印全部報告", fr: "Imprimer tous les rapports" })}
-                          </Button>
-                        </div>
-
-                        {generatedReport && (
-                          <div className="mt-4 rounded-xl border border-sky-100 bg-white p-4">
-                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Generated Preview</p>
-                            <pre className="max-h-96 overflow-auto whitespace-pre-wrap text-xs leading-6 text-slate-700">{generatedReport}</pre>
-                          </div>
-                        )}
-
-                        {generatedAllReports && (
-                          <div className="mt-4 rounded-xl border border-indigo-100 bg-white p-4">
-                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">All Patients Preview</p>
-                            <pre className="max-h-96 overflow-auto whitespace-pre-wrap text-xs leading-6 text-slate-700">{generatedAllReports}</pre>
-                          </div>
-                        )}
-                      </div>
 
                       <h3 className="text-lg font-semibold mt-6">{t("admin.assessments_in_progress")}</h3>
                       {getUserProgress(selectedUser).map((progress) => (
