@@ -5,6 +5,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { LanguageProvider } from "@/contexts/language-context"
 import { UserProvider } from "@/contexts/user-context"
+import ClientErrorLogger from "@/components/client-error-logger"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -41,9 +42,12 @@ export default function RootLayout({
         <link rel="icon" type="image/jpeg" sizes="512x512" href="/icons/icon-512x512.jpg" />
       </head>
       <body className={inter.className} suppressHydrationWarning>
-        <ThemeProvider defaultTheme="system">
+          <ThemeProvider defaultTheme="system">
           <LanguageProvider>
-            <UserProvider>{children}</UserProvider>
+            <UserProvider>
+              <ClientErrorLogger />
+              {children}
+            </UserProvider>
           </LanguageProvider>
         </ThemeProvider>
       </body>
