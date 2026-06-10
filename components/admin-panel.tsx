@@ -747,12 +747,12 @@ const buildAutoFinalSummary = (
 
   const sensoryText = (() => {
     if (!latestOlfactory) return language === "zh-CN" ? "感觉评估未提供。" : language === "zh-HK" ? "感官評估未提供。" : language === "fr" ? "Evaluation sensorielle non renseignee." : "Sensory assessment not provided."
-    const olf = getOlfactoryScoreDisplay(latestOlfactory, language, language === "zh-CN" ? "��提供" : language === "zh-HK" ? "未提供" : language === "fr" ? "Non renseigne" : "Not provided")
+    const olf = getOlfactoryScoreDisplay(latestOlfactory, language, language === "zh-CN" ? "未提供" : language === "zh-HK" ? "未提供" : language === "fr" ? "Non renseigne" : "Not provided")
     return language === "zh-CN" ? `感觉评估：${olf}` : language === "zh-HK" ? `感官評估：${olf}` : language === "fr" ? `Evaluation sensorielle: ${olf}` : `Sensory assessment: ${olf}`
   })()
 
   if (language === "zh-CN") {
-    return `患者的认知筛查结果：MMSE ${mmseScore ?? "未提供"} (${mmseClass})，MoCA ${mocaScore ?? "未提供"} (${mocaClass})���综合评估为${overall}。${eegText} ${tcmText} ${sensoryText}`
+    return `患者的认知筛查结果：MMSE ${mmseScore ?? "未提供"} (${mmseClass})，MoCA ${mocaScore ?? "未提供"} (${mocaClass})。综合评估为${overall}。${eegText} ${tcmText} ${sensoryText}`
   }
   if (language === "zh-HK") {
     return `患者的認知篩查結果：MMSE ${mmseScore ?? "未提供"} (${mmseClass})，MoCA ${mocaScore ?? "未提供"} (${mocaClass})。綜合評估為${overall}。${eegText} ${tcmText} ${sensoryText}`
@@ -2309,7 +2309,12 @@ export function AdminPanel() {
         <div class="textarea"><strong>${escapeHtml(eegSummaryLabel)}:</strong> ${escapeHtml(eegSummary)}</div>
       </div>
 
-      <!-- Section 6 removed per specification -->
+      <div class="section">
+        <div class="section-title">${escapeHtml(labels.finalSummary)}</div>
+        <div class="textarea">${escapeHtml(finalSummaryGenerated)}</div>
+      </div>
+
+      <!-- Section 6 (Final Recommendation) removed per specification -->
     </div>
     <div class="footer">
       <div>${escapeHtml(contentLabels.doctorName)}: ${escapeHtml(doctorName)}</div>
@@ -2365,7 +2370,7 @@ export function AdminPanel() {
     const mmseClass = classifyMmse(latestMmse?.total_score ?? null)
     const mocaClass = classifyMoca(latestMoca?.total_score ?? null)
     const overallCognitiveSeverity = chooseHigherSeverity(mmseClass, mocaClass)
-    const eegSummary = getEegCorrelationText(overallCognitiveSeverity, language) + "\nImportant Note: The EEG classification is an estimated correlation derived from cognitive assessment scores (MMSE and MoCA) and does not represent findings from an actual EEG examination."
+    const eegSummary = getEegCorrelationText(overallCognitiveSeverity, language) + (language === "zh-CN" ? "\n重要提示：EEG分类是基于MMSE和MoCA得分的估算，并不代表实际EEG检查结果。" : language === "zh-HK" ? "\n重要提示：EEG分類是基於MMSE和MoCA得分的估算，並不代表實際EEG檢查結果。" : language === "fr" ? "\nNote importante : la classification EEG est une correlation estimee a partir des scores MMSE et MoCA et ne remplace pas un examen EEG." : "\nImportant Note: The EEG classification is an estimated correlation derived from cognitive assessment scores (MMSE and MoCA) and does not represent findings from an actual EEG examination.")
     const finalSummaryGenerated = buildAutoFinalSummary(latestMmse, latestMoca, latestTcm, latestOlfactory, language)
 
     return [
@@ -2408,7 +2413,8 @@ export function AdminPanel() {
       `${eegStatusLabel}: ${labels.eegInProcess}`,
       `${eegSummaryLabel}: ${eegSummary}`,
       "",
-      `-- ${labels.doctorInputs} --`,
+      labels.finalSummary,
+      finalSummaryGenerated,
     ].join("\n")
   }
 
@@ -3567,7 +3573,7 @@ export function AdminPanel() {
                                 "Review tongue and face images, questionnaire constitution data, and existing remarks before finalizing the patient report.",
                                 {
                                   zh: "在生成患者报告前，先审核舌象、面诊图像、问卷体质数据及已有医生备注。",
-                                  yue: "在生成患者報告前，先審核舌象、面診圖像、問卷體質數據及已有醫生備註。",
+                                  yue: "在生成患者報告前，先審核舌象、面診圖像、問卷體質數據及已有���生備註。",
                                   fr: "Avant finalisation du rapport patient, verifier les images langue/visage, la constitution et les remarques existantes.",
                                 },
                               )}
@@ -3953,7 +3959,7 @@ export function AdminPanel() {
                               id="questionnaire-interpretation"
                               value={questionnaireInterpretationInput}
                               onChange={(event) => setQuestionnaireInterpretationInput(event.target.value)}
-                              placeholder={localizeText("Interpret questionnaire and pulse indicators", { zh: "解读问卷与脉象指标", yue: "解讀問卷與脈象指標", fr: "Interpreter les indicateurs du questionnaire et du pouls" })}
+                              placeholder={localizeText("Interpret questionnaire and pulse indicators", { zh: "解读问卷与脉象指标", yue: "解讀��卷與脈象指標", fr: "Interpreter les indicateurs du questionnaire et du pouls" })}
                               rows={2}
                             />
                           </div>
