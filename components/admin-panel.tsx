@@ -123,11 +123,45 @@ export function AdminPanel() {
   const [selectedTrendAssessmentType, setSelectedTrendAssessmentType] = useState<"MOCA" | "MMSE" | "ALL">("ALL")
   const [activeOlfactoryProtocol, setActiveOlfactoryProtocol] = useState<OlfactoryProtocolVersion>("sat_v3_14")
 
+  // Filters & search
+  const [filterQuery, setFilterQuery] = useState<string>("")
+  const [filterMissing, setFilterMissing] = useState<boolean>(false)
+  const [filterHighRisk, setFilterHighRisk] = useState<boolean>(false)
+  const [filterRecentlyDays, setFilterRecentlyDays] = useState<number>(0)
+
+  // Section statuses for selected user
+  const [sectionStatuses, setSectionStatuses] = useState<Record<string, any> | null>(null)
+  const [adminRemarks, setAdminRemarks] = useState<Record<string, string>>({})
+  const [localExemptFlags, setLocalExemptFlags] = useState<Record<string, boolean>>({})
+
   useEffect(() => {
     if (isAuthenticated) {
       loadData()
     }
   }, [isAuthenticated])
+
+  useEffect(() => {
+    if (!selectedUser) return
+    const statuses = adminDataUtils.computeSectionStatus(selectedUser, assessments, sensoryAssessments, tcmAssessments)
+    setSectionStatuses(statuses)
+
+    // load any locally saved remarks
+    const keys = ["cognition", "tcm", "sensory"]
+    const remarks: Record<string, string> = {}
+    keys.forEach((k) => {
+      const key = `adminRemark:${selectedUser}:${k}`
+      const v = typeof window !== "undefined" ? localStorage.getItem(key) : null
+      if (v) remarks[k] = v
+    })
+    setAdminRemarks(remarks)
+
+    const exemptFlags: Record<string, boolean> = {}
+    keys.forEach((k) => {
+      const key = `adminExempt:${selectedUser}:${k}`
+      exemptFlags[k] = typeof window !== "undefined" ? !!localStorage.getItem(key) : false
+    })
+    setLocalExemptFlags(exemptFlags)
+  }, [selectedUser, assessments, sensoryAssessments, tcmAssessments])
 
   const handleLogin = async () => {
     // Simple authentication - in production, use proper authentication
@@ -374,42 +408,7 @@ export function AdminPanel() {
 
   const averageScores = getAverageScores()
 
-  // Filters & search
-  const [filterQuery, setFilterQuery] = useState<string>("")
-  const [filterMissing, setFilterMissing] = useState<boolean>(false)
-  const [filterHighRisk, setFilterHighRisk] = useState<boolean>(false)
-  const [filterRecentlyDays, setFilterRecentlyDays] = useState<number>(0)
-
   const filteredUsers = adminDataUtils.filterUsers(users, { query: filterQuery, missingOnly: filterMissing, highRiskOnly: filterHighRisk, recentlyUpdatedDays: filterRecentlyDays }, assessments, sensoryAssessments, tcmAssessments)
-
-
-  // Section statuses for selected user
-  const [sectionStatuses, setSectionStatuses] = useState<Record<string, any> | null>(null)
-  const [adminRemarks, setAdminRemarks] = useState<Record<string, string>>({})
-  const [localExemptFlags, setLocalExemptFlags] = useState<Record<string, boolean>>({})
-
-  useEffect(() => {
-    if (!selectedUser) return
-    const statuses = adminDataUtils.computeSectionStatus(selectedUser, assessments, sensoryAssessments, tcmAssessments)
-    setSectionStatuses(statuses)
-
-    // load any locally saved remarks
-    const keys = ["cognition", "tcm", "sensory"]
-    const remarks: Record<string, string> = {}
-    keys.forEach((k) => {
-      const key = `adminRemark:${selectedUser}:${k}`
-      const v = typeof window !== "undefined" ? localStorage.getItem(key) : null
-      if (v) remarks[k] = v
-    })
-    setAdminRemarks(remarks)
-
-    const exemptFlags: Record<string, boolean> = {}
-    keys.forEach((k) => {
-      const key = `adminExempt:${selectedUser}:${k}`
-      exemptFlags[k] = typeof window !== "undefined" ? !!localStorage.getItem(key) : false
-    })
-    setLocalExemptFlags(exemptFlags)
-  }, [selectedUser, assessments, sensoryAssessments, tcmAssessments])
 
   const saveAdminRemark = async (section: string, text: string) => {
     if (!selectedUser) return
