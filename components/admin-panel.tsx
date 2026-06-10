@@ -387,7 +387,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cityProvince: "城市/省份",
     hospital: "醫院",
     eegNote: "腦電圖報告",
-    eegInProcess: "仍在��理中",
+    eegInProcess: "���在��理中",
     mmseDesignScores: "MMSE重建設計分項",
     unknown: "未提供",
   },
@@ -1990,6 +1990,42 @@ export function AdminPanel() {
     }
   }
 
+  const getSectionStatusLabel = (status: "completed" | "in_progress" | "missing") => {
+    if (status === "completed") return localizeText("Completed", { zh: "已完成", yue: "已完成", fr: "Termine" })
+    if (status === "in_progress") return localizeText("In progress", { zh: "进行中", yue: "進行中", fr: "En cours" })
+    return localizeText("Missing", { zh: "缺失", yue: "缺失", fr: "Manquant" })
+  }
+
+  const renderSectionPill = (status: "completed" | "in_progress" | "missing", missingItems?: string[]) => {
+    const color =
+      status === "completed"
+        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+        : status === "in_progress"
+          ? "border-amber-200 bg-amber-50 text-amber-700"
+          : "border-rose-200 bg-rose-50 text-rose-700"
+    return (
+      <div className="flex flex-col gap-0.5">
+        <Badge variant="outline" className={color}>
+          {getSectionStatusLabel(status)}
+        </Badge>
+        {status !== "completed" && missingItems && missingItems.length > 0 && (
+          <span className="text-[11px] text-slate-500">{missingItems.join(", ")}</span>
+        )}
+      </div>
+    )
+  }
+
+  // EEG / blood markers are optional follow-up performed after the core sections.
+  const getFollowUpState = (userId: string) => {
+    const userSensory = sensoryAssessments.filter((s: any) => s.user_id === userId)
+    const hasEeg = userSensory.some((s: any) => s.test_type === "eeg")
+    const hasBlood = userSensory.some((s: any) => s.test_type === "blood" || s.test_type === "blood_marker")
+    const done = [hasEeg, hasBlood].filter(Boolean).length
+    if (done === 2) return { label: localizeText("Complete", { zh: "已完成", yue: "已完成", fr: "Termine" }), color: "border-emerald-200 bg-emerald-50 text-emerald-700" }
+    if (done === 1) return { label: localizeText("Partial", { zh: "部分", yue: "部分", fr: "Partiel" }), color: "border-amber-200 bg-amber-50 text-amber-700" }
+    return { label: localizeText("Pending", { zh: "待跟进", yue: "待跟進", fr: "En attente" }), color: "border-slate-200 bg-slate-50 text-slate-500" }
+  }
+
   const getWorkflowStatusForUser = (userId: string): ReportStatus => {
     const report = getUserMedicalReport(userId)
     if (report?.report_status) return report.report_status
@@ -2997,7 +3033,7 @@ export function AdminPanel() {
                     <option value="complete">{localizeText("Questionnaire + Images", { zh: "问卷+图片完整", yue: "問卷+圖片完整", fr: "Questionnaire + images" })}</option>
                     <option value="missing_images">{localizeText("Missing images (questionnaire OK)", { zh: "缺少图片（问卷已完成）", yue: "缺少圖片（問卷已完成）", fr: "Images manquantes (questionnaire OK)" })}</option>
                     <option value="missing_questionnaire">{localizeText("Missing questionnaire", { zh: "缺少问卷", yue: "缺少問卷", fr: "Questionnaire manquant" })}</option>
-                    <option value="data_unavailable">{localizeText("TCM data unavailable", { zh: "中医数据不可用", yue: "中醫數據不可用", fr: "Donnees MTC indisponibles" })}</option>
+                    <option value="data_unavailable">{localizeText("TCM data unavailable", { zh: "中医数据不可用", yue: "中醫數據��可用", fr: "Donnees MTC indisponibles" })}</option>
                   </select>
                   <Button
                     type="button"
@@ -3029,17 +3065,22 @@ export function AdminPanel() {
                   <thead className="bg-slate-50">
                     <tr>
                       <th className="px-3 py-2 text-left font-semibold">{localizeText("Patient", { zh: "患者", yue: "患者", fr: "Patient" })}</th>
-                      <th className="px-3 py-2 text-left font-semibold">{localizeText("Cognitive Status", { zh: "认知状态", yue: "認知狀態", fr: "Statut cognitif" })}</th>
-                      <th className="px-3 py-2 text-left font-semibold">{localizeText("TCM Images", { zh: "中医图片", yue: "中醫圖片", fr: "Images MTC" })}</th>
+                      <th className="px-3 py-2 text-left font-semibold">{localizeText("Cognition", { zh: "认知", yue: "認知", fr: "Cognition" })}</th>
+                      <th className="px-3 py-2 text-left font-semibold">{localizeText("TCM", { zh: "中医", yue: "中醫", fr: "MTC" })}</th>
+                      <th className="px-3 py-2 text-left font-semibold">{localizeText("Sensory", { zh: "感官", yue: "感官", fr: "Sensoriel" })}</th>
+                      <th className="px-3 py-2 text-left font-semibold">
+                        {localizeText("Follow-up (EEG / Blood)", { zh: "跟进（脑电/血液）", yue: "跟進（腦電/血液）", fr: "Suivi (EEG / Sang)" })}
+                      </th>
                       <th className="px-3 py-2 text-left font-semibold">{localizeText("Report Status", { zh: "报告状态", yue: "報告狀態", fr: "Statut du rapport" })}</th>
                       <th className="px-3 py-2 text-left font-semibold">{localizeText("Download", { zh: "下载", yue: "下載", fr: "Telechargement" })}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredUsers.map((user) => {
-                      const risk = getUserLatestCognitiveRisk(user.id)
-                      const tcmImageState = getTcmImageState(user.id)
+                      const statuses = computeSectionStatus(user.id, assessments, sensoryAssessments, tcmAssessments)
+                      const followUp = getFollowUpState(user.id)
                       const workflowStatus = getWorkflowStatusForUser(user.id)
+                      const anyMissing = hasAnyMissingRequired(statuses)
                       return (
                         <tr
                           key={`row-${user.id}`}
@@ -3047,11 +3088,26 @@ export function AdminPanel() {
                           onClick={() => setSelectedUser(user.id)}
                         >
                           <td className="px-3 py-2">
-                            <p className="font-medium">{user.name || user.phone_number}</p>
-                            <p className="text-xs text-slate-500">{user.phone_number}</p>
+                            <div className="flex items-center gap-2">
+                              {anyMissing && (
+                                <span
+                                  className="inline-block h-2 w-2 shrink-0 rounded-full bg-rose-500"
+                                  title={localizeText("Missing required exams", { zh: "缺少必需检查", yue: "缺少必需檢查", fr: "Examens requis manquants" })}
+                                  aria-label={localizeText("Missing required exams", { zh: "缺少必需检查", yue: "缺少必需檢查", fr: "Examens requis manquants" })}
+                                />
+                              )}
+                              <div>
+                                <p className="font-medium">{user.name || user.phone_number}</p>
+                                <p className="text-xs text-slate-500">{user.phone_number}</p>
+                              </div>
+                            </div>
                           </td>
-                          <td className="px-3 py-2">{risk.label}</td>
-                          <td className="px-3 py-2">{tcmImageState.label}</td>
+                          <td className="px-3 py-2">{renderSectionPill(statuses.cognition.status, statuses.cognition.missingItems)}</td>
+                          <td className="px-3 py-2">{renderSectionPill(statuses.tcm.status, statuses.tcm.missingItems)}</td>
+                          <td className="px-3 py-2">{renderSectionPill(statuses.sensory.status, statuses.sensory.missingItems)}</td>
+                          <td className="px-3 py-2">
+                            <Badge variant="outline" className={followUp.color}>{followUp.label}</Badge>
+                          </td>
                           <td className="px-3 py-2">
                             <Badge variant="outline">{getReportStatusLabel(workflowStatus)}</Badge>
                           </td>
@@ -3063,9 +3119,27 @@ export function AdminPanel() {
                         </tr>
                       )
                     })}
+                    {filteredUsers.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="px-3 py-6 text-center text-slate-500">
+                          {localizeText("No patients match the current filters.", { zh: "没有符合当前筛选条件的患者。", yue: "沒有符合目前篩選條件嘅患者。", fr: "Aucun patient ne correspond aux filtres actuels." })}
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
+
+              <p className="mb-4 text-xs text-slate-500">
+                {localizeText(
+                  "Cognition, TCM and Sensory are scored during the in-clinic evaluation. EEG and blood markers are optional follow-up captured after the core sections are completed.",
+                  {
+                    zh: "认知、中医和感官在临床评估期间评分。脑电图和血液标志物为可选的后续随访，在核心项目完成后采集。",
+                    yue: "認知、中醫同感官喺臨床評估期間評分。腦電圖同血液標誌物屬可選嘅後續跟進，喺核心項目完成後採集。",
+                    fr: "La cognition, la MTC et le sensoriel sont evalues pendant la consultation. L'EEG et les marqueurs sanguins sont un suivi optionnel realise apres les sections principales.",
+                  },
+                )}
+              </p>
 
               <div className="space-y-4 max-h-96 overflow-y-auto">
                 {filteredUsers.map((user) => {
@@ -4022,7 +4096,7 @@ export function AdminPanel() {
                             {localizeText("Approve final report", { zh: "批准最终报告", yue: "批准最終報告", fr: "Approuver le rapport final" })}
                           </Button>
                           <Button onClick={() => updateReportStatus("pending_final_approval")} variant="outline">
-                            {localizeText("Send to final approval", { zh: "提交最终审批", yue: "提交最終審批", fr: "Envoyer pour approbation finale" })}
+                            {localizeText("Send to final approval", { zh: "提交最终审批", yue: "提交最終���批", fr: "Envoyer pour approbation finale" })}
                           </Button>
                           <Button
                             onClick={() => updateReportStatus("published_to_patient")}
