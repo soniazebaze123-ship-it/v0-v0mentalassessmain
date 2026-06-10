@@ -266,10 +266,10 @@ export const OLFACTORY_PROTOCOL_QUESTION_SET: Record<OlfactoryProtocolVersion, O
 
 export const OLFACTORY_COPY = {
   title: {
-    en: "Olfactory Task 14 Module",
-    zh: "嗅觉任务14项模块",
-    yue: "嗅覺任務14項模組",
-    fr: "Module de tache olfactive 14 items",
+    en: "CogniScent TM14",
+    zh: "CogniScent TM14",
+    yue: "CogniScent TM14",
+    fr: "CogniScent TM14",
   },
   subtitle: {
     en: "Blinded strip-based 14-scent identification task for clinical olfactory screening",
@@ -297,10 +297,10 @@ export const OLFACTORY_COPY = {
       fr: "Samedi V2 (12 items)",
     },
     sat_v3_14: {
-      en: "Olfactory Task V3 (14-item)",
-      zh: "嗅觉任务V3（14项）",
-      yue: "嗅覺任務V3（14項）",
-      fr: "Tache olfactive V3 (14 items)",
+      en: "CogniScent TM14 (14-item)",
+      zh: "CogniScent TM14（14项）",
+      yue: "CogniScent TM14（14項）",
+      fr: "CogniScent TM14 (14 items)",
     },
   },
   instructionsTitle: { en: "Instructions", zh: "说明", yue: "說明", fr: "Instructions" },
@@ -373,10 +373,10 @@ export const OLFACTORY_COPY = {
       fr: "Test premium temporaire d'identification olfactive a 12 odeurs",
     },
     sat_v3_14: {
-      en: "Olfactory Task 14-Scent Identification Test",
-      zh: "嗅觉任务14气味识别测试",
-      yue: "嗅覺任務14氣味識別測試",
-      fr: "Test d'identification olfactive de 14 odeurs",
+      en: "CogniScent TM14 14-Scent Identification Test",
+      zh: "CogniScent TM14 14气味识别测试",
+      yue: "CogniScent TM14 14氣味識別測試",
+      fr: "Test d'identification olfactive CogniScent TM14 (14 odeurs)",
     },
   },
 }

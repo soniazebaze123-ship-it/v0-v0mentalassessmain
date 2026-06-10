@@ -26,6 +26,11 @@ function isSameCalendarDay(value?: string | null) {
   return date.toDateString() === new Date().toDateString()
 }
 
+function clampCognitiveScore(score: number | null | undefined) {
+  const numericScore = typeof score === "number" && Number.isFinite(score) ? score : 0
+  return Math.min(30, Math.max(0, numericScore))
+}
+
 interface AssessmentStatus {
   moca: { completed: boolean; score?: number }
   mmse: { completed: boolean; score?: number }
@@ -36,10 +41,30 @@ interface AssessmentStatus {
   tcm: { completed: boolean; score?: number }
 }
 
+type AssessmentRow = {
+  type?: string | null
+  assessment_type?: string | null
+  score?: number | null
+  total_score?: number | null
+  completed_at?: string | null
+  created_at?: string | null
+}
+
+function getAssessmentKind(row: AssessmentRow): "MOCA" | "MMSE" | null {
+  const raw = (row.type || row.assessment_type || "").toUpperCase()
+  if (raw === "MOCA") return "MOCA"
+  if (raw === "MMSE") return "MMSE"
+  return null
+}
+
+function getAssessmentTimestamp(row: AssessmentRow) {
+  return row.completed_at || row.created_at || null
+}
+
 interface DashboardProps {
   onStartAssessment: (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm") => void
   onResumeAssessment?: (type: "moca" | "mmse", step: number, scores: number[]) => void
-  onResetAssessmentSession?: (type: "moca" | "mmse") => Promise<void>
+  onResetAssessmentSession?: (type: "moca" | "mmse" | "upload" | "visual" | "auditory" | "olfactory" | "tcm") => Promise<void>
   onViewResults?: (type: "moca" | "mmse") => void
   onViewRiskProfile?: () => void
 }
@@ -67,6 +92,7 @@ export function Dashboard({
   const displayName = user?.name?.trim() || "-"
   const displayId = user?.id || "-"
   const displayPhone = user?.phone_number || "-"
+  const displayNationalId = user?.national_id?.trim() || null
   const uiText = useCallback(
     (englishText: string, chineseText: string, cantoneseText?: string, frenchText?: string) =>
       localizeText(englishText, {
@@ -106,22 +132,27 @@ export function Dashboard({
       let hasCompleted = false
 
       if (assessments) {
-        assessments.forEach((assessment) => {
-          const completedToday = isSameCalendarDay(assessment.completed_at)
+        ;(assessments as AssessmentRow[]).forEach((assessment) => {
+          const kind = getAssessmentKind(assessment)
+          if (!kind) return
 
-          if (assessment.type === "MOCA" || assessment.type === "MoCA") {
+          const completedToday = isSameCalendarDay(getAssessmentTimestamp(assessment))
+          const score = clampCognitiveScore(assessment.score ?? assessment.total_score)
+
+          if (kind === "MOCA") {
             if (completedToday) {
-              newStatus.moca = { completed: true, score: assessment.score }
+              newStatus.moca = { completed: true, score }
             }
             hasCompleted = true
-            console.log("[v0] Dashboard: MoCA completed with score:", assessment.score)
-          } else if (assessment.type === "MMSE") {
-            if (completedToday) {
-              newStatus.mmse = { completed: true, score: assessment.score }
-            }
-            hasCompleted = true
-            console.log("[v0] Dashboard: MMSE completed with score:", assessment.score)
+            console.log("[v0] Dashboard: MoCA completed with score:", score)
+            return
           }
+
+          if (completedToday) {
+            newStatus.mmse = { completed: true, score }
+          }
+          hasCompleted = true
+          console.log("[v0] Dashboard: MMSE completed with score:", score)
         })
       }
 
@@ -204,11 +235,15 @@ export function Dashboard({
       } else {
         const { data } = await supabase
           .from("assessments")
-          .select("completed_at")
+          .select("*")
           .eq("user_id", user.id)
-          .eq("type", testType.toUpperCase())
 
-        return !(data ?? []).some((assessment) => isSameCalendarDay(assessment.completed_at))
+        return !((data as AssessmentRow[] | null) ?? []).some((assessment) => {
+          const kind = getAssessmentKind(assessment)
+          if (!kind) return false
+          if (kind !== testType.toUpperCase()) return false
+          return isSameCalendarDay(getAssessmentTimestamp(assessment))
+        })
       }
     } catch (error) {
       console.error("Error checking test availability:", error)
@@ -267,6 +302,38 @@ export function Dashboard({
     }
   }
 
+  const moduleProgress = {
+    upload: progress.UPLOAD,
+    visual: progress.VISUAL,
+    auditory: progress.AUDITORY,
+    olfactory: progress.OLFACTORY,
+    tcm: progress.TCM,
+  }
+
+  const handleResumeModule = (type: "upload" | "visual" | "auditory" | "olfactory" | "tcm") => {
+    onStartAssessment(type)
+  }
+
+  const handleResetModule = async (type: "upload" | "visual" | "auditory" | "olfactory" | "tcm") => {
+    if (!onResetAssessmentSession) {
+      onStartAssessment(type)
+      return
+    }
+
+    if (
+      confirm(
+        uiText(
+          "Reset the current session and start again from zero?",
+          "要重设当前测试并从零开始吗？",
+          "要重設當前測試並由零開始嗎？",
+          "Réinitialiser la session en cours et recommencer depuis le début ?",
+        ),
+      )
+    ) {
+      await onResetAssessmentSession(type)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -281,7 +348,7 @@ export function Dashboard({
   return (
     <div className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.14),_transparent_24%),linear-gradient(135deg,_#f7fbff_0%,_#eefaf7_45%,_#f4f7ff_100%)] p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8 overflow-hidden rounded-[32px] border border-white/80 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.14),_transparent_24%),linear-gradient(135deg,_rgba(255,255,255,0.94),_rgba(247,250,255,0.96))] shadow-[0_24px_90px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+        <div className="mb-8 overflow-hidden rounded-[32px] border border-white/80 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.16),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.14),_transparent_24%),linear-gradient(135deg,_rgba(255,255,255,0.94),_rgba(247,250,255,0.96),_rgba(253,242,248,0.96))] shadow-[0_24px_90px_rgba(15,23,42,0.10)] backdrop-blur-xl">
           <div className="px-6 py-6 md:px-8 md:py-8">
             <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
               <div className="max-w-3xl">
@@ -311,6 +378,9 @@ export function Dashboard({
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t("dashboard.id")}</p>
                   <p className="mt-2 truncate font-mono text-sm text-slate-900 md:text-base">{displayId}</p>
                   <p className="mt-1 text-sm text-slate-600">{displayPhone}</p>
+                  {displayNationalId && (
+                    <p className="mt-1 text-xs text-slate-500">ID: {displayNationalId}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -324,9 +394,6 @@ export function Dashboard({
                 <ThemeToggle />
                 <Button asChild variant="outline" size="sm" className="touch-target rounded-xl border-rose-200 bg-white/80 text-rose-700 hover:bg-rose-50">
                   <Link href="/olfactory-preview">{localizeText("Odofin Preview", { zh: "Odofin预览", yue: "Odofin預覽", fr: "Aperçu Odofin" })}</Link>
-                </Button>
-                <Button asChild variant="outline" size="sm" className="touch-target rounded-xl border-amber-200 bg-white/80 text-amber-700 hover:bg-amber-50">
-                  <Link href="/olfactory">{localizeText("Olfactory 14 Module", { zh: "嗅觉14项模块", yue: "嗅覺14項模組", fr: "Module olfactif 14 items" })}</Link>
                 </Button>
 
               </div>
@@ -496,9 +563,22 @@ export function Dashboard({
                 <div className="space-y-4">
                   <div className="flex items-center text-sm text-green-600">
                     <Clock className="w-4 h-4 mr-1.5" />
-                    <span>{t("dashboard.pending")}</span>
+                    <span>{moduleProgress.tcm ? t("dashboard.resume") : t("dashboard.pending")}</span>
                   </div>
-                  <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("tcm")}>{t("common.start")}</Button>
+                  {moduleProgress.tcm ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-md rounded-xl font-medium" onClick={() => handleResumeModule("tcm")}>{t("common.resume")}</Button>
+                      <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-green-300" onClick={() => handleResetModule("tcm")}>
+                        {localizeText("Start New Session", {
+                          zh: "开始新测试",
+                          yue: "開始新測試",
+                          fr: "Commencer une nouvelle session",
+                        })}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("tcm")}>{t("common.start")}</Button>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -560,9 +640,22 @@ export function Dashboard({
                 <div className="space-y-4">
                   <div className="flex items-center text-sm text-violet-600">
                     <Clock className="w-4 h-4 mr-1.5" />
-                    <span>{t("dashboard.pending")}</span>
+                    <span>{moduleProgress.upload ? t("dashboard.resume") : t("dashboard.pending")}</span>
                   </div>
-                  <Button className="w-full bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("upload")}>{t("dashboard.upload_files")}</Button>
+                  {moduleProgress.upload ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button className="w-full bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white shadow-md rounded-xl font-medium" onClick={() => handleResumeModule("upload")}>{t("common.resume")}</Button>
+                      <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-violet-300" onClick={() => handleResetModule("upload")}>
+                        {localizeText("Start New Session", {
+                          zh: "开始新测试",
+                          yue: "開始新測試",
+                          fr: "Commencer une nouvelle session",
+                        })}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button className="w-full bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("upload")}>{t("dashboard.upload_files")}</Button>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -592,9 +685,22 @@ export function Dashboard({
                 <div className="space-y-4">
                   <div className="flex items-center text-sm text-indigo-600">
                     <Clock className="w-4 h-4 mr-1.5" />
-                    <span>{t("dashboard.pending")}</span>
+                    <span>{moduleProgress.visual ? t("dashboard.resume") : t("dashboard.pending")}</span>
                   </div>
-                  <Button className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("visual")}>{t("common.start")}</Button>
+                  {moduleProgress.visual ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white shadow-md rounded-xl font-medium" onClick={() => handleResumeModule("visual")}>{t("common.resume")}</Button>
+                      <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-indigo-300" onClick={() => handleResetModule("visual")}>
+                        {localizeText("Start New Session", {
+                          zh: "开始新测试",
+                          yue: "開始新測試",
+                          fr: "Commencer une nouvelle session",
+                        })}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("visual")}>{t("common.start")}</Button>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -624,9 +730,22 @@ export function Dashboard({
                 <div className="space-y-4">
                   <div className="flex items-center text-sm text-rose-600">
                     <Clock className="w-4 h-4 mr-1.5" />
-                    <span>{t("dashboard.pending")}</span>
+                    <span>{moduleProgress.auditory ? t("dashboard.resume") : t("dashboard.pending")}</span>
                   </div>
-                  <Button className="w-full bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("auditory")}>{t("common.start")}</Button>
+                  {moduleProgress.auditory ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button className="w-full bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white shadow-md rounded-xl font-medium" onClick={() => handleResumeModule("auditory")}>{t("common.resume")}</Button>
+                      <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-rose-300" onClick={() => handleResetModule("auditory")}>
+                        {localizeText("Start New Session", {
+                          zh: "开始新测试",
+                          yue: "開始新測試",
+                          fr: "Commencer une nouvelle session",
+                        })}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button className="w-full bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("auditory")}>{t("common.start")}</Button>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -647,22 +766,38 @@ export function Dashboard({
               {status.olfactory.completed ? (
                 <div className="space-y-3">
                   <div className="bg-white/60 backdrop-blur-sm rounded-xl p-3 text-center">
-                    <p className="text-3xl font-bold text-emerald-600">{status.olfactory.score}/12</p>
+                    <p className="text-3xl font-bold text-emerald-600">{status.olfactory.score}/14</p>
                     <p className="text-xs text-emerald-700 mt-1">
                       {status.olfactory.classification === "normal"
                         ? localizeText("Normal identification range", { zh: "识别结果正常", yue: "識別結果正常", fr: "Identification normale" })
                         : localizeText("Review recommended", { zh: "建议复核", yue: "建議覆核", fr: "Révision recommandée" })}
                     </p>
                   </div>
-                  <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300" onClick={() => handleRetake("olfactory")}>{t("common.retake")}</Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md rounded-xl font-medium" onClick={() => handleResumeModule("olfactory")}>{t("common.resume")}</Button>
+                    <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-emerald-300" onClick={() => handleRetake("olfactory")}>{t("common.retake")}</Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center text-sm text-amber-600">
                     <Clock className="w-4 h-4 mr-1.5" />
-                    <span>{t("dashboard.pending")}</span>
+                    <span>{moduleProgress.olfactory ? t("dashboard.resume") : t("dashboard.pending")}</span>
                   </div>
-                  <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("olfactory")}>{t("common.start")}</Button>
+                  {moduleProgress.olfactory ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md rounded-xl font-medium" onClick={() => handleResumeModule("olfactory")}>{t("common.resume")}</Button>
+                      <Button variant="outline" className="w-full bg-white/80 hover:bg-white text-sm rounded-xl border-dashed border-amber-300" onClick={() => handleResetModule("olfactory")}>
+                        {localizeText("Start New Session", {
+                          zh: "开始新测试",
+                          yue: "開始新測試",
+                          fr: "Commencer une nouvelle session",
+                        })}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md rounded-xl font-medium" onClick={() => onStartAssessment("olfactory")}>{t("common.start")}</Button>
+                  )}
                 </div>
               )}
             </CardContent>
