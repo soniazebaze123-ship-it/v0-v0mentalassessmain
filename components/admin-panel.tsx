@@ -518,7 +518,7 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     mmseFinal: "MMSE 总分",
     mocaTasks: "MoCA 分项",
     mmseTasks: "MMSE 分项",
-    score: "分数",
+    score: "���数",
     eegStatus: "状态",
     eegSummary: "初步说明",
   },
@@ -1996,7 +1996,7 @@ export function AdminPanel() {
     return localizeText("Missing", { zh: "缺失", yue: "缺失", fr: "Manquant" })
   }
 
-  const renderSectionPill = (status: "completed" | "in_progress" | "missing", missingItems?: string[]) => {
+  const renderSectionPill = (status: "completed" | "in_progress" | "missing", missingItems?: string[], lastUpdated?: string | null) => {
     const color =
       status === "completed"
         ? "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -2011,6 +2011,10 @@ export function AdminPanel() {
         {status !== "completed" && missingItems && missingItems.length > 0 && (
           <span className="text-[11px] text-slate-500">{missingItems.join(", ")}</span>
         )}
+        <span className="flex items-center gap-1 text-[11px] text-slate-400">
+          <Clock className="h-3 w-3" />
+          {formatLastUpdated(lastUpdated ?? null)}
+        </span>
       </div>
     )
   }
@@ -2024,6 +2028,67 @@ export function AdminPanel() {
     if (done === 2) return { label: localizeText("Complete", { zh: "已完成", yue: "已完成", fr: "Termine" }), color: "border-emerald-200 bg-emerald-50 text-emerald-700" }
     if (done === 1) return { label: localizeText("Partial", { zh: "部分", yue: "部分", fr: "Partiel" }), color: "border-amber-200 bg-amber-50 text-amber-700" }
     return { label: localizeText("Pending", { zh: "待跟进", yue: "待跟進", fr: "En attente" }), color: "border-slate-200 bg-slate-50 text-slate-500" }
+  }
+
+  const formatLastUpdated = (iso: string | null) => {
+    if (!iso) return localizeText("Not started", { zh: "未开始", yue: "未開始", fr: "Non commence" })
+    const time = new Date(iso).getTime()
+    if (!Number.isFinite(time)) return localizeText("Not started", { zh: "未开始", yue: "未開始", fr: "Non commence" })
+    const diffDays = Math.floor((Date.now() - time) / (24 * 3600 * 1000))
+    if (diffDays <= 0) return localizeText("Today", { zh: "今天", yue: "今日", fr: "Aujourd'hui" })
+    if (diffDays === 1) return localizeText("Yesterday", { zh: "昨天", yue: "尋日", fr: "Hier" })
+    if (diffDays < 30) return localizeText(`${diffDays}d ago`, { zh: `${diffDays}天前`, yue: `${diffDays}日前`, fr: `il y a ${diffDays} j` })
+    return new Date(iso).toLocaleDateString()
+  }
+
+  // Aggregate completion across all patients for the three core evaluation sections.
+  const computeCompletionSummary = () => {
+    const total = users.length || 0
+    const acc = {
+      cognition: { completed: 0, in_progress: 0, missing: 0 },
+      tcm: { completed: 0, in_progress: 0, missing: 0 },
+      sensory: { completed: 0, in_progress: 0, missing: 0 },
+    }
+    users.forEach((u: any) => {
+      const s = computeSectionStatus(u.id, assessments, sensoryAssessments, tcmAssessments)
+      ;(["cognition", "tcm", "sensory"] as const).forEach((k) => {
+        acc[k][s[k].status] += 1
+      })
+    })
+    return { total, ...acc }
+  }
+  const completionSummary = computeCompletionSummary()
+
+  const exportMissingExamsWorklist = () => {
+    const headers = ["Patient", "Phone", "Cognition missing", "TCM missing", "Sensory missing", "Follow-up", "Report status"]
+    const rows = users
+      .map((u: any) => {
+        const s = computeSectionStatus(u.id, assessments, sensoryAssessments, tcmAssessments)
+        if (!hasAnyMissingRequired(s)) return null
+        const follow = getFollowUpState(u.id)
+        return [
+          u.name || u.phone_number || "",
+          u.phone_number || "",
+          s.cognition.missingItems.join(" | "),
+          s.tcm.missingItems.join(" | "),
+          s.sensory.missingItems.join(" | "),
+          follow.label,
+          getReportStatusLabel(getWorkflowStatusForUser(u.id)),
+        ]
+      })
+      .filter((r): r is string[] => r !== null)
+
+    const escapeCell = (v: string) => `"${String(v).replace(/"/g, '""')}"`
+    const csv = [headers, ...rows].map((row) => row.map(escapeCell).join(",")).join("\n")
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `missing-exams-worklist_${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   const getWorkflowStatusForUser = (userId: string): ReportStatus => {
@@ -2737,7 +2802,7 @@ export function AdminPanel() {
       setWorkflowMessage(
         localizeText("Report status updated to", {
           zh: "报告状态已更新为",
-          yue: "報告狀態已更新為",
+          yue: "報告���態已更新為",
           fr: "Le statut du rapport est passe a",
         }) + ` ${getReportStatusLabel(nextStatus)}.`,
       )
@@ -2986,6 +3051,35 @@ export function AdminPanel() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="mb-4 grid gap-3 sm:grid-cols-3">
+                {(
+                  [
+                    { key: "cognition", label: localizeText("Cognition", { zh: "认知", yue: "認知", fr: "Cognition" }) },
+                    { key: "tcm", label: localizeText("TCM", { zh: "中医", yue: "中醫", fr: "MTC" }) },
+                    { key: "sensory", label: localizeText("Sensory", { zh: "感官", yue: "感官", fr: "Sensoriel" }) },
+                  ] as const
+                ).map(({ key, label }) => {
+                  const stat = completionSummary[key]
+                  const pct = completionSummary.total > 0 ? Math.round((stat.completed / completionSummary.total) * 100) : 0
+                  return (
+                    <div key={key} className="rounded-lg border border-slate-200 bg-white p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-slate-700">{label}</span>
+                        <span className="text-sm font-bold text-slate-900">{pct}%</span>
+                      </div>
+                      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
+                        <span className="text-emerald-600">{stat.completed} {localizeText("done", { zh: "完成", yue: "完成", fr: "fini" })}</span>
+                        <span className="text-amber-600">{stat.in_progress} {localizeText("partial", { zh: "进行", yue: "進行", fr: "partiel" })}</span>
+                        <span className="text-rose-600">{stat.missing} {localizeText("missing", { zh: "缺失", yue: "缺失", fr: "manquant" })}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
               <div className="grid gap-3 md:grid-cols-2 mb-4">
                 <AssessmentInput
                   placeholder={localizeText("Search by phone, name, or national ID", {
@@ -3043,6 +3137,16 @@ export function AdminPanel() {
                     className="h-10 text-xs"
                   >
                     {localizeText("Missing exams only", { zh: "仅缺失检查", yue: "只顯示缺失檢查", fr: "Examens manquants" })}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={exportMissingExamsWorklist}
+                    className="h-10 text-xs"
+                  >
+                    <Download className="mr-1 h-3.5 w-3.5" />
+                    {localizeText("Export worklist", { zh: "导出待办清单", yue: "匯出待辦清單", fr: "Exporter la liste" })}
                   </Button>
                 </div>
               </div>
@@ -3102,9 +3206,9 @@ export function AdminPanel() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-3 py-2">{renderSectionPill(statuses.cognition.status, statuses.cognition.missingItems)}</td>
-                          <td className="px-3 py-2">{renderSectionPill(statuses.tcm.status, statuses.tcm.missingItems)}</td>
-                          <td className="px-3 py-2">{renderSectionPill(statuses.sensory.status, statuses.sensory.missingItems)}</td>
+                          <td className="px-3 py-2">{renderSectionPill(statuses.cognition.status, statuses.cognition.missingItems, statuses.cognition.lastUpdated)}</td>
+                          <td className="px-3 py-2">{renderSectionPill(statuses.tcm.status, statuses.tcm.missingItems, statuses.tcm.lastUpdated)}</td>
+                          <td className="px-3 py-2">{renderSectionPill(statuses.sensory.status, statuses.sensory.missingItems, statuses.sensory.lastUpdated)}</td>
                           <td className="px-3 py-2">
                             <Badge variant="outline" className={followUp.color}>{followUp.label}</Badge>
                           </td>
@@ -3247,7 +3351,7 @@ export function AdminPanel() {
                             section === "cognition"
                               ? { zh: "认知", yue: "認知", fr: "Cognition" }
                               : section === "tcm"
-                                ? { zh: "中医", yue: "中醫", fr: "MTC" }
+                                ? { zh: "��医", yue: "中醫", fr: "MTC" }
                                 : { zh: "感官", yue: "感官", fr: "Sensoriel" },
                           )
                           return (
