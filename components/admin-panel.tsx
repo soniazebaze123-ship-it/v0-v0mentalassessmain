@@ -1251,6 +1251,9 @@ export function AdminPanel() {
   const [workflowMessage, setWorkflowMessage] = useState("")
   const [generatedReport, setGeneratedReport] = useState("")
   const [generatedAllReports, setGeneratedAllReports] = useState("")
+  const [aiNarrative, setAiNarrative] = useState("")
+  const [aiNarrativeLoading, setAiNarrativeLoading] = useState(false)
+  const [aiNarrativeError, setAiNarrativeError] = useState("")
   const [patientSearch, setPatientSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | ReportStatus>("all")
   const [riskFilter, setRiskFilter] = useState<"all" | "high" | "moderate" | "low">("all")
@@ -1292,6 +1295,9 @@ export function AdminPanel() {
     setGeneratedReport("")
     setGeneratedAllReports("")
     setWorkflowMessage("")
+    setAiNarrative("")
+    setAiNarrativeError("")
+    setAiNarrativeLoading(false)
 
     const existingReview = doctorReviews
       .filter((review) => review.user_id === selectedUser)
@@ -2523,6 +2529,93 @@ export function AdminPanel() {
     if (!selectedUser) return
     const reportText = buildMedicalReport(selectedUser, reportLanguage)
     setGeneratedReport(reportText)
+  }
+
+  const handleGenerateAiNarrative = async () => {
+    if (!selectedUser) return
+    setAiNarrativeLoading(true)
+    setAiNarrativeError("")
+
+    try {
+      const userAssessments = getUserAssessments(selectedUser)
+      const userSensory = getUserSensoryAssessments(selectedUser)
+      const userTcm = getUserTcmAssessments(selectedUser)
+      const user = users.find((entry) => entry.id === selectedUser)
+
+      const latestMoca = userAssessments
+        .filter((a) => a.assessment_type === "MOCA")
+        .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
+      const latestMmse = userAssessments
+        .filter((a) => a.assessment_type === "MMSE")
+        .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
+      const latestOlfactory = userSensory
+        .filter((a) => a.test_type === "olfactory")
+        .sort((a, b) => new Date(b.test_date || 0).getTime() - new Date(a.test_date || 0).getTime())[0]
+      const latestTcm = userTcm.sort(
+        (a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime(),
+      )[0]
+
+      const mmseClass = classifyMmse(latestMmse?.total_score ?? null)
+      const mocaClass = classifyMoca(latestMoca?.total_score ?? null)
+      const overallSeverity = chooseHigherSeverity(mmseClass, mocaClass)
+      const eegCorrelationText = getEegCorrelationText(overallSeverity, reportLanguage)
+
+      const pulse = latestTcm?.answers?.pulse_assessment
+      const tcmPulseSummary = pulse
+        ? `severity ${pulse.severity ?? 0}/10, clinical pulse score ${pulse.clinicalPulseScore ?? 0}/100`
+        : null
+
+      const sensorySummary = latestOlfactory
+        ? getOlfactoryScoreDisplay(latestOlfactory, reportLanguage, "Not provided")
+        : null
+
+      const payload = {
+        language: reportLanguage,
+        patientName: user ? getUserDisplayName(user) : null,
+        mmseScore: latestMmse?.total_score ?? null,
+        mmseClass,
+        mocaScore: latestMoca?.total_score ?? null,
+        mocaClass,
+        overallSeverity,
+        eegCorrelationText,
+        tcmConstitution: latestTcm?.primary_constitution ?? null,
+        tcmConstitutionLabel: latestTcm?.primary_constitution
+          ? getConstitutionLabelForLanguage(latestTcm.primary_constitution, reportLanguage)
+          : null,
+        tcmPulseSummary,
+        sensorySummary,
+        tongueImageUrl: latestTcm?.answers?.tongue_image_url ?? null,
+        faceImageUrl: latestTcm?.answers?.face_image_url ?? null,
+      }
+
+      const res = await fetch("/api/generate-report-narrative", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        throw new Error(`Request failed with status ${res.status}`)
+      }
+
+      const data = (await res.json()) as { narrative?: string; error?: string }
+      if (data.error || !data.narrative) {
+        throw new Error(data.error || "No narrative returned")
+      }
+
+      setAiNarrative(data.narrative)
+    } catch (error) {
+      console.log("[v0] handleGenerateAiNarrative error:", error instanceof Error ? error.message : error)
+      setAiNarrativeError(
+        localizeText("Could not generate the AI narrative. Please try again.", {
+          zh: "无法生成 AI 叙述，请重试。",
+          yue: "無法生成 AI 敘述，請重試。",
+          fr: "Impossible de generer le compte rendu IA. Veuillez reessayer.",
+        }),
+      )
+    } finally {
+      setAiNarrativeLoading(false)
+    }
   }
 
   const handleDownloadReport = async () => {
@@ -4228,6 +4321,59 @@ export function AdminPanel() {
                             <Printer className="mr-2 h-4 w-4" />
                             {localizeText("Print", { zh: "打印", yue: "列印", fr: "Imprimer" })}
                           </Button>
+                        </div>
+
+                        <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50/60 p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <p className="flex items-center gap-2 text-sm font-semibold text-violet-900">
+                                <Sparkles className="h-4 w-4" />
+                                {localizeText("AI clinical narrative", { zh: "AI 临床叙述", yue: "AI 臨床敘述", fr: "Compte rendu clinique IA" })}
+                              </p>
+                              <p className="mt-1 text-xs text-violet-700/80">
+                                {localizeText(
+                                  "Generates a polished, professional summary from the patient's scores and TCM images. Scores, classifications and the EEG statement stay locked; the AI only writes the prose. Review and edit before finalizing.",
+                                  {
+                                    zh: "根据患者评分和中医图像生成专业的总结。评分、分类和脑电图陈述保持锁定，AI 仅撰写叙述文字。请在定稿前审阅并编辑。",
+                                    yue: "根據患者評分同中醫圖像生成專業總結。評分、分類同腦電圖陳述保持鎖定，AI 只撰寫敘述文字。請喺定稿前審閱並編輯。",
+                                    fr: "Genere une synthese professionnelle a partir des scores du patient et des images MTC. Les scores, classifications et l'enonce EEG restent verrouilles ; l'IA redige uniquement le texte. Verifiez et modifiez avant de finaliser.",
+                                  },
+                                )}
+                              </p>
+                            </div>
+                            <Button
+                              onClick={handleGenerateAiNarrative}
+                              disabled={!selectedUser || aiNarrativeLoading}
+                              className="bg-violet-600 text-white hover:bg-violet-700"
+                            >
+                              <Sparkles className="mr-2 h-4 w-4" />
+                              {aiNarrativeLoading
+                                ? localizeText("Generating...", { zh: "生成中…", yue: "生成中…", fr: "Generation..." })
+                                : localizeText("Generate with AI", { zh: "用 AI 生成", yue: "用 AI 生成", fr: "Generer avec l'IA" })}
+                            </Button>
+                          </div>
+
+                          {aiNarrativeError && (
+                            <p className="mt-3 text-xs font-medium text-rose-600">{aiNarrativeError}</p>
+                          )}
+
+                          {(aiNarrative || aiNarrativeLoading) && (
+                            <div className="mt-3">
+                              <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-violet-700">
+                                {localizeText("Editable narrative", { zh: "可编辑叙述", yue: "可編輯敘述", fr: "Compte rendu modifiable" })}
+                              </label>
+                              <AssessmentTextarea
+                                value={aiNarrative}
+                                onChange={(e) => setAiNarrative(e.target.value)}
+                                placeholder={localizeText("The AI narrative will appear here for review and editing.", {
+                                  zh: "AI 叙述将显示在此处供审阅和编辑。",
+                                  yue: "AI 敘述將顯示喺呢度供審閱同編輯。",
+                                  fr: "Le compte rendu IA apparaitra ici pour revision et modification.",
+                                })}
+                                className="min-h-40 bg-white text-sm leading-6"
+                              />
+                            </div>
+                          )}
                         </div>
 
                         <div className="mt-4 flex flex-wrap gap-2">
