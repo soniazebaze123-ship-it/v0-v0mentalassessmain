@@ -1,3 +1,87 @@
+export type SectionKey = "cognition" | "tcm" | "sensory"
+export type SectionStatusValue = "completed" | "in_progress" | "missing"
+
+export interface SectionStatus {
+  status: SectionStatusValue
+  missingItems: string[]
+  lastUpdated: string | null
+}
+
+export type SectionStatusMap = Record<SectionKey, SectionStatus>
+
+function mostRecent(dates: Array<string | null | undefined>): string | null {
+  const valid = dates
+    .filter((d): d is string => !!d)
+    .map((d) => ({ raw: d, time: new Date(d).getTime() }))
+    .filter((d) => Number.isFinite(d.time))
+    .sort((a, b) => b.time - a.time)
+  return valid.length > 0 ? valid[0].raw : null
+}
+
+function deriveStatus(presentCount: number, requiredCount: number): SectionStatusValue {
+  if (presentCount >= requiredCount && requiredCount > 0) return "completed"
+  if (presentCount > 0) return "in_progress"
+  return "missing"
+}
+
+/**
+ * Compute per-section status (Cognition, TCM, Sensory) for a single patient.
+ * EEG / blood markers are intentionally excluded here and treated as optional follow-up.
+ */
+export function computeSectionStatus(
+  userId: string,
+  assessments: any[] = [],
+  sensoryAssessments: any[] = [],
+  tcmAssessments: any[] = [],
+): SectionStatusMap {
+  // ----- Cognition: requires both MOCA and MMSE -----
+  const userCognition = assessments.filter((a) => a.user_id === userId)
+  const hasMoca = userCognition.some((a) => a.assessment_type === "MOCA")
+  const hasMmse = userCognition.some((a) => a.assessment_type === "MMSE")
+  const cognitionMissing: string[] = []
+  if (!hasMoca) cognitionMissing.push("MoCA")
+  if (!hasMmse) cognitionMissing.push("MMSE")
+  const cognition: SectionStatus = {
+    status: deriveStatus([hasMoca, hasMmse].filter(Boolean).length, 2),
+    missingItems: cognitionMissing,
+    lastUpdated: mostRecent(userCognition.map((a) => a.completed_at)),
+  }
+
+  // ----- TCM: requires a completed TCM / pulse assessment -----
+  const userTcm = tcmAssessments.filter((t) => t.user_id === userId)
+  const tcm: SectionStatus = {
+    status: deriveStatus(userTcm.length > 0 ? 1 : 0, 1),
+    missingItems: userTcm.length > 0 ? [] : ["TCM constitution & pulse"],
+    lastUpdated: mostRecent(userTcm.map((t) => t.completed_at)),
+  }
+
+  // ----- Sensory: requires visual, auditory and olfactory screenings -----
+  const userSensory = sensoryAssessments.filter((s) => s.user_id === userId)
+  const requiredSensory: Array<{ key: string; label: string }> = [
+    { key: "visual", label: "Visual" },
+    { key: "auditory", label: "Auditory" },
+    { key: "olfactory", label: "Olfactory" },
+  ]
+  const sensoryMissing = requiredSensory
+    .filter((r) => !userSensory.some((s) => s.test_type === r.key))
+    .map((r) => r.label)
+  const sensory: SectionStatus = {
+    status: deriveStatus(requiredSensory.length - sensoryMissing.length, requiredSensory.length),
+    missingItems: sensoryMissing,
+    lastUpdated: mostRecent(userSensory.map((s) => s.test_date)),
+  }
+
+  return { cognition, tcm, sensory }
+}
+
+/**
+ * Returns true when any required section for the patient is missing or only partially complete.
+ */
+export function hasAnyMissingRequired(statuses: SectionStatusMap | null | undefined): boolean {
+  if (!statuses) return false
+  return Object.values(statuses).some((s) => s && s.status !== "completed")
+}
+
 export function isHighRisk(userId: string, assessments: any[]) {
   const userAssessments = assessments.filter((a) => a.user_id === userId)
   if (!userAssessments || userAssessments.length === 0) return false
@@ -266,3 +350,17 @@ export function getTrajectoryWorkflowData(assessments: Assessment[]): Trajectory
     }
   })
 }
+
+const adminDataUtils = {
+  computeSectionStatus,
+  hasAnyMissingRequired,
+  isHighRisk,
+  filterUsers,
+  calculateAverageScores,
+  getScoreDistribution,
+  getScoreTrends,
+  getPatientTrajectories,
+  getTrajectoryWorkflowData,
+}
+
+export default adminDataUtils
