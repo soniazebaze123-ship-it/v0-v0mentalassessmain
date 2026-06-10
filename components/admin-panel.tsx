@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { AssessmentTextarea } from "@/components/ui/assessment-textarea"
 import { supabase } from "@/lib/supabase"
-import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp, Printer, Sparkles } from "lucide-react"
+import { Users, FileText, BarChart3, Download, Eye, ImageIcon, Clock, LogOut, TrendingUp, Printer, Sparkles, Brain } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 
 // Add imports for new chart components and data utilities
@@ -387,7 +387,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cityProvince: "城市/省份",
     hospital: "醫院",
     eegNote: "腦電圖報告",
-    eegInProcess: "仍在處理中",
+    eegInProcess: "仍在��理中",
     mmseDesignScores: "MMSE重建設計分項",
     unknown: "未提供",
   },
@@ -747,12 +747,12 @@ const buildAutoFinalSummary = (
 
   const sensoryText = (() => {
     if (!latestOlfactory) return language === "zh-CN" ? "感觉评估未提供。" : language === "zh-HK" ? "感官評估未提供。" : language === "fr" ? "Evaluation sensorielle non renseignee." : "Sensory assessment not provided."
-    const olf = getOlfactoryScoreDisplay(latestOlfactory, language, language === "zh-CN" ? "未提供" : language === "zh-HK" ? "未提供" : language === "fr" ? "Non renseigne" : "Not provided")
+    const olf = getOlfactoryScoreDisplay(latestOlfactory, language, language === "zh-CN" ? "��提供" : language === "zh-HK" ? "未提供" : language === "fr" ? "Non renseigne" : "Not provided")
     return language === "zh-CN" ? `感觉评估：${olf}` : language === "zh-HK" ? `感官評估：${olf}` : language === "fr" ? `Evaluation sensorielle: ${olf}` : `Sensory assessment: ${olf}`
   })()
 
   if (language === "zh-CN") {
-    return `患者的认知筛查结果：MMSE ${mmseScore ?? "未提供"} (${mmseClass})，MoCA ${mocaScore ?? "未提供"} (${mocaClass})。综合评估为${overall}。${eegText} ${tcmText} ${sensoryText}`
+    return `患者的认知筛查结果：MMSE ${mmseScore ?? "未提供"} (${mmseClass})，MoCA ${mocaScore ?? "未提供"} (${mocaClass})���综合评估为${overall}。${eegText} ${tcmText} ${sensoryText}`
   }
   if (language === "zh-HK") {
     return `患者的認知篩查結果：MMSE ${mmseScore ?? "未提供"} (${mmseClass})，MoCA ${mocaScore ?? "未提供"} (${mocaClass})。綜合評估為${overall}。${eegText} ${tcmText} ${sensoryText}`
@@ -2566,7 +2566,7 @@ export function AdminPanel() {
       setWorkflowMessage(
         localizeText("Could not save TCM assessment results.", {
           zh: "无法保存中医评估结果。",
-          yue: "無法保存中醫評估結果。",
+          yue: "無法保���中醫評估結果。",
           fr: "Impossible d'enregistrer les resultats d'evaluation MTC.",
         }),
       )
@@ -2747,32 +2747,52 @@ export function AdminPanel() {
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-          <h1 className="text-3xl font-bold text-center sm:text-left">{t("admin.title")}</h1>
-          <div className="flex flex-wrap justify-center sm:justify-end gap-2">
-            <Button onClick={() => setViewingProgressTracker(true)} variant="outline">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Patient Progress
-            </Button>
-            <Button onClick={() => setViewingFiles(!viewingFiles)} variant="outline">
-              <Eye className="w-4 h-4 mr-2" />
-              {viewingFiles ? t("admin.view_assessments") : t("admin.view_files")}
-            </Button>
-            <Button onClick={exportData} className="flex items-center space-x-2">
-              <Download className="w-4 h-4" />
-              <span>{t("admin.export_csv")}</span>
-            </Button>
-            <Button onClick={exportAllTcmResults} variant="outline" className="flex items-center space-x-2 bg-transparent">
-              <Download className="w-4 h-4" />
-              <span>{localizeText("Export TCM (all builds)", { zh: "导出中医（全部版本）", yue: "導出中醫（全部版本）", fr: "Exporter MTC (toutes versions)" })}</span>
-            </Button>
-            <ThemeToggle />
-            <Button onClick={handleLogout} variant="outline" className="flex items-center space-x-2 bg-transparent">
-              <LogOut className="w-4 h-4" />
-              <span>{t("common.logout")}</span>
-            </Button>
+        <header className="mb-8 rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-600 text-white">
+                <Brain className="h-6 w-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold leading-tight tracking-tight text-gray-900">{t("admin.title")}</h1>
+                <p className="text-sm text-gray-500">
+                  {localizeText("Cognitive assessment management", {
+                    zh: "认知评估管理",
+                    yue: "認知評估管理",
+                    fr: "Gestion des évaluations cognitives",
+                  })}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              <Button onClick={() => setViewingProgressTracker(true)} variant="outline" size="sm">
+                <TrendingUp className="mr-2 h-4 w-4" />
+                Patient Progress
+              </Button>
+              <Button onClick={() => setViewingFiles(!viewingFiles)} variant="outline" size="sm">
+                <Eye className="mr-2 h-4 w-4" />
+                {viewingFiles ? t("admin.view_assessments") : t("admin.view_files")}
+              </Button>
+              <Button onClick={exportData} size="sm">
+                <Download className="mr-2 h-4 w-4" />
+                {t("admin.export_csv")}
+              </Button>
+              <Button onClick={exportAllTcmResults} variant="outline" size="sm" className="bg-transparent">
+                <Download className="mr-2 h-4 w-4" />
+                {localizeText("Export TCM (all builds)", { zh: "导出中医（全部版本）", yue: "導出中醫（全部版本）", fr: "Exporter MTC (toutes versions)" })}
+              </Button>
+
+              <div className="mx-1 hidden h-6 w-px bg-gray-200 lg:block" aria-hidden="true" />
+
+              <ThemeToggle />
+              <Button onClick={handleLogout} variant="outline" size="sm" className="bg-transparent">
+                <LogOut className="mr-2 h-4 w-4" />
+                {t("common.logout")}
+              </Button>
+            </div>
           </div>
-        </div>
+        </header>
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-6 mb-8">
