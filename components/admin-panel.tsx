@@ -133,6 +133,10 @@ export function AdminPanel() {
   const [sectionStatuses, setSectionStatuses] = useState<Record<string, any> | null>(null)
   const [adminRemarks, setAdminRemarks] = useState<Record<string, string>>({})
   const [localExemptFlags, setLocalExemptFlags] = useState<Record<string, boolean>>({})
+  const [remarkSaveState, setRemarkSaveState] = useState<Record<string, "idle" | "saving" | "saved" | "pending">>({})
+  const [activeReminders, setActiveReminders] = useState<any[]>([])
+
+  const SECTION_KEYS = ["cognition", "tcm", "sensory"]
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -145,22 +149,52 @@ export function AdminPanel() {
     const statuses = adminDataUtils.computeSectionStatus(selectedUser, assessments, sensoryAssessments, tcmAssessments)
     setSectionStatuses(statuses)
 
-    // load any locally saved remarks
-    const keys = ["cognition", "tcm", "sensory"]
+    // Seed from localStorage first (instant), then reconcile with Supabase.
     const remarks: Record<string, string> = {}
-    keys.forEach((k) => {
-      const key = `adminRemark:${selectedUser}:${k}`
-      const v = typeof window !== "undefined" ? localStorage.getItem(key) : null
-      if (v) remarks[k] = v
+    const exemptFlags: Record<string, boolean> = {}
+    SECTION_KEYS.forEach((k) => {
+      const localNote = typeof window !== "undefined" ? localStorage.getItem(`adminRemark:${selectedUser}:${k}`) : null
+      if (localNote) remarks[k] = localNote
+      exemptFlags[k] = typeof window !== "undefined" ? !!localStorage.getItem(`adminExempt:${selectedUser}:${k}`) : false
     })
     setAdminRemarks(remarks)
-
-    const exemptFlags: Record<string, boolean> = {}
-    keys.forEach((k) => {
-      const key = `adminExempt:${selectedUser}:${k}`
-      exemptFlags[k] = typeof window !== "undefined" ? !!localStorage.getItem(key) : false
-    })
     setLocalExemptFlags(exemptFlags)
+    setRemarkSaveState({})
+
+    // Load persisted notes + reminders from Supabase (source of truth)
+    ;(async () => {
+      try {
+        const { data: notes } = await supabase
+          .from("admin_notes")
+          .select("section, note, exempt")
+          .eq("user_id", selectedUser)
+        if (notes) {
+          setAdminRemarks((prev) => {
+            const next = { ...prev }
+            notes.forEach((n: any) => {
+              next[n.section] = n.note ?? ""
+            })
+            return next
+          })
+          setLocalExemptFlags((prev) => {
+            const next = { ...prev }
+            notes.forEach((n: any) => {
+              next[n.section] = !!n.exempt
+            })
+            return next
+          })
+        }
+
+        const { data: reminders } = await supabase
+          .from("admin_reminders")
+          .select("*")
+          .eq("user_id", selectedUser)
+          .eq("status", "open")
+        setActiveReminders(reminders || [])
+      } catch (err) {
+        console.warn("[v0] Failed to load admin notes/reminders from Supabase:", err)
+      }
+    })()
   }, [selectedUser, assessments, sensoryAssessments, tcmAssessments])
 
   const handleLogin = async () => {
@@ -413,35 +447,102 @@ export function AdminPanel() {
   const saveAdminRemark = async (section: string, text: string) => {
     if (!selectedUser) return
     setAdminRemarks((prev) => ({ ...prev, [section]: text }))
+    setRemarkSaveState((prev) => ({ ...prev, [section]: "saving" }))
     const storageKey = `adminRemark:${selectedUser}:${section}`
-    try {
-      if (typeof window !== "undefined") localStorage.setItem(storageKey, text)
+    if (typeof window !== "undefined") localStorage.setItem(storageKey, text)
 
-      // Attempt to persist to Supabase admin_notes table (best-effort)
-      const { data, error } = await supabase.from("admin_notes").upsert({
-        user_id: selectedUser,
-        section,
-        note: text,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: ["user_id", "section"] })
+    try {
+      const { error } = await supabase.from("admin_notes").upsert(
+        {
+          user_id: selectedUser,
+          section,
+          note: text,
+          exempt: !!localExemptFlags[section],
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,section" },
+      )
 
       if (error) {
-        // leave in localStorage and mark as pending
-        console.warn("admin note save failed, saved locally:", error)
+        console.warn("[v0] admin note save failed, kept locally (pending):", error)
+        setRemarkSaveState((prev) => ({ ...prev, [section]: "pending" }))
         return
       }
-      // optionally remove local pending marker
-      return
+      setRemarkSaveState((prev) => ({ ...prev, [section]: "saved" }))
     } catch (err) {
-      console.warn("Error saving admin remark:", err)
+      console.warn("[v0] Error saving admin remark:", err)
+      setRemarkSaveState((prev) => ({ ...prev, [section]: "pending" }))
     }
   }
 
-  const markExempt = (section: string) => {
+  const markExempt = async (section: string) => {
     if (!selectedUser) return
+    const newValue = !localExemptFlags[section]
+    setLocalExemptFlags((prev) => ({ ...prev, [section]: newValue }))
     const key = `adminExempt:${selectedUser}:${section}`
-    if (typeof window !== "undefined") localStorage.setItem(key, "1")
-    setLocalExemptFlags((prev) => ({ ...prev, [section]: true }))
+    if (typeof window !== "undefined") {
+      if (newValue) localStorage.setItem(key, "1")
+      else localStorage.removeItem(key)
+    }
+    try {
+      await supabase.from("admin_notes").upsert(
+        {
+          user_id: selectedUser,
+          section,
+          note: adminRemarks[section] || "",
+          exempt: newValue,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,section" },
+      )
+    } catch (err) {
+      console.warn("[v0] Error saving exempt flag:", err)
+    }
+  }
+
+  // Create reminders for every missing required section of the current patient.
+  const createMissingExamReminders = async () => {
+    if (!selectedUser || !sectionStatuses) return
+    const missingSections = SECTION_KEYS.filter(
+      (k) => sectionStatuses[k] && sectionStatuses[k].status !== "completed" && !localExemptFlags[k],
+    )
+    if (missingSections.length === 0) return
+
+    const rows = missingSections.map((section) => ({
+      user_id: selectedUser,
+      section,
+      reminder_type: "missing_exam",
+      message: `Missing: ${(sectionStatuses[section].missingItems || []).join(", ") || section}`,
+      status: "open",
+    }))
+
+    try {
+      const { error } = await supabase.from("admin_reminders").insert(rows)
+      if (error) {
+        console.warn("[v0] Failed to create reminders:", error)
+        return
+      }
+      const { data: reminders } = await supabase
+        .from("admin_reminders")
+        .select("*")
+        .eq("user_id", selectedUser)
+        .eq("status", "open")
+      setActiveReminders(reminders || [])
+    } catch (err) {
+      console.warn("[v0] Error creating reminders:", err)
+    }
+  }
+
+  const resolveReminder = async (reminderId: string) => {
+    try {
+      await supabase
+        .from("admin_reminders")
+        .update({ status: "resolved", resolved_at: new Date().toISOString() })
+        .eq("id", reminderId)
+      setActiveReminders((prev) => prev.filter((r) => r.id !== reminderId))
+    } catch (err) {
+      console.warn("[v0] Error resolving reminder:", err)
+    }
   }
 
   // Inside the `AdminPanel` component, after `averageScores` calculation, add the following data preparations:
@@ -700,17 +801,34 @@ export function AdminPanel() {
                     <div className="space-y-4">
                       {/* Missing exams banner */}
                       {sectionStatuses && adminDataUtils.hasAnyMissingRequired(sectionStatuses) && (
-                        <div className="p-3 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-between">
+                        <div className="p-3 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-between flex-wrap gap-2">
                           <div>
                             <p className="font-semibold text-rose-700">Missing required exams</p>
                             <p className="text-sm text-rose-600">Some required sections are missing for this patient. Review and complete the exams.</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Button size="sm" onClick={() => { /* placeholder: trigger scheduling flow */ }} variant="outline">Schedule</Button>
-                            <Button size="sm" onClick={() => { /* placeholder: bulk remind */ }}>
-                              Remind
+                            <Button size="sm" onClick={createMissingExamReminders}>
+                              Create reminders
                             </Button>
                           </div>
+                        </div>
+                      )}
+
+                      {/* Active reminders (pending follow-up) */}
+                      {activeReminders.length > 0 && (
+                        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-2">
+                          <p className="font-semibold text-amber-800">Pending follow-up reminders</p>
+                          {activeReminders.map((r) => (
+                            <div key={r.id} className="flex items-center justify-between text-sm gap-2">
+                              <span className="text-amber-800">
+                                <span className="capitalize font-medium">{r.section}</span>
+                                {r.message ? ` — ${r.message}` : ""}
+                              </span>
+                              <Button size="sm" variant="outline" onClick={() => resolveReminder(r.id)}>
+                                Mark done
+                              </Button>
+                            </div>
+                          ))}
                         </div>
                       )}
 
@@ -745,9 +863,24 @@ export function AdminPanel() {
                                   placeholder={`Add a remark for ${section}`}
                                   rows={2}
                                 />
-                                <div className="flex gap-2 mt-2">
+                                <div className="flex items-center gap-2 mt-2 flex-wrap">
                                   <Button size="sm" onClick={() => saveAdminRemark(section, adminRemarks[section] || "")}>Save</Button>
-                                  <Button size="sm" variant="outline" onClick={() => markExempt(section)}>Mark Exempt</Button>
+                                  <Button
+                                    size="sm"
+                                    variant={localExemptFlags[section] ? "default" : "outline"}
+                                    onClick={() => markExempt(section)}
+                                  >
+                                    {localExemptFlags[section] ? "Exempt ✓" : "Mark Exempt"}
+                                  </Button>
+                                  {remarkSaveState[section] === "saving" && (
+                                    <span className="text-xs text-slate-500">Saving…</span>
+                                  )}
+                                  {remarkSaveState[section] === "saved" && (
+                                    <span className="text-xs text-emerald-600">Saved</span>
+                                  )}
+                                  {remarkSaveState[section] === "pending" && (
+                                    <span className="text-xs text-amber-600">Saved locally (pending sync)</span>
+                                  )}
                                 </div>
                               </div>
                             </div>
