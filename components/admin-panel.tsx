@@ -1993,7 +1993,7 @@ export function AdminPanel() {
     if (riskFlags >= 2) {
       return {
         key: "high" as const,
-        label: localizeText("High risk", { zh: "高风险", yue: "高風險", fr: "Risque eleve" }),
+        label: localizeText("High risk", { zh: "高风险", yue: "高���險", fr: "Risque eleve" }),
       }
     }
     if (riskFlags === 1) {
@@ -2446,7 +2446,6 @@ export function AdminPanel() {
         <div class="grid">
           <div class="field"><div class="label">${escapeHtml(eegStatusLabel)}</div><div class="value">${escapeHtml(neuroStatusLabel)}</div></div>
         </div>
-        <div class="textarea"><strong>${escapeHtml(eegSummaryLabel)}:</strong> ${escapeHtml(eegSummary)}</div>
         ${aiSectionText ? `<div class="textarea" style="white-space:pre-line;">${escapeHtml(aiSectionText)}</div>` : ""}
       </div>
 
@@ -2554,7 +2553,6 @@ export function AdminPanel() {
       "",
       labels.eegSection,
       `${eegStatusLabel}: ${neuroStatusLabel}`,
-      `${eegSummaryLabel}: ${eegSummary}`,
       ...(aiSectionText ? ["", aiSectionText] : []),
       "",
       labels.finalSummary,
