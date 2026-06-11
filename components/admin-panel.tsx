@@ -328,7 +328,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     treatmentPlan: "Treatment Plan",
     diagnosis: "TCM Diagnosis",
     tcmNeedsConfirmation: "A doctor need to confirm",
-    finalSummary: "Final Clinical Summary",
+    finalSummary: "Integrated Cognitive Assessment",
     reportDate: "Report Date",
     name: "Name",
     idNumber: "National ID",
@@ -353,7 +353,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     treatmentPlan: "治疗方案",
     diagnosis: "中医诊断",
     tcmNeedsConfirmation: "需由医生确认",
-    finalSummary: "临床总结",
+    finalSummary: "综合认知评估",
     reportDate: "报告日期",
     name: "姓名",
     idNumber: "身份证号",
@@ -378,7 +378,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     treatmentPlan: "治療方案",
     diagnosis: "中醫診斷",
     tcmNeedsConfirmation: "需由醫生確認",
-    finalSummary: "臨床總結",
+    finalSummary: "綜合認知評估",
     reportDate: "報告日期",
     name: "姓名",
     idNumber: "身份證號",
@@ -403,7 +403,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     treatmentPlan: "Plan therapeutique",
     diagnosis: "Diagnostic MTC",
     tcmNeedsConfirmation: "un medecin doit confirmer",
-    finalSummary: "Synthese clinique finale",
+    finalSummary: "Evaluation cognitive integree",
     reportDate: "Date du rapport",
     name: "Nom",
     idNumber: "Identifiant national",
@@ -600,7 +600,7 @@ const getDementiaRiskRecommendation = (
     if (riskLevel === "high")
       return "高风险：建议1-4周内转诊记忆门诊/神经科，完成全面认知评估、药物与共病评估，并同步启动家属照护与居家安全干预。"
     if (riskLevel === "moderate")
-      return "中风险：建议8-12周复评（MMSE/MoCA），强化睡眠、运动、血压血糖血脂管理及抑郁筛查；若出现功能下降，提前专科随访。"
+      return "中风险：建议8-12周复评（MMSE/MoCA），强化睡眠、运动、血压血糖血脂管理及抑郁筛查；若���现功能下降，提前专科随访。"
     return "低风险：建议6-12个月常规复筛，持续认知训练与社交活动，保持地中海式饮食、规律运动和睡眠管理。"
   }
   if (language === "zh-HK") {
@@ -2943,7 +2943,7 @@ export function AdminPanel() {
       }
       setWorkflowMessage(
         localizeText("Report status updated to", {
-          zh: "报告状态已更新为",
+          zh: "���告状态已更新为",
           yue: "報告���態已更新為",
           fr: "Le statut du rapport est passe a",
         }) + ` ${getReportStatusLabel(nextStatus)}.`,
@@ -3214,7 +3214,7 @@ export function AdminPanel() {
                       </div>
                       <div className="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
                         <span className="text-emerald-600">{stat.completed} {localizeText("done", { zh: "完成", yue: "完成", fr: "fini" })}</span>
-                        <span className="text-amber-600">{stat.in_progress} {localizeText("partial", { zh: "进行", yue: "進行", fr: "partiel" })}</span>
+                        <span className="text-amber-600">{stat.in_progress} {localizeText("partial", { zh: "进行", yue: "進���", fr: "partiel" })}</span>
                         <span className="text-rose-600">{stat.missing} {localizeText("missing", { zh: "缺失", yue: "缺失", fr: "manquant" })}</span>
                       </div>
                     </div>
@@ -3779,7 +3779,7 @@ export function AdminPanel() {
                               <p>
                                 {localizeText("Pulse severity", { zh: "脉象严重度", yue: "脈象嚴重度", fr: "Severite du pouls" })}: <span className="font-semibold">{assessment.answers.pulse_assessment.severity ?? 0}</span>
                                 {" • "}
-                                {localizeText("Pulse score", { zh: "脉象评分", yue: "脈象評分", fr: "Score du pouls" })}: <span className="font-semibold">{assessment.answers.pulse_assessment.clinicalPulseScore ?? 0}/100</span>
+                                {localizeText("Pulse score", { zh: "脉象评���", yue: "脈象評分", fr: "Score du pouls" })}: <span className="font-semibold">{assessment.answers.pulse_assessment.clinicalPulseScore ?? 0}/100</span>
                               </p>
                               {assessment.answers.pulse_assessment.selectedPulseIds && assessment.answers.pulse_assessment.selectedPulseIds.length > 0 && (
                                 <div className="mt-2 flex flex-wrap gap-2">
