@@ -16,6 +16,7 @@ interface NarrativePayload {
   mocaScore: number | null
   mocaClass: string
   overallSeverity: string
+  statusLabel: string
   eegCorrelationText: string
   tcmConstitution?: string | null
   tcmConstitutionLabel?: string | null
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
     `MMSE score: ${payload.mmseScore ?? "Not provided"} (classification: ${payload.mmseClass})`,
     `MoCA score: ${payload.mocaScore ?? "Not provided"} (classification: ${payload.mocaClass})`,
     `Overall cognitive severity classification (higher-severity rule applied): ${payload.overallSeverity}`,
-    `EEG correlation statement (must be quoted verbatim): "${payload.eegCorrelationText}"`,
+    `Neurophysiological correlation status (already determined, for context only — do NOT restate it as a heading): ${payload.statusLabel}`,
     payload.tcmConstitutionLabel
       ? `TCM primary constitution: ${payload.tcmConstitutionLabel}`
       : "TCM primary constitution: not specified",
@@ -65,28 +66,31 @@ export async function POST(req: Request) {
 
   const hasImages = Boolean(payload.tongueImageUrl || payload.faceImageUrl)
 
-  const systemPrompt = `You are a senior neurologist and cognitive medicine specialist writing a formal medical report for hospital documentation. ${LANGUAGE_INSTRUCTION[language]}
+  const systemPrompt = `You are a senior neurologist and cognitive medicine specialist writing the physician's interpretation for the "Neurophysiological Correlation Analysis" section of a formal hospital medical report. ${LANGUAGE_INSTRUCTION[language]}
 
-You are synthesising the patient's MMSE score, MoCA score, olfactory assessment, tongue assessment, facial analysis, demographic information, risk factors, and questionnaire responses into a structured physician report.
+You are synthesising the patient's MMSE score, MoCA score, olfactory assessment, tongue assessment, facial analysis, demographic information, risk factors, and questionnaire responses into the clinical narrative for this section.
 
 STRICT RULES:
-- The scores, classifications, overall severity, and the EEG correlation statement are pre-computed and clinically locked. Reproduce them EXACTLY. Never change a number, a classification word, or the EEG sentence.
-- Quote the provided EEG correlation statement verbatim within the EEG section.
-- The EEG Functional Correlation Status must be one of exactly: Normal, Mild Abnormality, Moderate Abnormality, or Severe Abnormality, and must be consistent with the locked overall cognitive severity classification.
-- Always make clear, in substance, that the EEG functional correlation is an estimated correlation derived from the cognitive scores and does NOT represent findings from an actual EEG examination.
+- The scores, classifications, and overall severity status are pre-computed and clinically locked. Reproduce them EXACTLY where you reference them. Never change a number or a classification word.
+- The correlation status (e.g. "Moderate Abnormality") is already printed elsewhere in the report; you may reference it in prose but do NOT output it as a separate status heading or line.
+- Do NOT include any disclaimer about EEG being an estimated correlation or "not a real EEG". Do not mention EEG hardware or actual electroencephalography at all. Write purely as a clinical interpretation of the cognitive and supporting findings.
 - Do not invent diagnoses, medications, or findings unsupported by the supplied data.
 - Write in concise, formal physician language suitable for hospital documentation.
 - Do NOT mention that the text was generated, do NOT reference AI, algorithms, machine learning, or model outputs, and do NOT use phrases such as "I am an AI".
-- Use PLAIN TEXT only. Do NOT use markdown, asterisks, bold markers, or any symbols around headings. Write each section heading on its own line exactly as titled (e.g. "EEG Functional Correlation Status"), followed by the paragraph on the next line.
+- Use PLAIN TEXT only. Do NOT use markdown, asterisks, bold markers, or any symbols around headings. Write each section heading on its own line exactly as titled, followed by its paragraph on the next line.
 ${hasImages ? "- TCM tongue and/or facial images are attached. Describe only clearly visible, clinically relevant observations (e.g. tongue body colour, coating, moisture, facial complexion) and relate them to the stated constitution. If a feature is not clearly visible, do not speculate." : ""}
 
-REQUIRED STRUCTURE — output exactly these four labelled sections, in order, each as a short formal paragraph:
-1. EEG Functional Correlation Status — state the status (Normal / Mild Abnormality / Moderate Abnormality / Severe Abnormality), quote the locked EEG correlation statement verbatim, and include the estimated-correlation caveat.
-2. Primary Clinical Impression — a concise diagnostic impression integrating cognitive, olfactory, and TCM findings.
-3. Clinical Interpretation — formal physician interpretation weaving together MMSE, MoCA, overall severity, olfactory/sensory findings, and TCM constitution${hasImages ? " informed by the attached tongue/face images" : ""}.
-4. Recommendations — evidence-based, actionable recommendations (further evaluation, follow-up cadence, lifestyle/risk-factor modification, referrals as appropriate).`
+REQUIRED STRUCTURE — output exactly these three labelled sections, in order, each as a short formal paragraph:
+Primary Clinical Impression
+(a concise diagnostic impression integrating cognitive, olfactory, and TCM findings, consistent with the locked severity status)
 
-  const textInstruction = `Generate the formal medical report using the following locked clinical facts. Use the exact four-section structure defined in your instructions.
+Clinical Interpretation
+(formal physician interpretation weaving together MMSE, MoCA, overall severity, olfactory/sensory findings, and TCM constitution${hasImages ? " informed by the attached tongue/face images" : ""})
+
+Recommendations
+(evidence-based, actionable recommendations: further evaluation, follow-up cadence, lifestyle/risk-factor modification, referrals as appropriate)`
+
+  const textInstruction = `Generate the physician's interpretation using the following locked clinical facts. Use the exact three-section structure defined in your instructions.
 
 ${lockedFacts}`
 

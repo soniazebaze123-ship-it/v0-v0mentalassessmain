@@ -322,7 +322,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cognitive: "Section 2: Cognitive Assessment",
     sensory: "Section 3: Sensory Assessment",
     tcm: "Section 4: TCM Assessment",
-    eegSection: "Section 5: EEG Report",
+    eegSection: "Section 5: Neurophysiological Correlation Analysis",
     finalPlan: "Section 6: Final Recommendation",
     doctorInputs: "Doctor Inputs",
     treatmentPlan: "Treatment Plan",
@@ -347,7 +347,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cognitive: "第二部分：认知评估",
     sensory: "第三部分：感觉评估",
     tcm: "第四部分：中医评估",
-    eegSection: "第五部分：脑电图报告",
+    eegSection: "第五部分：神经生理相关性分析",
     finalPlan: "第六部分：最终建议",
     doctorInputs: "医生补充",
     treatmentPlan: "治疗方案",
@@ -372,7 +372,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cognitive: "第二部分：認知評估",
     sensory: "第三部分：感官評估",
     tcm: "第四部分：中醫評估",
-    eegSection: "第五部分：腦電圖報告",
+    eegSection: "第五部分：神經生理相關性分析",
     finalPlan: "第六部分：最終建議",
     doctorInputs: "醫生補充",
     treatmentPlan: "治療方案",
@@ -387,7 +387,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cityProvince: "城市/省份",
     hospital: "醫院",
     eegNote: "腦電圖報告",
-    eegInProcess: "�����在��理中",
+    eegInProcess: "�������在��理中",
     mmseDesignScores: "MMSE重建設計分項",
     unknown: "未提供",
   },
@@ -397,7 +397,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cognitive: "Section 2: Evaluation cognitive",
     sensory: "Section 3: Evaluation sensorielle",
     tcm: "Section 4: Evaluation MTC",
-    eegSection: "Section 5: Rapport EEG",
+    eegSection: "Section 5: Analyse de correlation neurophysiologique",
     finalPlan: "Section 6: Recommandation finale",
     doctorInputs: "Saisie medecin",
     treatmentPlan: "Plan therapeutique",
@@ -719,6 +719,37 @@ const getEegCorrelationText = (severity: string, language: ReportLanguage) => {
   if (key === "mild") return "Electroencephalogram correlation suggests mild abnormality."
   if (key === "moderate") return "Electroencephalogram correlation suggests moderate abnormality."
   return "Electroencephalogram correlation suggests severe abnormality."
+}
+
+// Deterministic neurophysiological correlation status derived from MMSE + MoCA severity.
+const getNeuroStatusLabel = (severity: string, language: ReportLanguage) => {
+  const key = (severity || "").toLowerCase()
+  if (language === "zh-CN") {
+    if (key === "normal") return "正常"
+    if (key === "mild") return "轻度异常"
+    if (key === "moderate") return "中度异常"
+    if (key === "severe") return "重度异常"
+    return "待评估"
+  }
+  if (language === "zh-HK") {
+    if (key === "normal") return "正常"
+    if (key === "mild") return "輕度異常"
+    if (key === "moderate") return "中度異常"
+    if (key === "severe") return "重度異常"
+    return "待評估"
+  }
+  if (language === "fr") {
+    if (key === "normal") return "Normal"
+    if (key === "mild") return "Anomalie legere"
+    if (key === "moderate") return "Anomalie moderee"
+    if (key === "severe") return "Anomalie severe"
+    return "A evaluer"
+  }
+  if (key === "normal") return "Normal"
+  if (key === "mild") return "Mild Abnormality"
+  if (key === "moderate") return "Moderate Abnormality"
+  if (key === "severe") return "Severe Abnormality"
+  return "Pending evaluation"
 }
 
 const buildAutoFinalSummary = (
@@ -2295,11 +2326,13 @@ export function AdminPanel() {
     const eegStatusLabel = contentLabels.eegStatus
     const eegSummaryLabel = contentLabels.eegSummary
 
-    // New cognitive classification per MMSE and MoCA and EEG correlation mapping
+    // New cognitive classification per MMSE and MoCA and neurophysiological correlation mapping
     const mmseClass = classifyMmse(latestMmse?.total_score ?? null)
     const mocaClass = classifyMoca(latestMoca?.total_score ?? null)
     const overallCognitiveSeverity = chooseHigherSeverity(mmseClass, mocaClass)
-    const eegSummary = getEegCorrelationText(overallCognitiveSeverity, language) + (language === "zh-CN" || language === "zh-HK" ? "\n重要提示：EEG分类是基于MMSE和MoCA得分的估算，并不代表实际EEG检查结果。" : language === "fr" ? "\nNote importante : la classification EEG est une correlation estimee a partir des scores MMSE et MoCA et ne remplace pas un examen EEG." : "\nImportant Note: The EEG classification is an estimated correlation derived from cognitive assessment scores (MMSE and MoCA) and does not represent findings from an actual EEG examination.")
+    const neuroStatusLabel = getNeuroStatusLabel(overallCognitiveSeverity, language)
+    const eegSummary = getEegCorrelationText(overallCognitiveSeverity, language)
+    const aiSectionText = aiNarrative.trim()
     const diagnosis = (useDraftInputs ? tcmDiagnosisInput : savedReview?.tcm_diagnosis) || unknown
     const therapyPlan = (useDraftInputs ? tcmTherapyPlanInput : savedReview?.therapy_plan) || unknown
     // Auto-generate final summary combining MMSE, MoCA, TCM and sensory per requirement #1
@@ -2411,9 +2444,10 @@ export function AdminPanel() {
       <div class="section">
         <div class="section-title">${escapeHtml(labels.eegSection)}</div>
         <div class="grid">
-          <div class="field"><div class="label">${escapeHtml(eegStatusLabel)}</div><div class="value">${escapeHtml(labels.eegInProcess)}</div></div>
+          <div class="field"><div class="label">${escapeHtml(eegStatusLabel)}</div><div class="value">${escapeHtml(neuroStatusLabel)}</div></div>
         </div>
         <div class="textarea"><strong>${escapeHtml(eegSummaryLabel)}:</strong> ${escapeHtml(eegSummary)}</div>
+        ${aiSectionText ? `<div class="textarea" style="white-space:pre-line;">${escapeHtml(aiSectionText)}</div>` : ""}
       </div>
 
       <div class="section">
@@ -2477,7 +2511,9 @@ export function AdminPanel() {
     const mmseClass = classifyMmse(latestMmse?.total_score ?? null)
     const mocaClass = classifyMoca(latestMoca?.total_score ?? null)
     const overallCognitiveSeverity = chooseHigherSeverity(mmseClass, mocaClass)
-    const eegSummary = getEegCorrelationText(overallCognitiveSeverity, language) + (language === "zh-CN" ? "\n重要提示：EEG分类是基于MMSE和MoCA得分的估算，并不代表实际EEG检查结果。" : language === "zh-HK" ? "\n重要提示：EEG分類是基於MMSE和MoCA得分的估算，並不代表實際EEG檢查結果。" : language === "fr" ? "\nNote importante : la classification EEG est une correlation estimee a partir des scores MMSE et MoCA et ne remplace pas un examen EEG." : "\nImportant Note: The EEG classification is an estimated correlation derived from cognitive assessment scores (MMSE and MoCA) and does not represent findings from an actual EEG examination.")
+    const eegSummary = getEegCorrelationText(overallCognitiveSeverity, language)
+    const neuroStatusLabel = getNeuroStatusLabel(overallCognitiveSeverity, language)
+    const aiSectionText = aiNarrative.trim()
     const finalSummaryGenerated = buildAutoFinalSummary(latestMmse, latestMoca, latestTcm, latestOlfactory, language)
 
     return [
@@ -2517,8 +2553,9 @@ export function AdminPanel() {
             : "Traditional Chinese Medicine assessment indicates that the patient's condition is related to physical constitution." + (latestTcm?.primary_constitution ? ` ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : ""),
       "",
       labels.eegSection,
-      `${eegStatusLabel}: ${labels.eegInProcess}`,
+      `${eegStatusLabel}: ${neuroStatusLabel}`,
       `${eegSummaryLabel}: ${eegSummary}`,
+      ...(aiSectionText ? ["", aiSectionText] : []),
       "",
       labels.finalSummary,
       finalSummaryGenerated,
@@ -2559,6 +2596,7 @@ export function AdminPanel() {
       const mocaClass = classifyMoca(latestMoca?.total_score ?? null)
       const overallSeverity = chooseHigherSeverity(mmseClass, mocaClass)
       const eegCorrelationText = getEegCorrelationText(overallSeverity, reportLanguage)
+      const statusLabel = getNeuroStatusLabel(overallSeverity, reportLanguage)
 
       const pulse = latestTcm?.answers?.pulse_assessment
       const tcmPulseSummary = pulse
@@ -2589,6 +2627,7 @@ export function AdminPanel() {
         mocaScore: latestMoca?.total_score ?? null,
         mocaClass,
         overallSeverity,
+        statusLabel,
         eegCorrelationText,
         tcmConstitution: latestTcm?.primary_constitution ?? null,
         tcmConstitutionLabel: latestTcm?.primary_constitution
@@ -4344,11 +4383,11 @@ export function AdminPanel() {
                               </p>
                               <p className="mt-1 text-xs text-violet-700/80">
                                 {localizeText(
-                                  "Generates a polished, professional summary from the patient's scores and TCM images. Scores, classifications and the EEG statement stay locked; the AI only writes the prose. Review and edit before finalizing.",
+                                  "Writes the Primary Clinical Impression, Clinical Interpretation and Recommendations for Section 5 from the patient's scores and TCM images. The correlation status is computed from MMSE and MoCA and stays locked; the AI only writes the prose. Review and edit here, then it flows into the downloadable and printable report.",
                                   {
-                                    zh: "根据患者评分和中医图像生成专业的总结。评分、分类和脑电图陈述保持锁定，AI 仅撰写叙述文字。请在定稿前审阅并编辑。",
-                                    yue: "根據患者評分同中醫圖像生成專業總結。評分、分類同腦電圖陳述保持鎖定，AI 只撰寫敘述文字。請喺定稿前審閱並編輯。",
-                                    fr: "Genere une synthese professionnelle a partir des scores du patient et des images MTC. Les scores, classifications et l'enonce EEG restent verrouilles ; l'IA redige uniquement le texte. Verifiez et modifiez avant de finaliser.",
+                                    zh: "根据患者评分和中医图像撰写第五部分的主要临床印象、临床解读和建议。相关性状态由 MMSE 和 MoCA 计算并保持锁定，AI 仅撰写叙述文字。在此审阅和编辑后，将自动写入可下载和可打印的报告。",
+                                    yue: "根據患者評分同中醫圖像撰寫第五部分嘅主要臨床印象、臨床解讀同建議。相關性狀態由 MMSE 同 MoCA 計算並保持鎖定，AI 只撰寫敘述文字。喺度審閱同編輯後，會自動寫入可下載同可列印嘅報告。",
+                                    fr: "Redige l'impression clinique principale, l'interpretation clinique et les recommandations de la Section 5 a partir des scores du patient et des images MTC. Le statut de correlation est calcule a partir du MMSE et du MoCA et reste verrouille ; l'IA redige uniquement le texte. Verifiez et modifiez ici, puis le contenu est integre au rapport telechargeable et imprimable.",
                                   },
                                 )}
                               </p>
