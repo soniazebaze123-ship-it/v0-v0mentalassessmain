@@ -77,6 +77,7 @@ STRICT RULES:
 - Do not invent diagnoses, medications, or findings unsupported by the supplied data.
 - Write in concise, formal physician language suitable for hospital documentation.
 - Do NOT mention that the text was generated, do NOT reference AI, algorithms, machine learning, or model outputs, and do NOT use phrases such as "I am an AI".
+- Use PLAIN TEXT only. Do NOT use markdown, asterisks, bold markers, or any symbols around headings. Write each section heading on its own line exactly as titled (e.g. "EEG Functional Correlation Status"), followed by the paragraph on the next line.
 ${hasImages ? "- TCM tongue and/or facial images are attached. Describe only clearly visible, clinically relevant observations (e.g. tongue body colour, coating, moisture, facial complexion) and relate them to the stated constitution. If a feature is not clearly visible, do not speculate." : ""}
 
 REQUIRED STRUCTURE — output exactly these four labelled sections, in order, each as a short formal paragraph:
