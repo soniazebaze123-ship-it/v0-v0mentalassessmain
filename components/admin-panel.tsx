@@ -387,7 +387,7 @@ const REPORT_LABELS: Record<ReportLanguage, ReportLabels> = {
     cityProvince: "城市/省份",
     hospital: "醫院",
     eegNote: "腦電圖報告",
-    eegInProcess: "���在��理中",
+    eegInProcess: "�����在��理中",
     mmseDesignScores: "MMSE重建設計分項",
     unknown: "未提供",
   },
@@ -2569,9 +2569,21 @@ export function AdminPanel() {
         ? getOlfactoryScoreDisplay(latestOlfactory, reportLanguage, "Not provided")
         : null
 
+      let age: number | null = null
+      if (user?.date_of_birth) {
+        const dob = new Date(user.date_of_birth)
+        if (!Number.isNaN(dob.getTime())) {
+          const diff = Date.now() - dob.getTime()
+          const computed = Math.floor(diff / (365.25 * 24 * 3600 * 1000))
+          if (computed > 0 && computed < 130) age = computed
+        }
+      }
+
       const payload = {
         language: reportLanguage,
         patientName: user ? getUserDisplayName(user) : null,
+        age,
+        sex: user?.gender ?? null,
         mmseScore: latestMmse?.total_score ?? null,
         mmseClass,
         mocaScore: latestMoca?.total_score ?? null,
