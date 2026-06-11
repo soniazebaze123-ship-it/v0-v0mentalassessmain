@@ -485,8 +485,8 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     mocaTasks: "MoCA Tasks",
     mmseTasks: "MMSE Tasks",
     score: "Score",
-    eegStatus: "Status",
-    eegSummary: "Preliminary summary",
+    eegStatus: "EEG Status",
+    eegSummary: "Cognitive-Neurophysiological Interpretation",
   },
   "zh-CN": {
     cityProvinceValue: "广州 / 广东",
@@ -519,8 +519,8 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     mocaTasks: "MoCA 分项",
     mmseTasks: "MMSE 分项",
     score: "���数",
-    eegStatus: "状态",
-    eegSummary: "初步说明",
+    eegStatus: "EEG 状态",
+    eegSummary: "认知-神经生理解读",
   },
   "zh-HK": {
     cityProvinceValue: "廣州 / 廣東",
@@ -553,8 +553,8 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     mocaTasks: "MoCA 分項",
     mmseTasks: "MMSE 分項",
     score: "分數",
-    eegStatus: "狀態",
-    eegSummary: "初步說明",
+    eegStatus: "EEG 狀態",
+    eegSummary: "認知-神經生理解讀",
   },
   fr: {
     cityProvinceValue: "Guangzhou / Guangdong",
@@ -587,8 +587,8 @@ const REPORT_CONTENT_LABELS: Record<ReportLanguage, ReportContentLabels> = {
     mocaTasks: "Taches MoCA",
     mmseTasks: "Taches MMSE",
     score: "Score",
-    eegStatus: "Statut",
-    eegSummary: "Resume preliminaire",
+    eegStatus: "Statut EEG",
+    eegSummary: "Interpretation cognitivo-neurophysiologique",
   },
 }
 
@@ -1993,7 +1993,7 @@ export function AdminPanel() {
     if (riskFlags >= 2) {
       return {
         key: "high" as const,
-        label: localizeText("High risk", { zh: "高风险", yue: "高���險", fr: "Risque eleve" }),
+        label: localizeText("High risk", { zh: "高风险", yue: "高�����險", fr: "Risque eleve" }),
       }
     }
     if (riskFlags === 1) {
@@ -2446,7 +2446,7 @@ export function AdminPanel() {
         <div class="grid">
           <div class="field"><div class="label">${escapeHtml(eegStatusLabel)}</div><div class="value">${escapeHtml(neuroStatusLabel)}</div></div>
         </div>
-        ${aiSectionText ? `<div class="textarea" style="white-space:pre-line;">${escapeHtml(aiSectionText)}</div>` : ""}
+        ${aiSectionText ? `<div class="label" style="margin-top:8px;">${escapeHtml(eegSummaryLabel)}</div><div class="textarea" style="white-space:pre-line;">${escapeHtml(aiSectionText)}</div>` : ""}
       </div>
 
       <div class="section">
@@ -3885,7 +3885,7 @@ export function AdminPanel() {
                             <div className="flex items-center justify-between gap-3 flex-wrap">
                               <h3 className="text-lg font-semibold text-emerald-950">{localizeText("TCM Doctor Review Pack", { zh: "中医医生审核包", yue: "中醫醫生審核包", fr: "Pack de revue medecin MTC" })}</h3>
                               <Badge className="bg-emerald-600 text-white hover:bg-emerald-600">
-                                {localizeText("Doctor workspace", { zh: "医生工作区", yue: "醫生工作區", fr: "Espace medecin" })}
+                                {localizeText("Doctor workspace", { zh: "医生工���区", yue: "醫生工作區", fr: "Espace medecin" })}
                               </Badge>
                             </div>
                             <p className="mt-2 text-sm text-slate-600">
