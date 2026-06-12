@@ -236,6 +236,76 @@ const createChinesePdfFromCanvas = async (reportText: string) => {
   return await pdfDoc.save()
 }
 
+// Render a full styled HTML report string into a multi-page A4 PDF (Uint8Array).
+// Uses an off-screen iframe so the report's own CSS is applied, then captures
+// it with html2canvas and paginates the bitmap across A4 pages via jsPDF.
+const createPdfFromReportHtml = async (reportHtml: string) => {
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import("html2canvas"),
+    import("jspdf"),
+  ])
+
+  const iframe = document.createElement("iframe")
+  iframe.style.position = "fixed"
+  iframe.style.left = "-10000px"
+  iframe.style.top = "0"
+  iframe.style.width = "794px"
+  iframe.style.height = "1123px"
+  iframe.style.border = "0"
+  document.body.appendChild(iframe)
+
+  try {
+    const doc = iframe.contentDocument
+    if (!doc) throw new Error("Failed to access iframe document")
+    doc.open()
+    doc.write(reportHtml)
+    doc.close()
+
+    // Wait for fonts and layout to settle before capture.
+    await new Promise((resolve) => setTimeout(resolve, 350))
+    if (doc.fonts && doc.fonts.ready) {
+      try {
+        await doc.fonts.ready
+      } catch {
+        // ignore font loading errors, continue with capture
+      }
+    }
+
+    const target = (doc.querySelector(".page") as HTMLElement) || doc.body
+    const canvas = await html2canvas(target, {
+      scale: 2,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      windowWidth: target.scrollWidth,
+      windowHeight: target.scrollHeight,
+    })
+
+    const pdf = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" })
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+
+    const imgWidth = pageWidth
+    const imgHeight = (canvas.height * imgWidth) / canvas.width
+    const imgData = canvas.toDataURL("image/png")
+
+    let heightLeft = imgHeight
+    let position = 0
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight
+
+    while (heightLeft > 0) {
+      position -= pageHeight
+      pdf.addPage()
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+    }
+
+    return pdf.output("arraybuffer")
+  } finally {
+    document.body.removeChild(iframe)
+  }
+}
+
 const createMedicalReportPdf = async (reportText: string, language: ReportLanguage) => {
   if (language === "zh-CN" || language === "zh-HK") {
     return await createChinesePdfFromCanvas(reportText)
@@ -600,7 +670,7 @@ const getDementiaRiskRecommendation = (
     if (riskLevel === "high")
       return "高风险：建议1-4周内转诊记忆门诊/神经科，完成全面认知评估、药物与共病评估，并同步启动家属照护与居家安全干预。"
     if (riskLevel === "moderate")
-      return "中风险：建议8-12周复评（MMSE/MoCA），强化睡眠、运动、血压血糖血脂管理及抑郁筛查；若���现功能下降，提前专科随访。"
+      return "中风险：建议8-12周复评（MMSE/MoCA），强化睡眠、运动、血压血糖血脂��理及抑郁筛查；若���现功能下降，提前专科随访。"
     return "低风险：建议6-12个月常规复筛，持续认知训练与社交活动，保持地中海式饮食、规律运动和睡眠管理。"
   }
   if (language === "zh-HK") {
@@ -2321,8 +2391,10 @@ export function AdminPanel() {
     const riskClass = riskLevel === "high" ? "risk-high" : riskLevel === "moderate" ? "risk-mid" : "risk-low"
     const riskLabel = riskLevel === "high" ? contentLabels.riskHigh : riskLevel === "moderate" ? contentLabels.riskModerate : contentLabels.riskLow
 
-    const doctorName = (useDraftInputs ? doctorNameInput : savedReview?.doctor_name) || unknown
-    const reviewDate = (useDraftInputs ? reviewDateInput : savedReview?.review_date) || unknown
+    // Physician name is intentionally left blank (no "unknown" placeholder) so it can be signed by hand.
+    const doctorName = (useDraftInputs ? doctorNameInput : savedReview?.doctor_name) || ""
+    // Review date is auto-populated with the date the report is generated/printed when none is set.
+    const reviewDate = (useDraftInputs ? reviewDateInput : savedReview?.review_date) || new Date().toLocaleDateString()
     const eegStatusLabel = contentLabels.eegStatus
     const eegSummaryLabel = contentLabels.eegSummary
 
@@ -2673,11 +2745,12 @@ export function AdminPanel() {
     const filePrefix = getUserDisplayName(user).replace(/\s+/g, "_")
     const fileTimestamp = new Date().toISOString().replace(/[:.]/g, "-")
     const reportHtml = buildMedicalReportHtml(selectedUser, reportLanguage)
-    const blob = new Blob([reportHtml], { type: "text/html;charset=utf-8" })
+    const pdfBytes = await createPdfFromReportHtml(reportHtml)
+    const blob = new Blob([pdfBytes], { type: "application/pdf" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
-    link.download = `MA_${filePrefix}_${reportLanguage}_onepage_${fileTimestamp}.html`
+    link.download = `MA_${filePrefix}_${reportLanguage}_onepage_${fileTimestamp}.pdf`
     link.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
