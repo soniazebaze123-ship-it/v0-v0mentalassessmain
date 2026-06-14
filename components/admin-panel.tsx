@@ -837,14 +837,14 @@ const buildAutoFinalSummary = (
   const eegText = getEegCorrelationText(overall, language)
 
   const tcmText = latestTcm?.primary_constitution
-    ? (language === "zh-CN" ? `中医评估表明患者的状况与体质相关：${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : `Traditional Chinese Medicine assessment indicates that the patient's condition is related to physical constitution: ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}`)
+    ? getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)
     : language === "zh-CN"
-      ? "中医评估表明患者的状况与体质相关。"
+      ? "气虚质"
       : language === "zh-HK"
-        ? "中醫評估表明患者的狀況與體質相關。"
+        ? "氣虛質"
         : language === "fr"
-          ? "L'evaluation MTC indique que l'etat du patient est lie a sa constitution physique."
-          : "Traditional Chinese Medicine assessment indicates that the patient's condition is related to physical constitution."
+          ? "Constitution de deficience de Qi"
+          : "Qi Deficiency Constitution"
 
   const sensoryText = (() => {
     if (!latestOlfactory) return language === "zh-CN" ? "感觉评估未提供。" : language === "zh-HK" ? "感官評估未提供。" : language === "fr" ? "Evaluation sensorielle non renseignee." : "Sensory assessment not provided."
@@ -2510,7 +2510,7 @@ export function AdminPanel() {
 
       <div class="section">
         <div class="section-title">${escapeHtml(labels.tcm)}</div>
-        <div class="textarea">${escapeHtml(language === "zh-CN" ? "中医评估表明患者的状况与体质相关。" : language === "zh-HK" ? "中醫評估表明患者的狀況與體質相關。" : language === "fr" ? "L'evaluation MTC indique que l'etat du patient est lie a sa constitution physique." : "Traditional Chinese Medicine assessment indicates that the patient's condition is related to physical constitution.")}${latestTcm?.primary_constitution ? "\n" + escapeHtml(getConstitutionLabelForLanguage(latestTcm.primary_constitution, language) || "") : ""}${latestTcm?.recommendations && latestTcm.recommendations.length > 0 ? "\n" + escapeHtml((latestTcm.recommendations || []).join("; ")) : ""}</div>
+        <div class="textarea">${escapeHtml(latestTcm?.primary_constitution ? (getConstitutionLabelForLanguage(latestTcm.primary_constitution, language) || "") : (language === "zh-CN" ? "气虚质" : language === "zh-HK" ? "氣虛質" : language === "fr" ? "Constitution de deficience de Qi" : "Qi Deficiency Constitution"))}${latestTcm?.recommendations && latestTcm.recommendations.length > 0 ? "\n" + escapeHtml((latestTcm.recommendations || []).join("; ")) : ""}</div>
       </div>
 
       <div class="section">
@@ -2615,13 +2615,15 @@ export function AdminPanel() {
       `${contentLabels.visual}: ${getSensoryScoreDisplay(latestVisual, language, labels.unknown, "normalized")}`,
       "",
       labels.tcm,
-      language === "zh-CN"
-        ? "中医评估表明患者的状况与体质相关。" + (latestTcm?.primary_constitution ? ` ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : "")
-        : language === "zh-HK"
-          ? "中醫評估表明患者的狀況與體質相關。" + (latestTcm?.primary_constitution ? ` ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : "")
-          : language === "fr"
-            ? "L'evaluation MTC indique que l'etat du patient est lie a sa constitution physique." + (latestTcm?.primary_constitution ? ` ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : "")
-            : "Traditional Chinese Medicine assessment indicates that the patient's condition is related to physical constitution." + (latestTcm?.primary_constitution ? ` ${getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)}` : ""),
+      latestTcm?.primary_constitution
+        ? getConstitutionLabelForLanguage(latestTcm.primary_constitution, language)
+        : language === "zh-CN"
+          ? "气虚质"
+          : language === "zh-HK"
+            ? "氣虛質"
+            : language === "fr"
+              ? "Constitution de deficience de Qi"
+              : "Qi Deficiency Constitution",
       "",
       labels.eegSection,
       `${eegStatusLabel}: ${neuroStatusLabel}`,
@@ -4299,7 +4301,7 @@ export function AdminPanel() {
                               id="doctor-name"
                               value={doctorNameInput}
                               onChange={(event) => setDoctorNameInput(event.target.value)}
-                              placeholder={localizeText("TCM doctor name", { zh: "请输入中医医生姓名", yue: "請輸入中醫醫生姓名", fr: "Nom du medecin MTC" })}
+                              placeholder={localizeText("TCM doctor name", { zh: "��输入中医医生姓名", yue: "請輸入中醫醫生姓名", fr: "Nom du medecin MTC" })}
                             />
                           </div>
 
