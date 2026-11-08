@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { getPhoneLookupCandidates, normalizePhoneNumber } from "@/lib/auth/phone"
-import { hashPassword, verifyPassword } from "@/lib/auth/password"
+import { verifyPassword } from "@/lib/auth/password"
 
 export async function POST(request: Request) {
   try {
@@ -23,8 +23,12 @@ export async function POST(request: Request) {
       .in("phone_number", normalizedCandidates)
       .limit(1)
 
+    let existingUser = data?.[0]
+
     if (error) {
       const isSchemaIssue =
+        error.code === "42703" ||
+        error.code === "PGRST204" ||
         error.message.includes("does not exist") ||
         error.message.includes("password_hash") ||
         error.message.includes("date_of_birth") ||
@@ -33,122 +37,44 @@ export async function POST(request: Request) {
         error.message.includes("name") ||
         error.message.includes("email")
 
-      if (isSchemaIssue) {
-        const { data: fallbackUsersWithPassword, error: fallbackWithPasswordError } = await supabase
-          .from("users")
-          .select("id, email, phone_number, name, password_hash")
-          .in("phone_number", normalizedCandidates)
-          .limit(1)
-
-        if (!fallbackWithPasswordError) {
-          const fallbackUserWithPassword = fallbackUsersWithPassword?.[0]
-
-          if (!fallbackUserWithPassword) {
-            return NextResponse.json({ error: "No account found. Please register first." }, { status: 404 })
-          }
-
-          if (!fallbackUserWithPassword.password_hash) {
-            const passwordHash = hashPassword(password)
-            const { error: activationError } = await supabase
-              .from("users")
-              .update({ password_hash: passwordHash })
-              .eq("id", fallbackUserWithPassword.id)
-
-            if (activationError) {
-              return NextResponse.json(
-                { error: "Could not reactivate account password. Please try again." },
-                { status: 500 },
-              )
-            }
-
-            fallbackUserWithPassword.password_hash = passwordHash
-          }
-
-          if (!verifyPassword(password, fallbackUserWithPassword.password_hash)) {
-            const resetPasswordHash = hashPassword(password)
-            const { error: resetError } = await supabase
-              .from("users")
-              .update({ password_hash: resetPasswordHash })
-              .eq("id", fallbackUserWithPassword.id)
-
-            if (resetError) {
-              return NextResponse.json(
-                { error: "Could not update password. Please try again." },
-                { status: 500 },
-              )
-            }
-          }
-
-          return NextResponse.json({
-            user: {
-              id: fallbackUserWithPassword.id,
-              email: fallbackUserWithPassword.email,
-              phone_number: fallbackUserWithPassword.phone_number,
-              name: fallbackUserWithPassword.name,
-            },
-          })
-        }
-
-        const { data: fallbackUsers, error: fallbackError } = await supabase
-          .from("users")
-          .select("id, phone_number, name")
-          .in("phone_number", normalizedCandidates)
-          .limit(1)
-
-        if (fallbackError) {
-          return NextResponse.json({ error: "Database error during login." }, { status: 500 })
-        }
-
-        const fallbackUser = fallbackUsers?.[0]
-
-        if (!fallbackUser) {
-          return NextResponse.json({ error: "No account found. Please register first." }, { status: 404 })
-        }
-
-        return NextResponse.json({ user: fallbackUser })
+      if (!isSchemaIssue) {
+        return NextResponse.json({ error: "Database error during login. Please try again." }, { status: 500 })
       }
 
-      return NextResponse.json({ error: "Database error during login." }, { status: 500 })
+      // Older schemas may lack optional profile fields, but password verification
+      // is always required. Never fall back to a passwordless user lookup.
+      const { data: fallbackUsers, error: fallbackError } = await supabase
+        .from("users")
+        .select("id, phone_number, password_hash")
+        .in("phone_number", normalizedCandidates)
+        .limit(1)
+
+      if (fallbackError) {
+        return NextResponse.json(
+          { error: "Password login is unavailable. Please contact the app administrator." },
+          { status: 503 },
+        )
+      }
+
+      const fallbackUser = fallbackUsers?.[0]
+      existingUser = fallbackUser
+        ? { ...fallbackUser, email: null, name: null, date_of_birth: null, gender: null, national_id: null }
+        : undefined
     }
 
-    const existingUser = data?.[0]
-
     if (!existingUser) {
-      return NextResponse.json({ error: "No account found. Please register first." }, { status: 404 })
+      return NextResponse.json({ error: "Invalid phone number or password." }, { status: 401 })
     }
 
     if (!existingUser.password_hash) {
-      const passwordHash = hashPassword(password)
-      const { error: activationError } = await supabase
-        .from("users")
-        .update({ password_hash: passwordHash })
-        .eq("id", existingUser.id)
-
-      if (activationError) {
-        return NextResponse.json(
-          { error: "Could not reactivate account password. Please try again." },
-          { status: 500 },
-        )
-      }
-
-      existingUser.password_hash = passwordHash
+      return NextResponse.json(
+        { error: "This account needs a secure password reset. Please contact the app administrator." },
+        { status: 403 },
+      )
     }
 
     if (!verifyPassword(password, existingUser.password_hash)) {
-      const resetPasswordHash = hashPassword(password)
-      const { error: resetError } = await supabase
-        .from("users")
-        .update({ password_hash: resetPasswordHash })
-        .eq("id", existingUser.id)
-
-      if (resetError) {
-        return NextResponse.json(
-          { error: "Could not update password. Please try again." },
-          { status: 500 },
-        )
-      }
-
-      existingUser.password_hash = resetPasswordHash
+      return NextResponse.json({ error: "Invalid phone number or password." }, { status: 401 })
     }
 
     const safeUser = {
@@ -161,10 +87,7 @@ export async function POST(request: Request) {
       national_id: (existingUser as Record<string, unknown>).national_id as string | undefined,
     }
     return NextResponse.json({ user: safeUser })
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unexpected login error." },
-      { status: 500 },
-    )
+  } catch {
+    return NextResponse.json({ error: "Unable to log in. Please try again." }, { status: 500 })
   }
 }
