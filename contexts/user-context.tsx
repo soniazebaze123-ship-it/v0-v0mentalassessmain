@@ -62,25 +62,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const normalizePhoneForKey = (value: string) => value.replace(/\D/g, "")
 
-  const getStoredUserByPhone = (phoneNumber: string): User | null => {
-    const key = `mental_assess_user_${normalizePhoneForKey(phoneNumber)}`
-    const raw = localStorage.getItem(key)
-
-    if (!raw) {
-      return null
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as User
-      if (!parsed?.id || !parsed?.phone_number) {
-        return null
-      }
-      return parsed
-    } catch {
-      return null
-    }
-  }
-
   const setStoredUserByPhone = (user: User | null | undefined) => {
     if (!user?.phone_number || !user?.id) {
       return
@@ -152,23 +133,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }
 
   const login = async (phoneNumber: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    setLoading(true)
-    const restoreStoredUser = () => {
-      const trimmedPhone = phoneNumber.trim()
-      const digits = trimmedPhone.replace(/\D/g, "")
-      const normalizedPhone = trimmedPhone.startsWith("+") ? `+${digits}` : trimmedPhone
-      const storedUser = getStoredUserByPhone(normalizedPhone)
-
-      if (!storedUser) {
-        return null
-      }
-
-      setUser(storedUser)
-      setProgress({})
-      localStorage.setItem("mental_assess_dummy_user", JSON.stringify(storedUser))
-      return { success: true as const }
-    }
-
+    // Keep the login form mounted so its pending state and error remain visible.
+    // Page-wide loading replaces the form and discards its local state.
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -181,11 +147,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const payload = await response.json()
 
       if (!response.ok || !payload.user) {
-        const restoredUser = restoreStoredUser()
-        if (restoredUser) {
-          return restoredUser
-        }
-
         return {
           success: false,
           error: payload.error || "Login failed. Please check the phone number and password.",
@@ -199,11 +160,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       await loadUserProgress(payload.user.id)
       return { success: true }
     } catch (error: unknown) {
-      const restoredUser = restoreStoredUser()
-      if (restoredUser) {
-        return restoredUser
-      }
-
       const errorMessage = getErrorMessage(error)
       if (errorMessage.includes("Failed to fetch") || errorMessage.includes("fetch")) {
         return {
@@ -213,8 +169,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
 
       return { success: false, error: errorMessage }
-    } finally {
-      setLoading(false)
     }
   }
 

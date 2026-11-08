@@ -143,7 +143,7 @@ export function Login({ onRegister, onAdminLogin }: LoginProps) {
             </Button>
           </form>
 
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {error && <p role="alert" className="text-red-500 text-sm text-center">{error}</p>}
 
           <div className="text-center text-sm">
             <Button variant="link" onClick={onRegister} className="px-0">
